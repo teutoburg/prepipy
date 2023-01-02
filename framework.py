@@ -10,6 +10,7 @@ from operator import itemgetter
 import copy
 import struct
 from dataclasses import dataclass
+from multiprocessing import Manager, Pool
 
 # import yaml
 # from tqdm import tqdm
@@ -279,16 +280,17 @@ class Frame():
         return data_range, data_max
 
     def clipped_stats(self):
+        print("CLIPPING")
         data = self.image.flatten()
         mean, median, stddev = np.mean(data), np.median(data), np.std(data)
         logger.debug("unclipped:\tmean=%.4f\tmedian=%.4f\tstddev=%.4f",
-                      mean, median, stddev)
+                     mean, median, stddev)
 
         mean, median, stddev = scs(data,
                                    cenfunc='median', stdfunc='mad_std',
                                    sigma_upper=5, sigma_lower=3)
         logger.debug("clipped:\tmean=%.4f\tmedian=%.4f\tstddev=%.4f",
-                      mean, median, stddev)
+                     mean, median, stddev)
         self.clipped_mean = mean
         self.clipped_median = median
         self.clipped_stddev = stddev
@@ -395,6 +397,7 @@ class Picture():
     """n/a."""
 
     def __init__(self, name=None):
+        # self.frames = Manager().list()
         self.frames = list()
         self.stars = list()
         self.name = name
@@ -474,7 +477,7 @@ class Picture():
         self.frames.append(new_frame)
         return new_frame
 
-    def add_frame_from_file(self, filename, band):
+    def add_frame_from_file(self, filename, band, framelist=None):
         """
         Add a new frame to the picture. File must be in FITS format.
 
@@ -484,6 +487,9 @@ class Picture():
             Path of the file containing the image.
         band : Band or str
             Pass-band (filter) in which the image was taken.
+        framelist: list or None
+            List to append the frames to. If None (default), the internal list
+            is used. Used only for multiprocessing, do not change manually.
 
         Returns
         -------
@@ -499,8 +505,18 @@ class Picture():
         else:
             raise FileTypeError("Currently only FITS files are supported.")
 
-        self.frames.append(new_frame)
+        if framelist is None:
+            self.frames.append(new_frame)
+        else:
+            framelist.append(new_frame)
         return new_frame
+
+    def add_fits_frames_mp(self, input_path, bands):
+        args = [(input_path/f"{self.name}_{band.name}.fits", band)
+                for band in bands]
+        with Pool(len(args)) as p:
+            framelist = p.starmap(Frame.from_fits, args)
+        self.frames = framelist
 
     @classmethod
     def from_cube(cls, cube, bands=None):

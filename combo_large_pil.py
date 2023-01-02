@@ -7,6 +7,7 @@ import gc
 import logging
 from logging.config import dictConfig
 from pathlib import Path
+from multiprocessing import Pool
 
 import numpy as np
 import yaml
@@ -21,6 +22,19 @@ def _gma(i, g):
     return np.power(i, 1/g)
 
 
+def get_pictures(image_name, input_path, bands, n_combo, config, multi=False):
+    new_pic = Picture(name=image_name)
+    if multi:
+        new_pic.add_fits_frames_mp(input_path, bands)
+    else:
+        for band in tqdm(bands, total=len(config["use_bands"]),
+                         bar_format=TQDM_FMT):
+            fname = f"{image_name}_{band.name}.fits"
+            new_pic.add_frame_from_file(input_path/fname, band)
+    logger.info("Picture %s fully loaded.", new_pic.name)
+    yield new_pic
+
+
 def create_rgb_image(input_path, output_path, image_name):
     logger.info("****************************************")
     logger.info("Start RGB processing...")
@@ -33,26 +47,17 @@ def create_rgb_image(input_path, output_path, image_name):
 
     bands = Band.from_yaml_dict(bands_config, config["use_bands"])
     channel_combos = config["combinations"]
-    n_ch = len(channel_combos)
+    n_combo = len(channel_combos)
 
-    def get_pictures(n_combo):
-        new_pic = Picture(name=image_name)
-        for band in tqdm(bands, total=len(config["use_bands"]),
-                         bar_format=TQDM_FMT):
-            fname = f"{image_name}_{band.name}.fits"
-            new_pic.add_frame_from_file(input_path/fname, band)
-        logger.info("Picture %s fully loaded.", new_pic.name)
-        yield new_pic
-
-    pics = get_pictures(n_ch)
+    pics = get_pictures(image_name, input_path, bands, n_combo, config, False)
 
     for pic in pics:
         pic.preprocess_frames(clip=10, nanmode="max")
-        for combo in tqdm(channel_combos, total=n_ch,
+        for combo in tqdm(channel_combos, total=n_combo,
                           bar_format=TQDM_FMT):
             cols = "".join(combo)
             logger.info("Processing image %s in %s.", pic.name, cols)
-            pic.select_rgb_channels(combo, single=(n_ch == 1))
+            pic.select_rgb_channels(combo, single=(n_combo == 1))
 
             if config["process"]["contrast"] == "before":
                 pic.contrast_stretch_channels()
