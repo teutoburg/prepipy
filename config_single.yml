@@ -1,10 +1,13 @@
 ---
 process:
+  multiprocess: no
   contrast: before # before or after (stretching)
   grey_mode: normal # normal or lessback or moreback
   rgb_adjust: no
   alpha: 1.
   gamma_lum: 1.
+  clip: 10
+  nanmode: max
 use_bands:
   - VISIONS_J
   - VISIONS_H

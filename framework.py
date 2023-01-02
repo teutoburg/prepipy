@@ -78,12 +78,12 @@ class Band():
 class Frame():
     """n/a."""
 
-    def __init__(self, image, band, header=None):
+    def __init__(self, image, band, header=None, **kwargs):
         self.image = image
         self._band = band
         self.header = header
         self.background = np.nanmedian(self.image)  # estimated background
-        # self.clipped_stats()
+        self.clip_and_nan(**kwargs)
 
         self.coords = wcs.WCS(self.header)
 
@@ -154,7 +154,7 @@ class Frame():
         upper_limit = self.background + n_sigma * np.nanstd(self.image)
         self.image = np.clip(self.image, None, upper_limit)
 
-    def clip_and_nan(self, clip=10, nanmode="median"):
+    def clip_and_nan(self, clip=10, nanmode="max"):
         r"""
         Perform upper sigma clipping and replace NANs.
 
@@ -166,7 +166,7 @@ class Frame():
         nanmode : str, optional
             Which value to use for replacing NANs. Allowed values are
             \"median\" or \"max\" (clipped if clipping is performed).
-            The default is "median".
+            The default is "max".
 
         Raises
         ------
@@ -297,10 +297,12 @@ class Frame():
 
     def min_inten(self, gamma_lum, grey_level=.3,
                   sky_mode="median", max_mode="quantile", **kwargs):
-        self.clipped_stats()
         if sky_mode == "quantile":
             i_sky = np.quantile(self.image, .8)
         elif sky_mode == "median":
+            i_sky = np.nanmedian(self.image)
+        elif sky_mode == "clipmedian":
+            self.clipped_stats()
             i_sky = self.clipped_median
         elif sky_mode == "debug":
             i_sky = .01

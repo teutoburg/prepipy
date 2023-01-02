@@ -22,12 +22,12 @@ def _gma(i, g):
     return np.power(i, 1/g)
 
 
-def get_pictures(image_name, input_path, bands, n_combo, config, multi=False):
+def get_pictures(image_name, input_path, bands, n_bands, multi=False):
     new_pic = Picture(name=image_name)
     if multi:
         new_pic.add_fits_frames_mp(input_path, bands)
     else:
-        for band in tqdm(bands, total=len(config["use_bands"]),
+        for band in tqdm(bands, total=n_bands,
                          bar_format=TQDM_FMT):
             fname = f"{image_name}_{band.name}.fits"
             new_pic.add_frame_from_file(input_path/fname, band)
@@ -40,7 +40,7 @@ def create_rgb_image(input_path, output_path, image_name):
     logger.info("Start RGB processing...")
     logger.info("****************************************")
 
-    with open("./config.yml", "r") as ymlfile:
+    with open("./config_single.yml", "r") as ymlfile:
         config = yaml.load(ymlfile, yaml.SafeLoader)
     with open("./bands.yml", "r") as ymlfile:
         bands_config = yaml.load(ymlfile, yaml.SafeLoader)
@@ -49,10 +49,11 @@ def create_rgb_image(input_path, output_path, image_name):
     channel_combos = config["combinations"]
     n_combo = len(channel_combos)
 
-    pics = get_pictures(image_name, input_path, bands, n_combo, config, False)
+    pics = get_pictures(image_name, input_path, bands,
+                        len(config["use_bands"]),
+                        config["process"]["multiprocess"])
 
     for pic in pics:
-        pic.preprocess_frames(clip=10, nanmode="max")
         for combo in tqdm(channel_combos, total=n_combo,
                           bar_format=TQDM_FMT):
             cols = "".join(combo)
@@ -118,7 +119,7 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     logger = _logging_configurator()
     root = Path("D:/Nemesis/data/HOPS")
-    path = root/"HOPS_99"
+    path = root/"HOPS_288"
     imgpath = root/"RGBs"
     # root = Path("D:/Nemesis/data")
     # path = root/"stamps/LARGE/Orion"
@@ -127,7 +128,7 @@ if __name__ == "__main__":
     # target = "Hand"
     # target = "ONC"
     # target = "V883_Ori"
-    target = "HOPS_99"
+    target = "HOPS_288"
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
     create_rgb_image(path, imgpath, target)
