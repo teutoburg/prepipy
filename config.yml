@@ -19,4 +19,6 @@ combinations:
   - ["i4", "i3", "i2"]
   - ["m1", "Ks", "J" ]
   - ["m1", "i3", "Ks"]
+combinations_t:
+  - ["Ks", "H", "J" ]
 ...

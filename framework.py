@@ -83,7 +83,7 @@ class Frame():
         self._band = band
         self.header = header
         self.background = np.nanmedian(self.image)  # estimated background
-        self.clipped_stats()
+        # self.clipped_stats()
 
         self.coords = wcs.WCS(self.header)
 
@@ -291,7 +291,6 @@ class Frame():
                                    sigma_upper=5, sigma_lower=3)
         logger.debug("clipped:\tmean=%.4f\tmedian=%.4f\tstddev=%.4f",
                      mean, median, stddev)
-        self.clipped_mean = mean
         self.clipped_median = median
         self.clipped_stddev = stddev
         return mean, median, stddev
