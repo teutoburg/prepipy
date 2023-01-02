@@ -9,6 +9,7 @@ import logging
 from operator import itemgetter
 import copy
 import struct
+from dataclasses import dataclass
 
 # import yaml
 # from tqdm import tqdm
@@ -22,8 +23,6 @@ from astropy.stats import sigma_clipped_stats as scs
 
 from PIL import Image
 from tqdm import tqdm
-
-from dataclasses import dataclass
 
 TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 logger = logging.getLogger(__name__)
@@ -553,7 +552,7 @@ class Picture():
             else:
                 raise ValueError("stretch mode not understood")
 
-    def select_rgb_channels(self, bands):
+    def select_rgb_channels(self, bands, single=False):
         """
         Select existing frames to be used as channels for multi-colour image.
         Usually 3 channels are interpreted as RGB. Names of the frame bands
@@ -564,6 +563,10 @@ class Picture():
         ----------
         bands : list of str
             List of names for the bands to be used as colour channels.
+        single : bool, optional
+            If only a single RGB combination is used on the instance, set this
+            option to ``True`` to save memory. This will result in alteration
+            of the original frame images. The default is False.
 
         Raises
         ------
@@ -586,7 +589,8 @@ class Picture():
             raise ValueError("RGB accepts up to 4 channels.")
 
         frames_dict = dict(((f.band.name, f) for f in self.frames))
-        self.rgb_channels = list(itemgetter(*bands)(frames_dict))
+        copyfct = copy.copy if single else copy.deepcopy
+        self.rgb_channels = list(map(copyfct, (itemgetter(*bands)(frames_dict))))
         #self.rgb_channels = []
         #for band in bands:
         #    new_channel = copy.deepcopy(frames_dict[band])
