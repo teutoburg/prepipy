@@ -4,11 +4,12 @@
 """
 import sys
 import gc
-import yaml
 import logging
 from logging.config import dictConfig
 from pathlib import Path
+
 import numpy as np
+import yaml
 from tqdm import tqdm
 
 from framework import Picture, Frame, Band
@@ -32,6 +33,7 @@ def create_rgb_image(input_path, output_path, image_name):
 
     bands = Band.from_yaml_dict(bands_config, config["use_bands"])
     channel_combos = config["combinations"]
+    n_ch = len(channel_combos)
 
     def get_pictures(n_combo):
         new_pic = Picture(name=image_name)
@@ -42,15 +44,15 @@ def create_rgb_image(input_path, output_path, image_name):
         logger.info("Picture %s fully loaded.", new_pic.name)
         yield new_pic
 
-    pics = get_pictures(len(channel_combos))
+    pics = get_pictures(n_ch)
 
     for pic in pics:
         pic.preprocess_frames(clip=10, nanmode="max")
-        for combo in tqdm(channel_combos, total=len(channel_combos),
+        for combo in tqdm(channel_combos, total=n_ch,
                           bar_format=TQDM_FMT):
             cols = "".join(combo)
             logger.info("Processing image %s in %s.", pic.name, cols)
-            pic.select_rgb_channels(combo)
+            pic.select_rgb_channels(combo, single=(n_ch == 1))
 
             if config["process"]["contrast"] == "before":
                 pic.contrast_stretch_channels()
@@ -111,7 +113,7 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     logger = _logging_configurator()
     root = Path("D:/Nemesis/data/HOPS")
-    path = root/"HOPS_288"
+    path = root/"HOPS_99"
     imgpath = root/"RGBs"
     # root = Path("D:/Nemesis/data")
     # path = root/"stamps/LARGE/Orion"
@@ -120,7 +122,7 @@ if __name__ == "__main__":
     # target = "Hand"
     # target = "ONC"
     # target = "V883_Ori"
-    target = "HOPS_288"
+    target = "HOPS_99"
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
     create_rgb_image(path, imgpath, target)
