@@ -15,12 +15,8 @@ use_bands:
   - IRAC4
   - MIPS1
 combinations:
-  - ["Ks", "H" , "J" ]
   - ["i3", "Ks", "J" ]
-  - ["i3", "i2", "Ks"]
   - ["i4", "i3", "i2"]
   - ["m1", "Ks", "J" ]
-  - ["m1", "i2", "Ks"]
   - ["m1", "i3", "Ks"]
-  - ["m1", "i2", "Ks", "J" ]
 ...
