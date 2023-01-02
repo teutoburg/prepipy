@@ -397,7 +397,6 @@ class Picture():
     """n/a."""
 
     def __init__(self, name=None):
-        # self.frames = Manager().list()
         self.frames = list()
         self.stars = list()
         self.name = name
@@ -607,10 +606,6 @@ class Picture():
         frames_dict = dict(((f.band.name, f) for f in self.frames))
         copyfct = copy.copy if single else copy.deepcopy
         self.rgb_channels = list(map(copyfct, (itemgetter(*bands)(frames_dict))))
-        #self.rgb_channels = []
-        #for band in bands:
-        #    new_channel = copy.deepcopy(frames_dict[band])
-        #    self.rgb_channels.append(new_channel)
 
         if all(channel.band.wavelength is not None for channel in self.rgb_channels):
             if not all(redder.band.wavelength >= bluer.band.wavelength
@@ -628,8 +623,6 @@ class Picture():
             if isinstance(weights, str):
                 if weights == "auto":
                     weights = [1/frame.clipped_median for frame in self.rgb_channels]
-                    # weights = [frame.auto_gma()/frame.clipped_median for frame in self.rgb_channels]
-                    # print(weights)
                 else:
                     raise ValueError("weights mode not understood")
 
@@ -642,14 +635,7 @@ class Picture():
         alpha = 1.4
         grey_level = .3
 
-        # self.ap = {"grey": False, "gma": False, "alph": False}
         self.ap = {"gma": False, "alph": False}
-
-        # if any(channel.clipped_stddev > 1. for channel in self.rgb_channels) or sum(channel.clipped_stddev > .5 for channel in self.rgb_channels) >= 2:
-        #     grey_level = .3
-        #     self.ap["grey"] = True
-        # else:
-        #     grey_level = .03
 
         if not any((np.array([channel.clipped_median for channel in self.rgb_channels]) / np.mean([channel.clipped_median for channel in self.rgb_channels])) > 2.):
             gamma_lum = 1.2
@@ -668,7 +654,6 @@ class Picture():
         return sum_image
 
     def stretch_luminosity(self, stretch_fkt_lum, gamma_lum, lum, **kwargs):
-        # lum += 1e-5 # avoid zeros in lum
         lum_stretched = stretch_fkt_lum(lum, gamma_lum, **kwargs)
         for channel in self.rgb_channels:
             channel.image /= lum
