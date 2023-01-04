@@ -46,17 +46,16 @@ def create_rgb_image(input_path, output_path, image_name):
 
     bands = Band.from_yaml_dict(bands_config, config["use_bands"])
     channel_combos = config["combinations"]
-    n_combo = len(channel_combos)
+    n_combos = len(channel_combos)
 
     pic = create_picture(image_name, input_path, bands,
                          len(config["use_bands"]),
                          config["process"]["multiprocess"])
 
-    for combo in tqdm(channel_combos, total=n_combo,
-                      bar_format=TQDM_FMT):
+    for combo in tqdm(channel_combos, total=n_combos, bar_format=TQDM_FMT):
         cols = "".join(combo)
         logger.info("Processing image %s in %s.", pic.name, cols)
-        pic.select_rgb_channels(combo, single=(n_combo == 1))
+        pic.select_rgb_channels(combo, single=(n_combos == 1))
 
         grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
         grey_mode = config["process"]["grey_mode"]
@@ -71,9 +70,13 @@ def create_rgb_image(input_path, output_path, image_name):
             logger.info("RGB sat. adjusting after contrast and stretch.")
 
         if pic.is_bright:
-            logger.info("Image is bright, performing additional color " +
-                        "space stretching to equalize colors.")
+            logger.info("""Image is bright, performing additional color space
+                         stretching to equalize colors.""")
             pic.equalize("median", offset=.1, norm=True)
+        else:
+            logger.warning(""""No equalisation or normalisation performed on
+                            image %s in %s!""",
+                           pic.name, cols)
 
         if grey_mode != "normal":
             logger.info("Used grey mode \"%s\".", grey_mode)
@@ -82,8 +85,8 @@ def create_rgb_image(input_path, output_path, image_name):
             logger.info("Used normal grey mode.")
             fname = f"{pic.name}_img_{cols}.JPEG"
         pic.save_pil(output_path/fname)
-
         logger.info("Image %s in %s done.", pic.name, cols)
+
     logger.info("Image %s fully completed.", pic.name)
     del pic
     gc.collect()
