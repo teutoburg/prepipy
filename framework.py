@@ -83,6 +83,7 @@ class Frame():
         self._band = band
         self.header = header
         self.background = np.nanmedian(self.image)  # estimated background
+        self.normed = False
         self.clip_and_nan(**kwargs)
 
         self.coords = wcs.WCS(self.header)
@@ -264,9 +265,14 @@ class Frame():
 
     def normalize(self):
         """Subtract minimum and devide by maximum."""
+        if self.normed:
+            return self.data_range, self.data_max
+
         data_max = np.nanmax(self.image)
         data_min = np.nanmin(self.image)
         data_range = data_max - data_min
+        if round(data_min, 5) == 0. and round(data_max, 5) == 1.:
+            return data_range, data_max
 
         self.image -= data_min
         self.image /= data_range
@@ -387,11 +393,17 @@ class Frame():
     def auto_gma(self):
         return np.exp((1 - (self.clipped_median + self.clipped_stddev)) / 2)
 
-    def constrast_stretch(self, a, b):
+    def constrast_stretch(self, new_range, new_offset):
         # https://homepages.inf.ed.ac.uk/rbf/HIPR2/stretch.htm
-        c = np.nanmin(self.image)
-        d = np.nanmax(self.image)
-        self.image = (self.image - c) * ((b - a) / (d - c)) + a
+        data_max = np.nanmax(self.image)
+        data_min = np.nanmin(self.image)
+        data_range = data_max - data_min
+
+        self.image = (self.image - data_min) * (new_range / data_range) + new_offset
+
+        self.data_range = data_range
+        self.data_max = data_max
+        self.normed = True
 
 
 class Picture():
@@ -713,8 +725,10 @@ class Picture():
             frame.clip_and_nan(clip, nanmode)
 
     def contrast_stretch_channels(self):
+        off = 0.
+        rng = 1. - 0.
         for channel in self.rgb_channels:
-            channel.constrast_stretch(0., 1.)
+            channel.constrast_stretch(rng, off)
 
     def equalize2(self, mode="mean", offset=.5, supereq=False, contrast=False):
         means = []
@@ -728,7 +742,9 @@ class Picture():
             channel.image += offset
             channel.image[channel.image < 0.] = 0.
             if contrast:
-                channel.constrast_stretch(0., 1.)
+                off = 0.
+                rng = 1. - 0.
+                channel.constrast_stretch(rng, off)
         if supereq:
             maxmean = max(means)
             for channel, m in zip(self.rgb_channels, means):
