@@ -21,7 +21,7 @@ def _gma(i, g):
     return np.power(i, 1/g)
 
 
-def get_pictures(image_name, input_path, bands, n_bands, multi=False):
+def create_picture(image_name, input_path, bands, n_bands, multi=False):
     new_pic = Picture(name=image_name)
     if multi:
         new_pic.add_fits_frames_mp(input_path, bands)
@@ -31,7 +31,7 @@ def get_pictures(image_name, input_path, bands, n_bands, multi=False):
             fname = f"{image_name}_{band.name}.fits"
             new_pic.add_frame_from_file(input_path/fname, band)
     logger.info("Picture %s fully loaded.", new_pic.name)
-    yield new_pic
+    return new_pic
 
 
 def create_rgb_image(input_path, output_path, image_name):
@@ -48,46 +48,45 @@ def create_rgb_image(input_path, output_path, image_name):
     channel_combos = config["combinations"]
     n_combo = len(channel_combos)
 
-    pics = get_pictures(image_name, input_path, bands,
-                        len(config["use_bands"]),
-                        config["process"]["multiprocess"])
+    pic = create_picture(image_name, input_path, bands,
+                         len(config["use_bands"]),
+                         config["process"]["multiprocess"])
 
-    for pic in pics:
-        for combo in tqdm(channel_combos, total=n_combo,
-                          bar_format=TQDM_FMT):
-            cols = "".join(combo)
-            logger.info("Processing image %s in %s.", pic.name, cols)
-            pic.select_rgb_channels(combo, single=(n_combo == 1))
+    for combo in tqdm(channel_combos, total=n_combo,
+                      bar_format=TQDM_FMT):
+        cols = "".join(combo)
+        logger.info("Processing image %s in %s.", pic.name, cols)
+        pic.select_rgb_channels(combo, single=(n_combo == 1))
 
-            grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
-            grey_mode = config["process"]["grey_mode"]
-            pic.stretch_frames("stiff-d", only_rgb=True,
-                               stretch_function=Frame.stiff_stretch,
-                               stiff_mode="user3",
-                               grey_level=grey_values[grey_mode])
+        grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
+        grey_mode = config["process"]["grey_mode"]
+        pic.stretch_frames("stiff-d", only_rgb=True,
+                           stretch_function=Frame.stiff_stretch,
+                           stiff_mode="user3",
+                           grey_level=grey_values[grey_mode])
 
-            if config["process"]["rgb_adjust"]:
-                pic.adjust_rgb(config["process"]["alpha"], _gma,
-                               config["process"]["gamma_lum"])
-                logger.info("RGB sat. adjusting after contrast and stretch.")
+        if config["process"]["rgb_adjust"]:
+            pic.adjust_rgb(config["process"]["alpha"], _gma,
+                           config["process"]["gamma_lum"])
+            logger.info("RGB sat. adjusting after contrast and stretch.")
 
-            if pic.is_bright:
-                logger.info("Image is bright, performing additional color " +
-                            "space stretching to equalize colors.")
-                pic.equalize("median", offset=.1, norm=True)
+        if pic.is_bright:
+            logger.info("Image is bright, performing additional color " +
+                        "space stretching to equalize colors.")
+            pic.equalize("median", offset=.1, norm=True)
 
-            if grey_mode != "normal":
-                logger.info("Used grey mode \"%s\".", grey_mode)
-                fname = f"{pic.name}_img_{cols}_{grey_mode}.JPEG"
-            else:
-                logger.info("Used normal grey mode.")
-                fname = f"{pic.name}_img_{cols}.JPEG"
-            pic.save_pil(output_path/fname)
+        if grey_mode != "normal":
+            logger.info("Used grey mode \"%s\".", grey_mode)
+            fname = f"{pic.name}_img_{cols}_{grey_mode}.JPEG"
+        else:
+            logger.info("Used normal grey mode.")
+            fname = f"{pic.name}_img_{cols}.JPEG"
+        pic.save_pil(output_path/fname)
 
-            logger.info("Image %s in %s done.", pic.name, cols)
-        logger.info("Image %s fully completed.", pic.name)
-        del pic
-        gc.collect()
+        logger.info("Image %s in %s done.", pic.name, cols)
+    logger.info("Image %s fully completed.", pic.name)
+    del pic
+    gc.collect()
 
     logger.info("****************************************")
     logger.info("RGB processing done")
