@@ -284,6 +284,18 @@ class Frame():
 
         return data_range, data_max
 
+    def constrast_stretch(self, new_range, new_offset):
+        # https://homepages.inf.ed.ac.uk/rbf/HIPR2/stretch.htm
+        data_max = np.nanmax(self.image)
+        data_min = np.nanmin(self.image)
+        data_range = data_max - data_min
+
+        self.image = (self.image - data_min) * (new_range / data_range) + new_offset
+
+        self.data_range = data_range
+        self.data_max = data_max
+        self.normed = True
+
     def clipped_stats(self):
         print("CLIPPING")
         data = self.image.flatten()
@@ -391,18 +403,6 @@ class Frame():
 
     def auto_gma(self):
         return np.exp((1 - (self.clipped_median + self.clipped_stddev)) / 2)
-
-    def constrast_stretch(self, new_range, new_offset):
-        # https://homepages.inf.ed.ac.uk/rbf/HIPR2/stretch.htm
-        data_max = np.nanmax(self.image)
-        data_min = np.nanmin(self.image)
-        data_range = data_max - data_min
-
-        self.image = (self.image - data_min) * (new_range / data_range) + new_offset
-
-        self.data_range = data_range
-        self.data_max = data_max
-        self.normed = True
 
 
 class Picture():
