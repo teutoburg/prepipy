@@ -74,7 +74,7 @@ def create_rgb_image(input_path, output_path, image_name):
             if pic.is_bright:
                 logger.info("Image is bright, performing additional color " +
                             "space stretching to equalize colors.")
-                pic.equalize2("median", offset=.1, contrast=True)
+                pic.equalize2("median", offset=.1, norm=True)
 
             if grey_mode != "normal":
                 logger.info("Using grey mode \"%s\".", grey_mode)

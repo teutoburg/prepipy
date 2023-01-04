@@ -82,7 +82,6 @@ class Frame():
         self._band = band
         self.header = header
         self.background = np.nanmedian(self.image)  # estimated background
-        self.normed = False
         self.clip_and_nan(**kwargs)
 
         self.coords = wcs.WCS(self.header)
@@ -262,11 +261,8 @@ class Frame():
         ax.set_title(self.band.name)
         plt.show()
 
-    def normalize(self):
+    def normalize(self, new_range=1., new_offset=0.):
         """Subtract minimum and devide by maximum."""
-        if self.normed:
-            return self.data_range, self.data_max
-
         data_max = np.nanmax(self.image)
         data_min = np.nanmin(self.image)
         data_range = data_max - data_min
@@ -282,19 +278,13 @@ class Frame():
             print(f"ERROR: {data_max, data_min}")
         assert np.nanmax(self.image) == 1.0
 
-        return data_range, data_max
-
-    def constrast_stretch(self, new_range, new_offset):
-        # https://homepages.inf.ed.ac.uk/rbf/HIPR2/stretch.htm
-        data_max = np.nanmax(self.image)
-        data_min = np.nanmin(self.image)
-        data_range = data_max - data_min
-
-        self.image = (self.image - data_min) * (new_range / data_range) + new_offset
+        self.image = self.image * new_range + new_offset
 
         self.data_range = data_range
+        self.data_min = data_min
         self.data_max = data_max
-        self.normed = True
+
+        return data_range, data_max
 
     def clipped_stats(self):
         print("CLIPPING")
@@ -693,7 +683,7 @@ class Picture():
         This method should also work for 4-channel images, but this is not tested.
 
         """
-        # BUG: sometimes lost of zeros, maybe normalise before this?????
+        # BUG: sometimes lost of zeros, maybe normalize before this?????
         logger.info("RGB adjusting using alpha=%s, gamma_lum=%s.",
                     alpha, gamma_lum)
         lum = self.luminance()
@@ -719,7 +709,7 @@ class Picture():
         # gamma_lum = kwargs.get("gamma_lum", gamma)
         self.stretch_luminosity(stretch_fkt_lum, gamma_lum, lum, **kwargs)
 
-    def equalize2(self, mode="mean", offset=.5, supereq=False, contrast=False):
+    def equalize2(self, mode="mean", offset=.5, supereq=False, norm=False):
         means = []
         for channel in self.rgb_channels:
             channel.image /= np.nanmax(channel.image)
@@ -730,10 +720,8 @@ class Picture():
             means.append(np.nanmean(channel.image))
             channel.image += offset
             channel.image[channel.image < 0.] = 0.
-            if contrast:
-                off = 0.
-                rng = 1. - 0.
-                channel.constrast_stretch(rng, off)
+            if norm:
+                channel.normalize()
         if supereq:
             maxmean = max(means)
             for channel, m in zip(self.rgb_channels, means):
