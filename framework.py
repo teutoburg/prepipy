@@ -709,7 +709,7 @@ class Picture():
         # gamma_lum = kwargs.get("gamma_lum", gamma)
         self.stretch_luminosity(stretch_fkt_lum, gamma_lum, lum, **kwargs)
 
-    def equalize2(self, mode="mean", offset=.5, supereq=False, norm=False):
+    def equalize(self, mode="mean", offset=.5, supereq=False, norm=False):
         means = []
         for channel in self.rgb_channels:
             channel.image /= np.nanmax(channel.image)
