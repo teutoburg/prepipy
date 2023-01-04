@@ -10,7 +10,7 @@ from operator import itemgetter
 import copy
 import struct
 from dataclasses import dataclass
-from multiprocessing import Manager, Pool
+from multiprocessing import Pool
 
 # import yaml
 # from tqdm import tqdm
@@ -23,7 +23,6 @@ from astropy import wcs
 from astropy.stats import sigma_clipped_stats as scs
 
 from PIL import Image
-from tqdm import tqdm
 
 TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 logger = logging.getLogger(__name__)
