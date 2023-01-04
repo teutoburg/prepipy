@@ -37,6 +37,8 @@ class Error(Exception):
 class BandExistsError(Error):
     """A Frame in this band already exists in this picture."""
 
+    # TODO: investigate msg in here and band name as parameter...
+    # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
     pass
 
 
@@ -245,7 +247,7 @@ class Frame():
         if self.coord is not None:
             plt.subplot(projection=self.coord)
         plt.imshow(self.image, vmin=100., vmax=1000., origin="lower")
-        plt.grid(color='white', ls='dashed')
+        plt.grid(color="white", ls="dashed")
         plt.xlabel("RA")
         plt.ylabel("DE")
         plt.tight_layout()
@@ -255,7 +257,7 @@ class Frame():
     def display_3d(self):
         xx, yy = np.mgrid[0:self.image.shape[0], 0:self.image.shape[1]]
         fig = plt.figure()
-        ax = fig.gca(projection='3d')
+        ax = fig.gca(projection="3d")
         ax.plot_surface(xx, yy, self.image, rstride=1, cstride=1,
                         cmap="viridis", linewidth=0)
         ax.set_title(self.band.name)
@@ -275,7 +277,7 @@ class Frame():
         try:
             assert np.nanmin(self.image) == 0.0
         except AssertionError:
-            print(f"ERROR: {data_max, data_min}")
+            logger.error("Normalisation error: %s, %s", data_max, data_min)
         assert np.nanmax(self.image) == 1.0
 
         self.image = self.image * new_range + new_offset
@@ -287,14 +289,14 @@ class Frame():
         return data_range, data_max
 
     def clipped_stats(self):
-        print("CLIPPING")
+        """Calculate sigma-clipped image statistics."""
         data = self.image.flatten()
         mean, median, stddev = np.mean(data), np.median(data), np.std(data)
         logger.debug("unclipped:\tmean=%.4f\tmedian=%.4f\tstddev=%.4f",
                      mean, median, stddev)
 
         mean, median, stddev = scs(data,
-                                   cenfunc='median', stdfunc='mad_std',
+                                   cenfunc="median", stdfunc="mad_std",
                                    sigma_upper=5, sigma_lower=3)
         logger.debug("clipped:\tmean=%.4f\tmedian=%.4f\tstddev=%.4f",
                      mean, median, stddev)
@@ -318,7 +320,8 @@ class Frame():
 
         if max_mode == "quantile":
             i_max = np.quantile(self.image, .995)
-        elif max_mode == "max":  # FIXME: if we normalize before, this will always be == 1.0
+        elif max_mode == "max":
+            # FIXME: if we normalize before, this will always be == 1.0
             i_max = np.nanmax(self.image)
         elif max_mode == "debug":
             i_max = .99998
@@ -332,7 +335,8 @@ class Frame():
         logger.debug("i_min=%.4f\t\ti_max=%.4f", i_min, i_max)
         return i_min, i_max
 
-    def stiff_d(self, stretch_function, gamma_lum=1.5, grey_level=.1, **kwargs):
+    def stiff_d(self, stretch_function, gamma_lum=1.5, grey_level=.1,
+                **kwargs):
         logger.info("stretching %s band", self.band.name)
         data_range, data_max = self.normalize()
 
@@ -471,8 +475,8 @@ class Picture():
             raise TypeError("Invalid type for band.")
 
         if band in self.bands:
-            err_msg = f"Picture already includes a Frame in \"{band.name}\" band."
-            raise BandExistsError(err_msg)
+            raise BandExistsError(("Picture already includes a Frame in "
+                                   "\"{band.name}\" band."))
 
         return band
 
@@ -526,7 +530,7 @@ class Picture():
     @classmethod
     def from_cube(cls, cube, bands=None):
         if not cube.ndim == 3:
-            raise TypeError("A \"cube\" must have exactly 3 (three) dimensions!")
+            raise TypeError("A \"cube\" must have exactly 3 dimensions!")
 
         if bands is None:
             bands = len(cube) * [Band("unknown")]
@@ -538,7 +542,8 @@ class Picture():
 
         if not len(bands) == len(cube):
             # HACK: change this to zip(..., strict=True) below in Python 3.10+
-            raise IndexError("Length of bands must equal number of images in cube.")
+            raise IndexError(("Length of bands in list must equal the number "
+                              "of images in the cube."))
 
         new_picture = cls()
 
@@ -549,18 +554,22 @@ class Picture():
 
     @classmethod
     def from_tesseract(cls, tesseract, bands=None):
+        """Generate individual pictures from 4D cube."""
         for cube in tesseract:
             yield cls.from_cube(cube, bands)
 
     @staticmethod
     def merge_tesseracts(tesseracts):
+        """Merge multiple 4D image cubes into a single one."""
         return np.hstack(list(tesseracts))
 
     @staticmethod
     def combine_into_tesseract(pictures):
+        """Combine multiple 3D picture cubes into one 4D cube."""
         return np.stack([picture.cube for picture in pictures])
 
     def stretch_frames(self, mode="auto-light", only_rgb=False, **kwargs):
+        """Perform stretching on frames."""
         if only_rgb:
             frames = self.rgb_channels
         else:
@@ -576,6 +585,7 @@ class Picture():
     def select_rgb_channels(self, bands, single=False):
         """
         Select existing frames to be used as channels for multi-colour image.
+
         Usually 3 channels are interpreted as RGB. Names of the frame bands
         given in `bands` must match the name of the respective frame's band.
         The order of bands is interprted as R, G and B in the case of 3 bands.
@@ -611,24 +621,32 @@ class Picture():
 
         frames_dict = dict(((f.band.name, f) for f in self.frames))
         copyfct = copy.copy if single else copy.deepcopy
-        self.rgb_channels = list(map(copyfct, (itemgetter(*bands)(frames_dict))))
+        self.rgb_channels = list(map(copyfct,
+                                     (itemgetter(*bands)(frames_dict))))
 
-        if all(channel.band.wavelength is not None for channel in self.rgb_channels):
+        if all(channel.band.wavelength is not None
+               for channel in self.rgb_channels):
             if not all(redder.band.wavelength >= bluer.band.wavelength
                        for redder, bluer
                        in zip(self.rgb_channels, self.rgb_channels[1:])):
-                raise UserWarning("Not all RGB channels are ordered by descending wavelength.")
+                raise UserWarning(("Not all RGB channels are ordered by "
+                                   "descending wavelength."))
 
         _chnames = [channel.band.name for channel in self.rgb_channels]
         logger.info("Successfully selected %i RGB channels: %s",
                     len(_chnames), ", ".join(map(str, _chnames)))
         return self.rgb_channels
 
-    def weightssss(self, weights):
+    def norm_by_weights(self, weights):
+        """Normalize channels by weights.
+
+        Currently only supports "auto" mode, using clipped median as weight.
+        """
         if weights is not None:
             if isinstance(weights, str):
                 if weights == "auto":
-                    weights = [1/frame.clipped_median for frame in self.rgb_channels]
+                    weights = [1/frame.clipped_median
+                               for frame in self.rgb_channels]
                 else:
                     raise ValueError("weights mode not understood")
 
@@ -636,6 +654,7 @@ class Picture():
                 channel.image *= weight
 
     def autoparam(self):
+        """Experimental automatic parameter estimation."""
         gamma = 2.25
         gamma_lum = 1.5
         alpha = 1.4
@@ -643,11 +662,16 @@ class Picture():
 
         self.ap = {"gma": False, "alph": False}
 
-        if not any((np.array([channel.clipped_median for channel in self.rgb_channels]) / np.mean([channel.clipped_median for channel in self.rgb_channels])) > 2.):
+        if not any((np.array([chnl.clipped_median
+                              for chnl in self.rgb_channels])
+                    / np.mean([chnl.clipped_median
+                               for chnl in self.rgb_channels])) > 2.):
             gamma_lum = 1.2
             self.ap["gma"] = True
 
-        if all(channel.clipped_median > 200. for channel in self.rgb_channels) and all(channel.clipped_stddev > 50. for channel in self.rgb_channels):
+        if (all(chnl.clipped_median > 200. for chnl in self.rgb_channels)
+            and
+            all(chnl.clipped_stddev > 50. for chnl in self.rgb_channels)):
             alpha = 1.2
             self.ap["alph"] = True
             print(self.name)
@@ -655,11 +679,13 @@ class Picture():
         return gamma, gamma_lum, alpha, grey_level
 
     def luminance(self):
+        """Luminance of RGB image."""
         sum_image = sum(frame.image for frame in self.rgb_channels)
         sum_image /= len(self.rgb_channels)
         return sum_image
 
     def stretch_luminosity(self, stretch_fkt_lum, gamma_lum, lum, **kwargs):
+        """Perform luminance stretching."""
         lum_stretched = stretch_fkt_lum(lum, gamma_lum, **kwargs)
         for channel in self.rgb_channels:
             channel.image /= lum
@@ -682,9 +708,9 @@ class Picture():
         None.
 
         Notes
-        -------
-        This method should also work for 2-channel images, but this is not tested.
-        This method should also work for 4-channel images, but this is not tested.
+        -----
+        Method should also work for 2-channel images, but this is not tested.
+        Method should also work for 4-channel images, but this is not tested.
 
         """
         # BUG: sometimes lost of zeros, maybe normalize before this?????
@@ -713,7 +739,28 @@ class Picture():
         # gamma_lum = kwargs.get("gamma_lum", gamma)
         self.stretch_luminosity(stretch_fkt_lum, gamma_lum, lum, **kwargs)
 
-    def equalize(self, mode="mean", offset=.5, supereq=False, norm=False):
+    def equalize(self, mode="mean", offset=.5, norm=True, supereq=False):
+        """
+        Perform a collection of processes to enhance the RGB image.
+
+        Parameters
+        ----------
+        mode : str, optional
+            "median" or "mean". The default is "mean".
+        offset : TYPE, optional
+            To be added before clipping negative values. The default is 0.5.
+        norm : bool, optional
+            Whether to perform normalisation in each channel.
+            The default is True.
+        supereq : bool, optional
+            Whether to perform additional crocc-channel equalisation. Currently
+            highly experimental feature. The default is False.
+
+        Returns
+        -------
+        None.
+
+        """
         means = []
         for channel in self.rgb_channels:
             channel.image /= np.nanmax(channel.image)
@@ -773,7 +820,7 @@ class Picture():
         if coord is not None:
             plt.subplot(projection=coord)
         plt.imshow(self.image, vmin=100., vmax=1000., origin="lower")
-        plt.grid(color='white', ls='dashed')
+        plt.grid(color="white", ls="dashed")
         plt.xlabel("RA")
         plt.ylabel("DE")
         plt.tight_layout()
@@ -867,7 +914,7 @@ class Picture():
         with Image.open(fname) as img:
             app = img.app["APP0"]
 
-        with open(fname, mode='rb') as file:
+        with open(fname, mode="rb") as file:
             binary = file.read()
 
         pos = binary.find(app) + len(app)
@@ -875,10 +922,23 @@ class Picture():
         bout += Picture._make_jpeg_comment_segment(hdr.tostring().encode())
         bout += binary[pos:]
 
-        with open(fname, mode='wb') as file:
+        with open(fname, mode="wb") as file:
             file.write(bout)
 
-    def save_pil(self, fname):
+    def save_pil(self, fname: str):
+        """
+        Save RGB image to specified file name using pillow.
+
+        Parameters
+        ----------
+        fname : str
+            Full file path and name.
+
+        Returns
+        -------
+        None.
+
+        """
         logger.info("Saving image as JPEG to %s", fname)
         rgb = self.get_rgb_cube(mode="0-255", order="xyc")
         # HACK: does this always produce correct orientation??
@@ -891,7 +951,7 @@ class Picture():
                 img.save(fname)
             except (KeyError, OSError):
                 logger.warning("Cannot save RGBA as JPEG, converting to RGB.")
-                img = img.convert('RGB')
+                img = img.convert("RGB")
                 img.save(fname)
             # img.save(fname, comment=hdr.tostring())
 

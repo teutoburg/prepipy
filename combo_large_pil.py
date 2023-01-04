@@ -70,12 +70,12 @@ def create_rgb_image(input_path, output_path, image_name):
             logger.info("RGB sat. adjusting after contrast and stretch.")
 
         if pic.is_bright:
-            logger.info("""Image is bright, performing additional color space
-                         stretching to equalize colors.""")
+            logger.info(("Image is bright, performing additional color space "
+                         "stretching to equalize colors."))
             pic.equalize("median", offset=.1, norm=True)
         else:
-            logger.warning(""""No equalisation or normalisation performed on
-                            image %s in %s!""",
+            logger.warning(("No equalisation or normalisation performed on "
+                            "image %s in %s!"),
                            pic.name, cols)
 
         if grey_mode != "normal":
