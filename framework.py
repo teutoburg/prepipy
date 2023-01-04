@@ -428,6 +428,11 @@ class Picture():
         return self.frames[0].coords
 
     @property
+    def image_size(self):
+        """Number of pixels per frame. Read-only property."""
+        return self.frames[0].image.size
+
+    @property
     def cube(self):
         """Stack images from all frames into one 3D cube."""
         return np.stack([frame.image for frame in self.frames])
@@ -453,7 +458,6 @@ class Picture():
             rgb *= 255.
             rgb = rgb.astype(np.uint8)
             return rgb
-
 
     @property
     def is_bright(self):
@@ -840,6 +844,11 @@ class Picture():
                 sout += "\r"
                 file.write(sout)
 
+    def _update_header(self):
+        hdr = self.frames[0].header
+        # TODO: properly do this ^^
+        hdr.update(AUTHOR="Fabian Haberhauer")
+
     @staticmethod
     def _make_jpeg_variable_segment(marker: int, payload: bytes) -> bytes:
         """Make a JPEG segment from the given payload."""
@@ -874,10 +883,9 @@ class Picture():
         rgb = self.get_rgb_cube(mode="0-255", order="xyc")
         # HACK: does this always produce correct orientation??
         rgb = np.flip(rgb, 0)
-        hdr = self.frames[0].header
-        # TODO: properly do this ^^
-        hdr.update(AUTHOR="Fabian Haberhauer")
-        Image.MAX_IMAGE_PIXELS = self.frames[0].image.size + 1
+        hdr = self._update_header()
+
+        Image.MAX_IMAGE_PIXELS = self.image_size + 1
         with Image.fromarray(rgb) as img:
             try:
                 img.save(fname)
@@ -886,4 +894,5 @@ class Picture():
                 img = img.convert('RGB')
                 img.save(fname)
             # img.save(fname, comment=hdr.tostring())
+
         self.save_hdr(fname, hdr)
