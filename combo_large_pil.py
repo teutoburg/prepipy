@@ -7,7 +7,6 @@ import gc
 import logging
 from logging.config import dictConfig
 from pathlib import Path
-from multiprocessing import Pool
 
 import numpy as np
 import yaml
@@ -40,7 +39,7 @@ def create_rgb_image(input_path, output_path, image_name):
     logger.info("Start RGB processing...")
     logger.info("****************************************")
 
-    with open("./config_single.yml", "r") as ymlfile:
+    with open("./config.yml", "r") as ymlfile:
         config = yaml.load(ymlfile, yaml.SafeLoader)
     with open("./bands.yml", "r") as ymlfile:
         bands_config = yaml.load(ymlfile, yaml.SafeLoader)
@@ -119,7 +118,7 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     logger = _logging_configurator()
     root = Path("D:/Nemesis/data/HOPS")
-    path = root/"HOPS_288"
+    path = root/"HOPS_99"
     imgpath = root/"RGBs"
     # root = Path("D:/Nemesis/data")
     # path = root/"stamps/LARGE/Orion"
@@ -128,7 +127,7 @@ if __name__ == "__main__":
     # target = "Hand"
     # target = "ONC"
     # target = "V883_Ori"
-    target = "HOPS_288"
+    target = "HOPS_99"
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
     create_rgb_image(path, imgpath, target)
