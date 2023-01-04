@@ -77,10 +77,10 @@ def create_rgb_image(input_path, output_path, image_name):
                 pic.equalize2("median", offset=.1, norm=True)
 
             if grey_mode != "normal":
-                logger.info("Using grey mode \"%s\".", grey_mode)
+                logger.info("Used grey mode \"%s\".", grey_mode)
                 fname = f"{pic.name}_img_{cols}_{grey_mode}.JPEG"
             else:
-                logger.info("Using normal grey mode.")
+                logger.info("Used normal grey mode.")
                 fname = f"{pic.name}_img_{cols}.JPEG"
             pic.save_pil(output_path/fname)
 

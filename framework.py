@@ -617,7 +617,7 @@ class Picture():
 
         _chnames = [channel.band.name for channel in self.rgb_channels]
         logger.info("Successfully selected %i RGB channels: %s",
-                     len(_chnames), ", ".join(map(str, _chnames)))
+                    len(_chnames), ", ".join(map(str, _chnames)))
         return self.rgb_channels
 
     def weightssss(self, weights):
