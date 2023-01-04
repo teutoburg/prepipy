@@ -59,19 +59,12 @@ def create_rgb_image(input_path, output_path, image_name):
             logger.info("Processing image %s in %s.", pic.name, cols)
             pic.select_rgb_channels(combo, single=(n_combo == 1))
 
-            if config["process"]["contrast"] == "before":
-                pic.contrast_stretch_channels()
-            # TODO: investigate which of these could be after general process
-
             grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
             grey_mode = config["process"]["grey_mode"]
             pic.stretch_frames("stiff-d", only_rgb=True,
                                stretch_function=Frame.stiff_stretch,
                                stiff_mode="user3",
                                grey_level=grey_values[grey_mode])
-
-            if config["process"]["contrast"] == "after":
-                pic.contrast_stretch_channels()
 
             if config["process"]["rgb_adjust"]:
                 pic.adjust_rgb(config["process"]["alpha"], _gma,

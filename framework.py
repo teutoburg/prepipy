@@ -720,16 +720,6 @@ class Picture():
         # gamma_lum = kwargs.get("gamma_lum", gamma)
         self.stretch_luminosity(stretch_fkt_lum, gamma_lum, lum, **kwargs)
 
-    def preprocess_frames(self, clip=10, nanmode="median"):
-        for frame in tqdm(self.frames, bar_format=TQDM_FMT):
-            frame.clip_and_nan(clip, nanmode)
-
-    def contrast_stretch_channels(self):
-        off = 0.
-        rng = 1. - 0.
-        for channel in self.rgb_channels:
-            channel.constrast_stretch(rng, off)
-
     def equalize2(self, mode="mean", offset=.5, supereq=False, contrast=False):
         means = []
         for channel in self.rgb_channels:

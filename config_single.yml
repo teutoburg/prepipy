@@ -1,7 +1,6 @@
 ---
 process:
   multiprocess: no
-  contrast: after # before or after (stretching)
   grey_mode: normal # normal or lessback or moreback
   rgb_adjust: no
   alpha: 1.
