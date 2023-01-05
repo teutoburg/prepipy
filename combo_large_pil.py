@@ -12,7 +12,7 @@ import numpy as np
 import yaml
 from tqdm import tqdm
 
-from framework import Picture, Frame, Band
+from framework import RGBPicture, Frame, Band
 
 TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 
@@ -22,7 +22,7 @@ def _gma(i, g):
 
 
 def create_picture(image_name, input_path, bands, n_bands, multi=False):
-    new_pic = Picture(name=image_name)
+    new_pic = RGBPicture(name=image_name)
     if multi:
         new_pic.add_fits_frames_mp(input_path, bands)
     else:

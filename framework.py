@@ -351,9 +351,6 @@ class Picture():
         self.frames = list()
         self.name = name
 
-        self.params = None
-        self.rgb_channels = None
-
     @property
     def bands(self):
         """List of all bands in the frames. Read-only property."""
@@ -381,33 +378,6 @@ class Picture():
     def cube(self):
         """Stack images from all frames into one 3D cube."""
         return np.stack([frame.image for frame in self.frames])
-
-    def get_rgb_cube(self, mode="0-1", order="cxy"):
-        """Stack images from RGB channels into one 3D cube, normalized to 1.
-
-        mode can be `0-1` or `0-255`.
-        order can be `cxy` or `xyc`.
-        """
-        rgb = np.stack([frame.image for frame in self.rgb_channels])
-        # rgb[rgb<0.] = 0.
-        rgb /= rgb.max()
-
-        # invert alpha channel if RGB(A)
-        if len(rgb) == 4:
-            rgb[3] = 1 - rgb[3]
-        if order == "xyc":
-            rgb = np.moveaxis(rgb, 0, -1)
-        if mode == "0-1":
-            return rgb
-        if mode == "0-255":
-            rgb *= 255.
-            rgb = rgb.astype(np.uint8)
-            return rgb
-
-    @property
-    def is_bright(self):
-        """Return True is any median of the RGB frames is >.2."""
-        return any(np.median(c.image) > .2 for c in self.rgb_channels)
 
     def _check_band(self, band):
         if isinstance(band, str):
@@ -538,19 +508,58 @@ class Picture():
         """Combine multiple 3D picture cubes into one 4D cube."""
         return np.stack([picture.cube for picture in pictures])
 
-    def stretch_frames(self, mode="auto-light", only_rgb=False, **kwargs):
+    def stretch_frames(self, mode="auto-light", **kwargs):
         """Perform stretching on frames."""
-        if only_rgb:
-            frames = self.rgb_channels
-        else:
-            frames = self.frames
-        for frame in frames:
+        for frame in self.frames:
             if mode == "auto-light":
                 frame.autostretch_light(**kwargs)
             elif mode == "stiff-d":
                 frame.stiff_d(**kwargs)
             else:
                 raise ValueError("stretch mode not understood")
+
+    def _update_header(self):
+        hdr = self.frames[0].header
+        # TODO: properly do this ^^
+        hdr.update(AUTHOR="Fabian Haberhauer")
+        return hdr
+
+
+class RGBPicture(Picture):
+    """Picture subclass for ccombining frames to colour image (RGB)."""
+
+    def __init__(self, name=None):
+        super().__init__(name)
+
+        self.params = None
+        self.rgb_channels = None
+
+    @property
+    def is_bright(self):
+        """Return True is any median of the RGB frames is >.2."""
+        return any(np.median(c.image) > .2 for c in self.rgb_channels)
+
+    def get_rgb_cube(self, mode="0-1", order="cxy"):
+        """Stack images from RGB channels into one 3D cube, normalized to 1.
+
+        mode can be `0-1` or `0-255`.
+        order can be `cxy` or `xyc`.
+        """
+        rgb = np.stack([frame.image for frame in self.rgb_channels])
+        # rgb[rgb<0.] = 0.
+        rgb /= rgb.max()
+
+        # invert alpha channel if RGB(A)
+        if len(rgb) == 4:
+            rgb[3] = 1 - rgb[3]
+        if order == "xyc":
+            rgb = np.moveaxis(rgb, 0, -1)
+        if mode == "0-1":
+            return rgb
+        if mode == "0-255":
+            rgb *= 255.
+            rgb = rgb.astype(np.uint8)
+            return rgb
 
     def select_rgb_channels(self, bands, single=False):
         """
@@ -624,6 +633,20 @@ class Picture():
 
             for channel, weight in zip(self.rgb_channels, weights):
                 channel.image *= weight
+
+    def stretch_frames(self, mode="auto-light", only_rgb=False, **kwargs):
+        """Perform stretching on frames."""
+        if only_rgb:
+            frames = self.rgb_channels
+        else:
+            frames = self.frames
+        for frame in frames:
+            if mode == "auto-light":
+                frame.autostretch_light(**kwargs)
+            elif mode == "stiff-d":
+                frame.stiff_d(**kwargs)
+            else:
+                raise ValueError("stretch mode not understood")
 
     def autoparam(self):
         """Experimental automatic parameter estimation."""
@@ -761,12 +784,6 @@ class Picture():
         b = (1. - y / cmyk_scale) * scale_factor
         return r, g, b
 
-    def _update_header(self):
-        hdr = self.frames[0].header
-        # TODO: properly do this ^^
-        hdr.update(AUTHOR="Fabian Haberhauer")
-        return hdr
-
     @staticmethod
     def _make_jpeg_variable_segment(marker: int, payload: bytes) -> bytes:
         """Make a JPEG segment from the given payload."""
@@ -775,7 +792,7 @@ class Picture():
     @staticmethod
     def _make_jpeg_comment_segment(comment: bytes) -> bytes:
         """Make a JPEG comment/COM segment."""
-        return Picture._make_jpeg_variable_segment(0xFFFE, comment)
+        return RGBPicture._make_jpeg_variable_segment(0xFFFE, comment)
 
     @staticmethod
     def save_hdr(fname, hdr):
@@ -791,7 +808,7 @@ class Picture():
 
         pos = binary.find(app) + len(app)
         bout = binary[:pos]
-        bout += Picture._make_jpeg_comment_segment(hdr.tostring().encode())
+        bout += RGBPicture._make_jpeg_comment_segment(hdr.tostring().encode())
         bout += binary[pos:]
 
         with open(fname, mode="wb") as file:
