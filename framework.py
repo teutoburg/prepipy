@@ -50,6 +50,8 @@ class FileTypeError(Error):
 
 @dataclass
 class Band():
+    """n/a."""
+
     name: str
     wavelength: float = None
     instrument: str = "unknown"
@@ -57,6 +59,7 @@ class Band():
 
     @classmethod
     def from_yaml_dict(cls, bands, use_bands=None):
+        """Create incstance from YAML dictionary entry (default factory)."""
         # parse shortened names to correct parameter names
         for band in bands.values():
             band["instrument"] = band.pop("inst")
@@ -96,26 +99,30 @@ class Frame():
 
     @classmethod
     def from_fits(cls, filename, band):
+        """Create instance from fits file."""
         with fits.open(filename) as file:
             return cls(file[0].data, band, file[0].header)
 
     @property
     def band(self):
-        """The pass-band in which the frame was taken. Read-only property."""
+        """Get pass-band in which the frame was taken. Read-only property."""
         return self._band
 
     @property
     def shape(self):
+        """Get shape of image array as pretty string."""
         return f"{self.image.shape[0]} x {self.image.shape[1]}"
 
-    def camera_aperture(self, center, radius):
+    def camera_aperture(self, center: tuple[int], radius: float) -> None:
         """
+        Remove vignetting effects.
+
         Set everything outside a defined radius around a defined center to
-        zero, to remove vignetting effects.
+        zero.
 
         Parameters
         ----------
-        center : tuple
+        center : 2-tuple of ints
             Center of the camera aperture. Not necessarily the actual center
             of the image.
         radius : float
@@ -196,6 +203,7 @@ class Frame():
             raise ValueError("nanmode not understood")
 
     def display_3d(self):
+        """Show frame as 3D plot (z=intensity)."""
         xx, yy = np.mgrid[0:self.image.shape[0], 0:self.image.shape[1]]
         fig = plt.figure()
         ax = fig.gca(projection="3d")
@@ -245,8 +253,8 @@ class Frame():
         self.clipped_stddev = stddev
         return mean, median, stddev
 
-    def min_inten(self, gamma_lum, grey_level=.3,
-                  sky_mode="median", max_mode="quantile", **kwargs):
+    def _min_inten(self, gamma_lum, grey_level=.3,
+                   sky_mode="median", max_mode="quantile", **kwargs):
         if sky_mode == "quantile":
             i_sky = np.quantile(self.image, .8)
         elif sky_mode == "median":
@@ -278,12 +286,13 @@ class Frame():
 
     def stiff_d(self, stretch_function, gamma_lum=1.5, grey_level=.1,
                 **kwargs):
+        """Stretch frame based on modified STIFF algorithm."""
         logger.info("stretching %s band", self.band.name)
         data_range, data_max = self.normalize()
 
         # gamma_lum = self.auto_gma()
 
-        i_min, i_max = self.min_inten(gamma_lum, grey_level, **kwargs)
+        i_min, i_max = self._min_inten(gamma_lum, grey_level, **kwargs)
         self.sky_mask = self.image < i_min
         self.image = self.image.clip(i_min, i_max)
 
@@ -296,15 +305,18 @@ class Frame():
 
     @staticmethod
     def stiff_stretch(image, stiff_mode="power-law", **kwargs):
+        """Stretch frame based on STIFF algorithm."""
         def_kwargs = {"power-law": {"gamma": 2.2, "a": 1., "b": 0., "i_t": 0.},
-                      "srgb": {"gamma": 2.4, "a": 12.92, "b": .055, "i_t": .00304},
-                      "rec709": {"gamma": 2.22, "a": 4.5, "b": .099, "i_t": .018},
+                      "srgb":
+                          {"gamma": 2.4, "a": 12.92, "b": .055, "i_t": .00304},
+                      "rec709":
+                          {"gamma": 2.22, "a": 4.5, "b": .099, "i_t": .018},
                       "user": {"gamma": 2.25, "a": 3., "b": .08, "i_t": .003},
                       "user2": {"gamma": 2.25, "a": 3., "b": .1, "i_t": .8},
                       "user3": {"gamma": 2.25, "a": 3., "b": .05, "i_t": .001},
                       "user4": {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003}}
-        if not stiff_mode in def_kwargs:
-            raise KeyError(f"Mode must be either of {list(def_kwargs.keys())}.")
+        if stiff_mode not in def_kwargs:
+            raise KeyError(f"Mode must be one of {list(def_kwargs.keys())}.")
 
         kwargs = def_kwargs[stiff_mode] | kwargs
 
@@ -318,6 +330,7 @@ class Frame():
 
     @staticmethod
     def autostretch_light(image, **kwargs):
+        """Stretch frame based on autostretch algorithm."""
         # logger.info("Begin autostretch for \"%s\" band", self.band.name)
         # maximum = self.normalize()
         # logger.info("maximum:\t%s", maximum)
@@ -337,6 +350,7 @@ class Frame():
         return image_s
 
     def auto_gma(self):
+        """Find gamma based on exponential function. Highly experimental."""
         return np.exp((1 - (self.clipped_median + self.clipped_stddev)) / 2)
 
 
@@ -354,7 +368,7 @@ class Picture():
 
     @property
     def image(self):
-        """Combined image of all frames. Read-only property."""
+        """Get combined image of all frames. Read-only property."""
         if not self.frames:
             raise ValueError("No frame loaded.")
         # HACK: actually combine all images!
@@ -367,7 +381,7 @@ class Picture():
 
     @property
     def image_size(self):
-        """Number of pixels per frame. Read-only property."""
+        """Get number of pixels per frame. Read-only property."""
         return self.frames[0].image.size
 
     @property
@@ -415,6 +429,7 @@ class Picture():
         return band
 
     def add_frame(self, image, band, header=None):
+        """Add new frame to Picture using image array and band information."""
         band = self._check_band(band)
         new_frame = Frame(image, band, header=None)
         self.frames.append(new_frame)
@@ -743,6 +758,7 @@ class Picture():
 
     @staticmethod
     def cmyk_to_rgb(c, m, y, k, cmyk_scale, rgb_scale=255):
+        """Convert CMYK to RGB"""
         cmyk_scale = float(cmyk_scale)
         r = rgb_scale * (1. - c / cmyk_scale) * (1. - k / cmyk_scale)
         g = rgb_scale * (1. - m / cmyk_scale) * (1. - k / cmyk_scale)
@@ -767,6 +783,7 @@ class Picture():
 
     @staticmethod
     def save_hdr(fname, hdr):
+        """Save header as JPEG comment. Redundant with pillow 9.4.x."""
         # TODO: log all of this crape
         logger.debug("saving header:")
         logger.debug(hdr.tostring(sep="\n"))
