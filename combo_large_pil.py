@@ -42,26 +42,12 @@ def get_bands(fname, config):
 
 
 def create_rgb_image(input_path, output_path, image_name,
-                     config_name=None, bands_name=None):
-    logger.info("****************************************")
-    logger.info("Start RGB processing...")
-    logger.info("****************************************")
-
-    if config_name is None:
-        config_name = "./config.yml"
-    with open(config_name, "r") as ymlfile:
-        config = yaml.load(ymlfile, yaml.SafeLoader)
-
-    if bands_name is None:
-        bands_name = "./bands.yml"
-    bands = get_bands(bands_name, config)
-    channel_combos = config["combinations"]
-    n_combos = len(channel_combos)
-
+                     config, bands, channel_combos):
     pic = create_picture(image_name, input_path, bands,
                          len(config["use_bands"]),
                          config["process"]["multiprocess"])
 
+    n_combos = len(channel_combos)
     for combo in tqdm(channel_combos, total=n_combos, bar_format=TQDM_FMT):
         cols = "".join(combo)
         logger.info("Processing image %s in %s.", pic.name, cols)
@@ -96,10 +82,27 @@ def create_rgb_image(input_path, output_path, image_name,
             fname = f"{pic.name}_img_{cols}.JPEG"
         pic.save_pil(output_path/fname)
         logger.info("Image %s in %s done.", pic.name, cols)
-
     logger.info("Image %s fully completed.", pic.name)
-    del pic
-    gc.collect()
+
+
+def setup_rgb(input_path, output_path, image_name,
+              config_name=None, bands_name=None):
+    logger.info("****************************************")
+    logger.info("Start RGB processing...")
+    logger.info("****************************************")
+
+    if config_name is None:
+        config_name = "./config.yml"
+    with open(config_name, "r") as ymlfile:
+        config = yaml.load(ymlfile, yaml.SafeLoader)
+
+    if bands_name is None:
+        bands_name = "./bands.yml"
+    bands = get_bands(bands_name, config)
+    channel_combos = config["combinations"]
+
+    create_rgb_image(input_path, output_path, image_name, config, bands,
+                     channel_combos)
 
     logger.info("****************************************")
     logger.info("RGB processing done")
@@ -135,7 +138,7 @@ if __name__ == "__main__":
     target = "HOPS_99"
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
-    create_rgb_image(path, imgpath, target)
+    setup_rgb(path, imgpath, target)
 
     gc.collect()
     sys.exit(0)
