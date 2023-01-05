@@ -140,5 +140,15 @@ if __name__ == "__main__":
 
     setup_rgb(path, imgpath, target)
 
+    # root = Path("D:/Nemesis/data/perseus")
+    # path = root/"stamps/"
+
+    # for i in range(1, 4):
+    #     target = f"IC 348-{i}"
+    #     imgpath = root/"RGBs"/target
+    #     imgpath.mkdir(parents=True, exist_ok=True)
+    
+    #     setup_rgb(path, imgpath, target)
+
     gc.collect()
     sys.exit(0)
