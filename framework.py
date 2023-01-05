@@ -31,21 +31,13 @@ logger = logging.getLogger(__name__)
 class Error(Exception):
     """Base class for exeptions in this module."""
 
-    pass
-
 
 class BandExistsError(Error):
     """A Frame in this band already exists in this picture."""
 
-    # TODO: investigate msg in here and band name as parameter...
-    # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
-    pass
-
 
 class FileTypeError(Error):
     """The given file has the wrong or an unknown type."""
-
-    pass
 
 
 @dataclass
@@ -70,7 +62,7 @@ class Band():
         if use_bands is not None:
             bands = itemgetter(*use_bands)(bands)
         else:
-            bands = tuple(band.values())
+            bands = tuple(bands.values())
 
         # in case we ever need the names as well...
         # for name, band in bands.items():
@@ -90,6 +82,7 @@ class Frame():
         self.clip_and_nan(**kwargs)
 
         self.coords = wcs.WCS(self.header)
+        self.sky_mask = None
 
     def __repr__(self):
         return str(self)  # DEBUG only
@@ -208,7 +201,7 @@ class Frame():
         fig = plt.figure()
         axis = fig.gca(projection="3d")
         axis.plot_surface(x_grid, y_grid, self.image, rstride=1, cstride=1,
-                        cmap="viridis", linewidth=0)
+                          cmap="viridis", linewidth=0)
         axis.set_title(self.band.name)
         plt.show()
 
@@ -231,10 +224,6 @@ class Frame():
 
         self.image = self.image * new_range + new_offset
 
-        self.data_range = data_range
-        self.data_min = data_min
-        self.data_max = data_max
-
         return data_range, data_max
 
     def clipped_stats(self):
@@ -249,8 +238,6 @@ class Frame():
                                    sigma_upper=5, sigma_lower=3)
         logger.debug("clipped:\tmean=%.4f\tmedian=%.4f\tstddev=%.4f",
                      mean, median, stddev)
-        self.clipped_median = median
-        self.clipped_stddev = stddev
         return mean, median, stddev
 
     def _min_inten(self, gamma_lum, grey_level=.3,
@@ -260,8 +247,8 @@ class Frame():
         elif sky_mode == "median":
             i_sky = np.nanmedian(self.image)
         elif sky_mode == "clipmedian":
-            self.clipped_stats()
-            i_sky = self.clipped_median
+            _, clp_median, _ = self.clipped_stats()
+            i_sky = clp_median
         elif sky_mode == "debug":
             i_sky = .01
         else:
@@ -288,7 +275,7 @@ class Frame():
                 **kwargs):
         """Stretch frame based on modified STIFF algorithm."""
         logger.info("stretching %s band", self.band.name)
-        data_range, data_max = self.normalize()
+        data_range, _ = self.normalize()
 
         # gamma_lum = self.auto_gma()
 
@@ -353,7 +340,8 @@ class Frame():
 
     def auto_gma(self):
         """Find gamma based on exponential function. Highly experimental."""
-        return np.exp((1 - (self.clipped_median + self.clipped_stddev)) / 2)
+        clp_mean, _, clp_stddev = self.clipped_stats()
+        return np.exp((1 - (clp_mean + clp_stddev)) / 2)
 
 
 class Picture():
@@ -362,6 +350,9 @@ class Picture():
     def __init__(self, name=None):
         self.frames = list()
         self.name = name
+
+        self.params = None
+        self.rgb_channels = None
 
     @property
     def bands(self):
@@ -433,7 +424,7 @@ class Picture():
     def add_frame(self, image, band, header=None):
         """Add new frame to Picture using image array and band information."""
         band = self._check_band(band)
-        new_frame = Frame(image, band, header=None)
+        new_frame = Frame(image, band, header)
         self.frames.append(new_frame)
         return new_frame
 
@@ -624,8 +615,10 @@ class Picture():
         if weights is not None:
             if isinstance(weights, str):
                 if weights == "auto":
-                    weights = [1/frame.clipped_median
-                               for frame in self.rgb_channels]
+                    clipped_stats = [chnl.clipped_stats()
+                                     for chnl in self.rgb_channels]
+                    _, clp_medians, _ = zip(*clipped_stats)
+                    weights = [1/median for median in clp_medians]
                 else:
                     raise ValueError("weights mode not understood")
 
@@ -641,16 +634,16 @@ class Picture():
 
         self.params = {"gma": False, "alph": False}
 
-        if not any((np.array([chnl.clipped_median
-                              for chnl in self.rgb_channels])
-                    / np.mean([chnl.clipped_median
-                               for chnl in self.rgb_channels])) > 2.):
+        clipped_stats = [chnl.clipped_stats() for chnl in self.rgb_channels]
+        _, clp_medians, clp_stddevs = zip(*clipped_stats)
+
+        if not any((np.array(clp_medians) / np.mean(clp_medians)) > 2.):
             gamma_lum = 1.2
             self.params["gma"] = True
 
-        if (all(chnl.clipped_median > 200. for chnl in self.rgb_channels)
+        if (all(median > 200. for median in clp_medians)
             and
-            all(chnl.clipped_stddev > 50. for chnl in self.rgb_channels)):
+            all(stddev > 50. for stddev in clp_stddevs)):
             alpha = 1.2
             self.params["alph"] = True
             print(self.name)
