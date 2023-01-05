@@ -204,12 +204,12 @@ class Frame():
 
     def display_3d(self):
         """Show frame as 3D plot (z=intensity)."""
-        xx, yy = np.mgrid[0:self.image.shape[0], 0:self.image.shape[1]]
+        x_grid, y_grid = np.mgrid[0:self.image.shape[0], 0:self.image.shape[1]]
         fig = plt.figure()
-        ax = fig.gca(projection="3d")
-        ax.plot_surface(xx, yy, self.image, rstride=1, cstride=1,
+        axis = fig.gca(projection="3d")
+        axis.plot_surface(x_grid, y_grid, self.image, rstride=1, cstride=1,
                         cmap="viridis", linewidth=0)
-        ax.set_title(self.band.name)
+        axis.set_title(self.band.name)
         plt.show()
 
     def normalize(self, new_range=1., new_offset=0.):
@@ -323,9 +323,10 @@ class Frame():
         # kwargs["gamma"] = self.auto_gma()
         assert kwargs['gamma'] == 2.25  # HACK: DEBUG ONLY
 
-        b, i_t = kwargs["b"], kwargs["i_t"]
+        b_slope, i_t = kwargs["b"], kwargs["i_t"]
         image_s = kwargs["a"] * image * (image < i_t)
-        image_s += (1+b) * image**(1/kwargs["gamma"]) - b * (image >= i_t)
+        image_s += (1 + b_slope) * image**(1/kwargs["gamma"])
+        image_s -= b_slope * (image >= i_t)
         return image_s
 
     @staticmethod
@@ -335,15 +336,16 @@ class Frame():
         # maximum = self.normalize()
         # logger.info("maximum:\t%s", maximum)
 
-        mu = np.nanmean(image)
+        mean = np.nanmean(image)
         sigma = np.nanstd(image)
-        logger.info("$\mu$:\t%s", mu)
+        logger.info("$\mu$:\t%s", mean)
         logger.info("$\sigma$:\t%s", sigma)
 
-        gamma = np.exp((1 - (mu + sigma)) / 2)
+        gamma = np.exp((1 - (mean + sigma)) / 2)
         logger.info("$\gamma$:\t%s", gamma)
 
-        k = np.power(image, gamma) + (1 - np.power(image, gamma)) * (mu**gamma)
+        k = np.power(image, gamma) + ((1 - np.power(image, gamma))
+                                      * (mean**gamma))
         image_s = np.power(image, gamma) / k
 
         # image_s *= maximum
@@ -473,8 +475,8 @@ class Picture():
         """Add frames from fits files for each band, using multiprocessing."""
         args = [(input_path/f"{self.name}_{band.name}.fits", band)
                 for band in bands]
-        with Pool(len(args)) as p:
-            framelist = p.starmap(Frame.from_fits, args)
+        with Pool(len(args)) as pool:
+            framelist = pool.starmap(Frame.from_fits, args)
         self.frames = framelist
 
     @classmethod
@@ -637,20 +639,20 @@ class Picture():
         alpha = 1.4
         grey_level = .3
 
-        self.ap = {"gma": False, "alph": False}
+        self.params = {"gma": False, "alph": False}
 
         if not any((np.array([chnl.clipped_median
                               for chnl in self.rgb_channels])
                     / np.mean([chnl.clipped_median
                                for chnl in self.rgb_channels])) > 2.):
             gamma_lum = 1.2
-            self.ap["gma"] = True
+            self.params["gma"] = True
 
         if (all(chnl.clipped_median > 200. for chnl in self.rgb_channels)
             and
             all(chnl.clipped_stddev > 50. for chnl in self.rgb_channels)):
             alpha = 1.2
-            self.ap["alph"] = True
+            self.params["alph"] = True
             print(self.name)
 
         return gamma, gamma_lum, alpha, grey_level
@@ -752,17 +754,18 @@ class Picture():
                 channel.normalize()
         if supereq:
             maxmean = max(means)
-            for channel, m in zip(self.rgb_channels, means):
-                eq = min(maxmean/m, 10.)
-                channel.image *= eq
+            for channel, mean in zip(self.rgb_channels, means):
+                equal = min(maxmean/mean, 10.)
+                channel.image *= equal
 
     @staticmethod
     def cmyk_to_rgb(c, m, y, k, cmyk_scale, rgb_scale=255):
-        """Convert CMYK to RGB"""
+        """Convert CMYK to RGB."""
         cmyk_scale = float(cmyk_scale)
-        r = rgb_scale * (1. - c / cmyk_scale) * (1. - k / cmyk_scale)
-        g = rgb_scale * (1. - m / cmyk_scale) * (1. - k / cmyk_scale)
-        b = rgb_scale * (1. - y / cmyk_scale) * (1. - k / cmyk_scale)
+        scale_factor = rgb_scale * (1. - k / cmyk_scale)
+        r = (1. - c / cmyk_scale) * scale_factor
+        g = (1. - m / cmyk_scale) * scale_factor
+        b = (1. - y / cmyk_scale) * scale_factor
         return r, g, b
 
     def _update_header(self):
