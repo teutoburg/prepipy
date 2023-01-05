@@ -34,17 +34,27 @@ def create_picture(image_name, input_path, bands, n_bands, multi=False):
     return new_pic
 
 
-def create_rgb_image(input_path, output_path, image_name):
+def get_bands(fname, config):
+    with open(fname, "r") as ymlfile:
+        bands_config = yaml.load(ymlfile, yaml.SafeLoader)
+    bands = Band.from_yaml_dict(bands_config, config["use_bands"])
+    return bands
+
+
+def create_rgb_image(input_path, output_path, image_name,
+                     config_name=None, bands_name=None):
     logger.info("****************************************")
     logger.info("Start RGB processing...")
     logger.info("****************************************")
 
-    with open("./config.yml", "r") as ymlfile:
+    if config_name is None:
+        config_name = "./config.yml"
+    with open(config_name, "r") as ymlfile:
         config = yaml.load(ymlfile, yaml.SafeLoader)
-    with open("./bands.yml", "r") as ymlfile:
-        bands_config = yaml.load(ymlfile, yaml.SafeLoader)
 
-    bands = Band.from_yaml_dict(bands_config, config["use_bands"])
+    if bands_name is None:
+        bands_name = "./bands.yml"
+    bands = get_bands(bands_name, config)
     channel_combos = config["combinations"]
     n_combos = len(channel_combos)
 
