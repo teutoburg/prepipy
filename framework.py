@@ -521,6 +521,7 @@ class Picture():
         return new_frame
 
     def add_fits_frames_mp(self, input_path, bands):
+        """Add frames from fits files for each band, using multiprocessing."""
         args = [(input_path/f"{self.name}_{band.name}.fits", band)
                 for band in bands]
         with Pool(len(args)) as p:
@@ -529,6 +530,33 @@ class Picture():
 
     @classmethod
     def from_cube(cls, cube, bands=None):
+        """
+        Create Picture instance from 3D array (data cube) and list of bands.
+
+        Parameters
+        ----------
+        cube : array_like, shape (N, M, K)
+            Data cube (3D array) containing image data. Shape is interpreted as
+            N images of dimension M x K.
+        bands : iterable of Band objects or str of length N, optional
+            Any iterable containing information about the bands. Bands can be
+            given as Band objects or simply str. Length of the iterable must
+            match number of images in `cube` (N). If None, bands will be marked
+            "unknown". The default is None.
+
+        Raises
+        ------
+        TypeError
+            Raised if data type of `bands` is invalid.
+        IndexError
+            Raised if ``len(bands) != len(cube)``.
+
+        Returns
+        -------
+        new_picture : Picture
+            New instance of Picture including the created frames.
+
+        """
         if not cube.ndim == 3:
             raise TypeError("A \"cube\" must have exactly 3 dimensions!")
 
