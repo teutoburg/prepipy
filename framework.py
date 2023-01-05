@@ -404,14 +404,7 @@ class Picture():
 
     def __init__(self, name=None):
         self.frames = list()
-        self.stars = list()
         self.name = name
-
-    @property
-    def num_stars(self):
-        """Number of fitted, identified and cross-matched stars.
-        Read-only property."""
-        return len(self.stars)
 
     @property
     def bands(self):
@@ -814,6 +807,85 @@ class Picture():
         b = rgb_scale * (1. - y / cmyk_scale) * (1. - k / cmyk_scale)
         return r, g, b
 
+    def _update_header(self):
+        hdr = self.frames[0].header
+        # TODO: properly do this ^^
+        hdr.update(AUTHOR="Fabian Haberhauer")
+
+    @staticmethod
+    def _make_jpeg_variable_segment(marker: int, payload: bytes) -> bytes:
+        """Make a JPEG segment from the given payload."""
+        return struct.pack('>HH', marker, 2 + len(payload)) + payload
+
+    @staticmethod
+    def _make_jpeg_comment_segment(comment: bytes) -> bytes:
+        """Make a JPEG comment/COM segment."""
+        return Picture._make_jpeg_variable_segment(0xFFFE, comment)
+
+    @staticmethod
+    def save_hdr(fname, hdr):
+        # TODO: log all of this crape
+        logger.debug("saving header:")
+        logger.debug(hdr.tostring(sep="\n"))
+        with Image.open(fname) as img:
+            app = img.app["APP0"]
+
+        with open(fname, mode="rb") as file:
+            binary = file.read()
+
+        pos = binary.find(app) + len(app)
+        bout = binary[:pos]
+        bout += Picture._make_jpeg_comment_segment(hdr.tostring().encode())
+        bout += binary[pos:]
+
+        with open(fname, mode="wb") as file:
+            file.write(bout)
+
+    def save_pil(self, fname: str):
+        """
+        Save RGB image to specified file name using pillow.
+
+        Parameters
+        ----------
+        fname : str
+            Full file path and name.
+
+        Returns
+        -------
+        None.
+
+        """
+        logger.info("Saving image as JPEG to %s", fname)
+        rgb = self.get_rgb_cube(mode="0-255", order="xyc")
+        # HACK: does this always produce correct orientation??
+        rgb = np.flip(rgb, 0)
+        hdr = self._update_header()
+
+        Image.MAX_IMAGE_PIXELS = self.image_size + 1
+        with Image.fromarray(rgb) as img:
+            try:
+                img.save(fname)
+            except (KeyError, OSError):
+                logger.warning("Cannot save RGBA as JPEG, converting to RGB.")
+                img = img.convert("RGB")
+                img.save(fname)
+            # img.save(fname, comment=hdr.tostring())
+
+        self.save_hdr(fname, hdr)
+
+class SourcesPicture(Picture):
+    """n/a."""
+
+    def __init__(self, name=None):
+        super().__init__(name)
+        self.stars = list()
+
+    @property
+    def num_stars(self):
+        """Number of fitted, identified and cross-matched stars.
+        Read-only property."""
+        return len(self.stars)
+
     def combine_starlists(self):
         """Combine star lists of all frames to a master list for the picture."""
         def match(star_list_1, star_list_2):
@@ -918,69 +990,3 @@ class Picture():
                         sout += f"\t{np.nan}\t{np.nan}"
                 sout += "\r"
                 file.write(sout)
-
-    def _update_header(self):
-        hdr = self.frames[0].header
-        # TODO: properly do this ^^
-        hdr.update(AUTHOR="Fabian Haberhauer")
-
-    @staticmethod
-    def _make_jpeg_variable_segment(marker: int, payload: bytes) -> bytes:
-        """Make a JPEG segment from the given payload."""
-        return struct.pack('>HH', marker, 2 + len(payload)) + payload
-
-    @staticmethod
-    def _make_jpeg_comment_segment(comment: bytes) -> bytes:
-        """Make a JPEG comment/COM segment."""
-        return Picture._make_jpeg_variable_segment(0xFFFE, comment)
-
-    @staticmethod
-    def save_hdr(fname, hdr):
-        # TODO: log all of this crape
-        logger.debug("saving header:")
-        logger.debug(hdr.tostring(sep="\n"))
-        with Image.open(fname) as img:
-            app = img.app["APP0"]
-
-        with open(fname, mode="rb") as file:
-            binary = file.read()
-
-        pos = binary.find(app) + len(app)
-        bout = binary[:pos]
-        bout += Picture._make_jpeg_comment_segment(hdr.tostring().encode())
-        bout += binary[pos:]
-
-        with open(fname, mode="wb") as file:
-            file.write(bout)
-
-    def save_pil(self, fname: str):
-        """
-        Save RGB image to specified file name using pillow.
-
-        Parameters
-        ----------
-        fname : str
-            Full file path and name.
-
-        Returns
-        -------
-        None.
-
-        """
-        logger.info("Saving image as JPEG to %s", fname)
-        rgb = self.get_rgb_cube(mode="0-255", order="xyc")
-        # HACK: does this always produce correct orientation??
-        rgb = np.flip(rgb, 0)
-        hdr = self._update_header()
-
-        Image.MAX_IMAGE_PIXELS = self.image_size + 1
-        with Image.fromarray(rgb) as img:
-            try:
-                img.save(fname)
-            except (KeyError, OSError):
-                logger.warning("Cannot save RGBA as JPEG, converting to RGB.")
-                img = img.convert("RGB")
-                img.save(fname)
-            # img.save(fname, comment=hdr.tostring())
-
-        self.save_hdr(fname, hdr)
