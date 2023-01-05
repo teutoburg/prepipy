@@ -41,14 +41,18 @@ def main():
 
 
 def _logging_configurator():
+    main_logger = logging.getLogger("main")
     try:
         with open("./log/logging_config.yml", "r") as ymlfile:
             dictConfig(yaml.load(ymlfile, yaml.SafeLoader))
     except FileNotFoundError as err:
         logging.error(err)
-        logging.warning("Fallback to basic logging config.")
         logging.basicConfig()
-        logging.getLogger().setLevel(logging.INFO)
+        logger.setLevel(logging.INFO)
+    return main_logger
+
+
+logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
