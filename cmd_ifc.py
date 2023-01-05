@@ -5,7 +5,7 @@ from logging.config import dictConfig
 import yaml
 from pathlib import Path
 
-from combo_large_pil import create_rgb_image
+from combo_large_pil import setup_rgb_single
 
 
 def main():
@@ -29,6 +29,16 @@ def main():
                         help='''The file path where the combined images will
                         be saved to. If omitted, images are dumped back into
                         the input folder.''')
+    parser.add_argument('-c', '--config-file', nargs=1,
+                        type=str,
+                        help='''The name of the main config file to be used.
+                        If omitted, the code will look for a file named
+                        "config.yml" in the main package folder.''')
+    parser.add_argument('-b', '--bands-file', nargs=1,
+                        type=str,
+                        help='''The name of the band config file to be used.
+                        If omitted, the code will look for a file named
+                        "bands.yml" in the main package folder.''')
     args = parser.parse_args()
     input_path = Path(args.input_path[0])
     if args.output_path is not None:
@@ -36,8 +46,8 @@ def main():
     else:
         logging.warning("No output path specified, dumping into input folder.")
         output_path = input_path
-    image_name = args.image_name[0]
-    create_rgb_image(input_path, output_path, image_name)
+    setup_rgb_single(input_path, output_path, args.image_name[0],
+                     args.config_file[0], args.bands_file[0])
 
 
 def _logging_configurator():
