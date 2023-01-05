@@ -741,6 +741,7 @@ class Picture():
                 eq = min(maxmean/m, 10.)
                 channel.image *= eq
 
+    @staticmethod
     def cmyk_to_rgb(c, m, y, k, cmyk_scale, rgb_scale=255):
         cmyk_scale = float(cmyk_scale)
         r = rgb_scale * (1. - c / cmyk_scale) * (1. - k / cmyk_scale)
@@ -752,6 +753,7 @@ class Picture():
         hdr = self.frames[0].header
         # TODO: properly do this ^^
         hdr.update(AUTHOR="Fabian Haberhauer")
+        return hdr
 
     @staticmethod
     def _make_jpeg_variable_segment(marker: int, payload: bytes) -> bytes:
