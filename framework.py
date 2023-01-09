@@ -575,14 +575,23 @@ class RGBPicture(Picture):
         # invert alpha channel if RGB(A)
         if len(rgb) == 4:
             rgb[3] = 1 - rgb[3]
-        if order == "xyc":
+
+        if order == "cxy":
+            pass
+        elif order == "xyc":
             rgb = np.moveaxis(rgb, 0, -1)
+        else:
+            raise ValueError("order not understood")
+
         if mode == "0-1":
-            return rgb
-        if mode == "0-255":
+            pass
+        elif mode == "0-255":
             rgb *= 255.
             rgb = rgb.astype(np.uint8)
-            return rgb
+        else:
+            raise ValueError("mode not understood")
+
+        return rgb
 
     def select_rgb_channels(self, bands, single=False):
         """
