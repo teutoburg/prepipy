@@ -23,6 +23,7 @@ from astropy import wcs
 from astropy.stats import sigma_clipped_stats as scs
 
 from PIL import Image
+from tqdm import tqdm
 
 TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 logger = logging.getLogger(__name__)
@@ -358,17 +359,38 @@ class Picture():
         return [frame.band for frame in self.frames]
 
     @property
-    def image(self):
-        """Get combined image of all frames. Read-only property."""
+    def primary_frame(self):
+        """Get the first frame from the frames list. Read-only property."""
         if not self.frames:
             raise ValueError("No frame loaded.")
+        return self.frames[0]
+
+    @property
+    def image(self):
+        """Get combined image of all frames. Read-only property."""
         # HACK: actually combine all images!
-        return self.frames[0].image
+        return self.primary_frame.image
 
     @property
     def coords(self):
-        """WCS coordinates of the first frame."""
-        return self.frames[0].coords
+        """WCS coordinates of the first frame. Read-only property."""
+        return self.primary_frame.coords
+
+    @property
+    def center(self):
+        """Pixel coordinates of center of first frame. Read-only property."""
+        return [sh//2 for sh in self.image.shape]
+
+    @property
+    def center_coords(self):
+        """WCS coordinates of the center of first frame. Read-only property."""
+        return self.coords.pixel_to_world(*self.center)
+
+    @property
+    def center_coords_str(self):
+        """Get string conversion of center coords. Read-only property."""
+        cen = self.center_coords
+        return cen.to_string("hmsdms", sep=" ", precision=2)
 
     @property
     def image_size(self):
@@ -377,7 +399,7 @@ class Picture():
 
     @property
     def cube(self):
-        """Stack images from all frames into one 3D cube."""
+        """Stack images from all frames in one 3D cube. Read-only property."""
         return np.stack([frame.image for frame in self.frames])
 
     def _check_band(self, band):
@@ -798,6 +820,10 @@ class RGBPicture(Picture):
         b = (1. - y / cmyk_scale) * scale_factor
         return r, g, b
 
+
+class JPEGPicture(RGBPicture):
+    """RGBPicture subclass for single image in JPEG format using Pillow."""
+
     @staticmethod
     def _make_jpeg_variable_segment(marker: int, payload: bytes) -> bytes:
         """Make a JPEG segment from the given payload."""
@@ -806,7 +832,7 @@ class RGBPicture(Picture):
     @staticmethod
     def _make_jpeg_comment_segment(comment: bytes) -> bytes:
         """Make a JPEG comment/COM segment."""
-        return RGBPicture._make_jpeg_variable_segment(0xFFFE, comment)
+        return JPEGPicture._make_jpeg_variable_segment(0xFFFE, comment)
 
     @staticmethod
     def save_hdr(fname, hdr):
@@ -822,7 +848,7 @@ class RGBPicture(Picture):
 
         pos = binary.find(app) + len(app)
         bout = binary[:pos]
-        bout += RGBPicture._make_jpeg_comment_segment(hdr.tostring().encode())
+        bout += JPEGPicture._make_jpeg_comment_segment(hdr.tostring().encode())
         bout += binary[pos:]
 
         with open(fname, mode="wb") as file:
@@ -859,3 +885,100 @@ class RGBPicture(Picture):
             # img.save(fname, comment=hdr.tostring())
 
         self.save_hdr(fname, hdr)
+
+
+class MPLPicture(RGBPicture):
+    """RGBPicture subclass for collage of one or more RGB combinations.
+
+    Additional information can be added to the collage, which is created using
+    Matplotlib and saved in pdf format.
+    """
+
+    padding = {1: 5, 2: 5, 4: 4}
+
+    @property
+    def title(self):
+        """Get string-formatted name of Picture."""
+        return f"Source ID: {self.name}"
+
+    def _add_histo(self, axis):
+        cube = self.get_rgb_cube(order="cxy")
+        axis.hist([img.flatten() for img in cube],
+                  20, color=("r", "g", "b"))
+
+    @staticmethod
+    def _plot_coord_grid(axis):
+        axis.grid(color="w", ls=":")
+
+    def _plot_center_merker(self, axis):
+        axis.plot(*self.center, "w+", ms=10)
+
+    def _display_cube(self, axis, center=False, grid=False):
+        # FIXME: What about origin="lower" ??
+        axis.imshow(self.get_rgb_cube(order="xyc"), aspect="auto")
+        if center:
+            self._plot_center_merker(axis)
+        if grid:
+            self._plot_coord_grid(axis)
+
+    def _display_cube_histo(self, axes, cube):
+        axes[0].imshow(cube.T, origin="lower")
+        self._mk_coord_etc(axes[0])
+        self._add_histo(axes[1], cube)
+
+    @staticmethod
+    def _get_axes(nrows, ncols, coord):
+        fig = plt.figure(figsize=(ncols * 5, nrows * 6), dpi=300)
+        # subfigs = fig.subfigures(nrows)
+        # for subfig in subfigs[::2]:
+        # for subfig in subfigs:
+        #     subfig.subplots(1, ncols, subplot_kw={"projection": coord})
+        # for subfig in subfigs[1::2]:
+        #     subfig.subplots(1, ncols)
+        axes = fig.subplots(nrows, ncols, subplot_kw={"projection": coord})
+        # axes = [subfig.axes for subfig in subfigs]
+        # axes = list(map(list, zip(*axes)))
+        return fig, axes.T
+
+    @staticmethod
+    def _get_axes(nrows, ncols, coord):
+        fig = plt.figure(figsize=(ncols * 15, nrows * 15),
+                         dpi=600, frameon=False)
+        axes = fig.subplots(nrows, ncols, subplot_kw={"projection": coord})
+        return fig, axes
+
+    def stuff(self, channel_combos, imgpath, grey_mode="normal"):
+        grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
+        nrows, ncols = 1, len(channel_combos)
+        fig, axes = self._get_axes(nrows, ncols, self.coords)
+        for combo, column in zip(tqdm(channel_combos), axes):
+            self.select_rgb_channels(combo)
+            self.stretch_frames("stiff-d", only_rgb=True,
+                                stretch_function=Frame.stiff_stretch,
+                                stiff_mode="user3",
+                                grey_level=grey_values[grey_mode])
+
+            title = "R: {}, G: {}, B: {}".format(*combo)
+            title += "\nequalize = "
+            if self.is_bright:
+                self.equalize("median", offset=.1, norm=True)
+                title += "True"
+            else:
+                title += "False"
+
+            column.set_title(title)
+            # _display_cube_histo(column[:2], pic.rgb_cube)
+            # _display_cube(column[0], pic.rgb_cube)
+            self._display_cube(column)
+            # _display_cube_histo(column[2:], pic.rgb_cube)
+            # _display_cube(column[1], pic.rgb_cube)
+
+        suptitle = self.title + "\n" + self.center_coords_str
+        fig.suptitle(suptitle, fontsize="xx-large")
+
+        fig.tight_layout(pad=self.padding[ncols])
+        fig.tight_layout()
+
+        fig.savefig(imgpath/f"{self.name}.pdf")
+        plt.close(fig)
+        del fig
