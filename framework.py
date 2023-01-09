@@ -210,7 +210,9 @@ class Frame():
         data_max = np.nanmax(self.image)
         data_min = np.nanmin(self.image)
         data_range = data_max - data_min
-        if round(data_min, 5) == 0. and round(data_max, 5) == 1.:
+
+        # Check if data is already normalized for all practical purposes
+        if np.isclose((data_min, data_max), (0., 1.), atol=1e-5).all():
             return data_range, data_max
 
         self.image -= data_min
@@ -218,9 +220,9 @@ class Frame():
 
         try:
             assert np.nanmin(self.image) == 0.0
+            assert np.nanmax(self.image) == 1.0
         except AssertionError:
-            logger.error("Normalisation error: %s, %s", data_max, data_min)
-        assert np.nanmax(self.image) == 1.0
+            logger.error("Normalisation error: %f, %f", data_max, data_min)
 
         self.image = self.image * new_range + new_offset
 
@@ -230,13 +232,12 @@ class Frame():
         """Calculate sigma-clipped image statistics."""
         data = self.image.flatten()
         mean, median, stddev = np.mean(data), np.median(data), np.std(data)
-        logger.debug("unclipped:\tmean=%.4f\tmedian=%.4f\tstddev=%.4f",
+        logger.debug("%10s:  mean=%-8.4fmedian=%-8.4fstddev=%.4f", "unclipped",
                      mean, median, stddev)
-
         mean, median, stddev = scs(data,
                                    cenfunc="median", stdfunc="mad_std",
                                    sigma_upper=5, sigma_lower=3)
-        logger.debug("clipped:\tmean=%.4f\tmedian=%.4f\tstddev=%.4f",
+        logger.debug("%10s:  mean=%-8.4fmedian=%-8.4fstddev=%.4f", "clipped",
                      mean, median, stddev)
         return mean, median, stddev
 
@@ -674,13 +675,23 @@ class RGBPicture(Picture):
         return gamma, gamma_lum, alpha, grey_level
 
     def luminance(self):
-        """Luminance of RGB image."""
+        """Calculate the luminance of the RGB image.
+
+        The luminance is defined as the (pixel-wise) sum of all colour channels
+        divided by the number of channels.
+        """
         sum_image = sum(frame.image for frame in self.rgb_channels)
         sum_image /= len(self.rgb_channels)
         return sum_image
 
-    def stretch_luminosity(self, stretch_fkt_lum, gamma_lum, lum, **kwargs):
-        """Perform luminance stretching."""
+    def stretch_luminance(self, stretch_fkt_lum, gamma_lum, lum, **kwargs):
+        """Perform luminance stretching.
+
+        The luminance stretch function `stretch_fkt_lum` is expected to take
+        positional arguments `lum` (image luminance) and `gamma_lum` (gamma
+        factor used for stretching). Any additional kwargs will be passed to
+        `stretch_fkt_lum`.
+        """
         lum_stretched = stretch_fkt_lum(lum, gamma_lum, **kwargs)
         for channel in self.rgb_channels:
             channel.image /= lum
@@ -708,8 +719,9 @@ class RGBPicture(Picture):
         Method should also work for 4-channel images, but this is not tested.
 
         """
-        # BUG: sometimes lost of zeros, maybe normalize before this?????
-        logger.info("RGB adjusting using alpha=%s, gamma_lum=%s.",
+        # BUG: sometimes lost of zeros, maybe normalize before this?
+        #      Is this still an issue??
+        logger.info("RGB adjusting using alpha=%.3f, gamma_lum=%.3f.",
                     alpha, gamma_lum)
         lum = self.luminance()
         n_channels = len(self.rgb_channels)
@@ -732,7 +744,9 @@ class RGBPicture(Picture):
             channel.image = adjusted
 
         # gamma_lum = kwargs.get("gamma_lum", gamma)
-        self.stretch_luminosity(stretch_fkt_lum, gamma_lum, lum, **kwargs)
+        # FIXME: should the lu stretch be done with the original luminance
+        #        (as is currently) or with the adjusted one???
+        self.stretch_luminance(stretch_fkt_lum, gamma_lum, lum, **kwargs)
 
     def equalize(self, mode="mean", offset=.5, norm=True, supereq=False):
         """
