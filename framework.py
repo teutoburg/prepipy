@@ -269,7 +269,7 @@ class Frame():
         logger.debug("p_grey_g=%.4f", p_grey_g)
         logger.debug("i_sky=%.4f", i_sky)
         i_min = max((i_sky - p_grey_g * i_max) / (1. - p_grey_g), 0.)
-        logger.debug("i_min=%.4f\t\ti_max=%.4f", i_min, i_max)
+        logger.debug("i_min=%-10.4fi_max=%.4f", i_min, i_max)
         return i_min, i_max
 
     def stiff_d(self, stretch_function, gamma_lum=1.5, grey_level=.1,
@@ -326,11 +326,11 @@ class Frame():
 
         mean = np.nanmean(image)
         sigma = np.nanstd(image)
-        logger.info("$\mu$:\t%s", mean)
-        logger.info("$\sigma$:\t%s", sigma)
+        logger.info(r"$\mu$:\t%s", mean)
+        logger.info(r"$\sigma$:\t%s", sigma)
 
         gamma = np.exp((1 - (mean + sigma)) / 2)
-        logger.info("$\gamma$:\t%s", gamma)
+        logger.info(r"$\gamma$:\t%s", gamma)
 
         k = np.power(image, gamma) + ((1 - np.power(image, gamma))
                                       * (mean**gamma))
