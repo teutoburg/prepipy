@@ -5,7 +5,7 @@ from logging.config import dictConfig
 import yaml
 from pathlib import Path
 
-from combo_large_pil import setup_rgb_single
+from combo_large_pil import setup_rgb_single, setup_rgb_multiple
 
 
 def main():
@@ -39,6 +39,11 @@ def main():
                         help='''The name of the band config file to be used.
                         If omitted, the code will look for a file named
                         "bands.yml" in the main package folder.''')
+    parser.add_argument('-m', '--many', nargs=1,
+                        type=bool,
+                        default=False,
+                        help='''Whether to process multiple images. If True,
+                        image_name is interpreted as a list of names.''')
     args = parser.parse_args()
     input_path = Path(args.input_path[0])
     if args.output_path is not None:
@@ -46,8 +51,13 @@ def main():
     else:
         logging.warning("No output path specified, dumping into input folder.")
         output_path = input_path
-    setup_rgb_single(input_path, output_path, args.image_name[0],
-                     args.config_file[0], args.bands_file[0])
+
+    if args.many[0]:
+        setup_rgb_multiple(input_path, output_path, args.image_name[0],
+                           args.config_file[0], args.bands_file[0])
+    else:
+        setup_rgb_single(input_path, output_path, args.image_name[0],
+                         args.config_file[0], args.bands_file[0])
 
 
 def _logging_configurator():
