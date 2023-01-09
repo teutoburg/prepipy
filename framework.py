@@ -932,8 +932,8 @@ class MPLPicture(RGBPicture):
 
     def _display_cube_histo(self, axes, cube):
         axes[0].imshow(cube.T, origin="lower")
-        self._mk_coord_etc(axes[0])
-        self._add_histo(axes[1], cube)
+        # self._mk_coord_etc(axes[0])
+        self._add_histo(axes[1])
 
     @staticmethod
     def _get_axes(nrows, ncols, coord):
@@ -957,6 +957,7 @@ class MPLPicture(RGBPicture):
         return fig, axes
 
     def stuff(self, channel_combos, imgpath, grey_mode="normal"):
+        """DEBUG ONLY."""
         grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
         nrows, ncols = 1, len(channel_combos)
         fig, axes = self._get_axes(nrows, ncols, self.coords)
