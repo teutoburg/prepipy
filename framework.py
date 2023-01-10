@@ -820,14 +820,16 @@ class RGBPicture(Picture):
                 channel.image *= equal
 
     @staticmethod
-    def cmyk_to_rgb(c, m, y, k, cmyk_scale, rgb_scale=255):
+    def cmyk_to_rgb(cmyk, cmyk_scale, rgb_scale=255):
         """Convert CMYK to RGB."""
         cmyk_scale = float(cmyk_scale)
-        scale_factor = rgb_scale * (1. - k / cmyk_scale)
-        r = (1. - c / cmyk_scale) * scale_factor
-        g = (1. - m / cmyk_scale) * scale_factor
-        b = (1. - y / cmyk_scale) * scale_factor
-        return r, g, b
+        scale_factor = rgb_scale * (1. - cmyk[3] / cmyk_scale)
+        rgb = ((1. - cmyk[0] / cmyk_scale) * scale_factor,
+               (1. - cmyk[1] / cmyk_scale) * scale_factor,
+               (1. - cmyk[2] / cmyk_scale) * scale_factor
+               )
+        # TODO: make this an array, incl. mult. w/ sc.fc. afterwards etc.
+        return rgb
 
 
 class JPEGPicture(RGBPicture):
