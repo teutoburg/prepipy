@@ -937,8 +937,7 @@ class MPLPicture(RGBPicture):
         # self._mk_coord_etc(axes[0])
         self._add_histo(axes[1])
 
-    @staticmethod
-    def _get_axes(nrows, ncols, coord):
+    def _get_axes(self, nrows, ncols):
         fig = plt.figure(figsize=(ncols * 5, nrows * 6), dpi=300)
         # subfigs = fig.subfigures(nrows)
         # for subfig in subfigs[::2]:
@@ -946,23 +945,24 @@ class MPLPicture(RGBPicture):
         #     subfig.subplots(1, ncols, subplot_kw={"projection": coord})
         # for subfig in subfigs[1::2]:
         #     subfig.subplots(1, ncols)
-        axes = fig.subplots(nrows, ncols, subplot_kw={"projection": coord})
+        axes = fig.subplots(nrows, ncols,
+                            subplot_kw={"projection": self.coords})
         # axes = [subfig.axes for subfig in subfigs]
         # axes = list(map(list, zip(*axes)))
         return fig, axes.T
 
-    @staticmethod
-    def _get_axes(nrows, ncols, coord):
+    def _get_axes(self, nrows, ncols):
         fig = plt.figure(figsize=(ncols * 15, nrows * 15),
                          dpi=600, frameon=False)
-        axes = fig.subplots(nrows, ncols, subplot_kw={"projection": coord})
+        axes = fig.subplots(nrows, ncols,
+                            subplot_kw={"projection": self.coords})
         return fig, axes
 
     def stuff(self, channel_combos, imgpath, grey_mode="normal"):
         """DEBUG ONLY."""
         grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
         nrows, ncols = 1, len(channel_combos)
-        fig, axes = self._get_axes(nrows, ncols, self.coords)
+        fig, axes = self._get_axes(nrows, ncols)
         for combo, column in zip(tqdm(channel_combos), axes):
             self.select_rgb_channels(combo)
             self.stretch_frames("stiff-d", only_rgb=True,
