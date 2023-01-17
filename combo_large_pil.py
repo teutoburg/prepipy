@@ -12,7 +12,7 @@ import numpy as np
 import yaml
 from tqdm import tqdm
 
-from framework import RGBPicture, Frame, Band
+from framework import JPEGPicture, Frame, Band
 
 TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 
@@ -31,7 +31,7 @@ def _pretty_info_log(msg_key):
 
 
 def create_picture(image_name, input_path, bands, n_bands, multi=False):
-    new_pic = RGBPicture(name=image_name)
+    new_pic = JPEGPicture(name=image_name)
     if multi:
         new_pic.add_fits_frames_mp(input_path, bands)
     else:
@@ -158,7 +158,7 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     logger = _logging_configurator()
     root = Path("D:/Nemesis/data/HOPS")
-    path = root/"HOPS_99"
+    path = root/"HOPS_53"
     imgpath = root/"RGBs"
     # root = Path("D:/Nemesis/data")
     # path = root/"stamps/LARGE/Orion"
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     # target = "Hand"
     # target = "ONC"
     # target = "V883_Ori"
-    target = "HOPS_99"
+    target = "HOPS_53"
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
     setup_rgb_single(path, imgpath, target)
