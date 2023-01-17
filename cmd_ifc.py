@@ -15,9 +15,8 @@ from combo_large_pil import setup_rgb_single, setup_rgb_multiple
 def main():
     """Execute in script mode."""
     parser = argparse.ArgumentParser(prog="RGBCOMBO",
-                                     description=("Comines RGB channels to "
-                                                  "color image including "
-                                                  "stretching."))
+                                     description="""Combines RGB channels to
+                                     color image including stretching.""")
 
     # https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument
 
@@ -46,6 +45,11 @@ def main():
                         action="store_true",
                         help="""Whether to process multiple images. If set,
                         image-name is interpreted as a list of names.""")
+    parser.add_argument("--create-outfolders",
+                        action="store_true",
+                        help="""Whether to create a separate folder in the
+                        output path for each picture, which may already exist.
+                        Can only be used if -m option is set.""")
     args = parser.parse_args()
 
     if args.output_path is not None:
@@ -56,7 +60,8 @@ def main():
 
     if args.many:
         setup_rgb_multiple(args.input_path, output_path, args.image_name,
-                           args.config_file, args.bands_file)
+                           args.config_file, args.bands_file,
+                           args.create_outfolders)
     else:
         setup_rgb_single(args.input_path, output_path, args.image_name,
                          args.config_file, args.bands_file)
