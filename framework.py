@@ -60,7 +60,7 @@ class Band():
             band["instrument"] = band.pop("inst")
             band["telescope"] = band.pop("tele")
             band["wavelength"] = band.pop("wave")
-            band["printname"] = printname
+            band["printname"] = printname.replace("_", " ")
 
         # either use specified or all, anyway turn into tuple without names
         if use_bands is not None:
