@@ -67,7 +67,8 @@ def create_rgb_image(input_path, output_path, image_name,
         pic.stretch_frames("stiff-d", only_rgb=True,
                            stretch_function=Frame.stiff_stretch,
                            stiff_mode="user3",
-                           grey_level=grey_values[grey_mode])
+                           grey_level=grey_values[grey_mode],
+                           skymode=config["process"]["skymode"])
 
         if config["process"]["rgb_adjust"]:
             pic.adjust_rgb(config["process"]["alpha"], _gma,
@@ -99,7 +100,7 @@ def setup_rgb_single(input_path, output_path, image_name,
     _pretty_info_log("single")
 
     if config_name is None:
-        config_name = "./config.yml"
+        config_name = "./config_single.yml"
     with open(config_name, "r") as ymlfile:
         config = yaml.load(ymlfile, yaml.SafeLoader)
 
@@ -163,11 +164,13 @@ if __name__ == "__main__":
     # root = Path("D:/Nemesis/data")
     # path = root/"stamps/LARGE/Orion"
     # imgpath = root/"comps_large"
+    root = Path("C:/Users/ghost/Desktop/nemesis/iras32")
+    path = root
+    imgpath = root
 
     # target = "Hand"
-    # target = "ONC"
-    # target = "V883_Ori"
     target = "HOPS_53"
+    target = "larger_IRAS-32"
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
     setup_rgb_single(path, imgpath, target)

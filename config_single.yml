@@ -1,12 +1,13 @@
 ---
 process:
   multiprocess: no
-  grey_mode: normal # normal or lessback or moreback
+  grey_mode: lessback # normal or lessback or moreback
   rgb_adjust: no
   alpha: 1.
   gamma_lum: 1.
   clip: 10
   nanmode: max
+  skymode: clipmedian
 use_bands:
   - VISIONS_J
   - VISIONS_H

@@ -76,6 +76,8 @@ class Frame():
     """n/a."""
 
     def __init__(self, image, band, header=None, **kwargs):
+        if "imgslice" in kwargs:
+            image = image[kwargs["imgslice"]]
         self.image = image
         self._band = band
         self.header = header
@@ -92,10 +94,10 @@ class Frame():
         return f"{self.shape} frame in \"{self.band.name}\" band"
 
     @classmethod
-    def from_fits(cls, filename, band):
+    def from_fits(cls, filename, band, **kwargs):
         """Create instance from fits file."""
         with fits.open(filename) as file:
-            return cls(file[0].data, band, file[0].header)
+            return cls(file[0].data, band, file[0].header, **kwargs)
 
     @property
     def band(self):
@@ -153,7 +155,7 @@ class Frame():
         upper_limit = self.background + n_sigma * np.nanstd(self.image)
         self.image = np.clip(self.image, None, upper_limit)
 
-    def clip_and_nan(self, clip=10, nanmode="max"):
+    def clip_and_nan(self, clip=10, nanmode="max", **kwargs):
         r"""
         Perform upper sigma clipping and replace NANs.
 
@@ -414,14 +416,14 @@ class Picture():
 
         return band
 
-    def add_frame(self, image, band, header=None):
+    def add_frame(self, image, band, header=None, **kwargs):
         """Add new frame to Picture using image array and band information."""
         band = self._check_band(band)
-        new_frame = Frame(image, band, header)
+        new_frame = Frame(image, band, header, **kwargs)
         self.frames.append(new_frame)
         return new_frame
 
-    def add_frame_from_file(self, filename, band, framelist=None):
+    def add_frame_from_file(self, filename, band, framelist=None, **kwargs):
         """
         Add a new frame to the picture. File must be in FITS format.
 
@@ -445,7 +447,7 @@ class Picture():
         logger.info("Loading frame for %s band", band.name)
 
         if filename.suffix == ".fits":
-            new_frame = Frame.from_fits(filename, band)
+            new_frame = Frame.from_fits(filename, band, **kwargs)
         else:
             raise FileTypeError("Currently only FITS files are supported.")
 
@@ -926,7 +928,8 @@ class MPLPicture(RGBPicture):
 
     def _display_cube(self, axis, center=False, grid=False):
         # FIXME: What about origin="lower" ??
-        axis.imshow(self.get_rgb_cube(order="xyc"), aspect="auto")
+        axis.imshow(self.get_rgb_cube(order="xyc"),
+                    aspect="equal", origin="lower")
         if center:
             self._plot_center_merker(axis)
         if grid:
@@ -938,29 +941,29 @@ class MPLPicture(RGBPicture):
         self._add_histo(axes[1])
 
     def _get_axes(self, nrows, ncols):
-        fig = plt.figure(figsize=(ncols * 5, nrows * 6), dpi=300)
+        fig = plt.figure(figsize=(ncols * 3, nrows * 6), dpi=300)
         # subfigs = fig.subfigures(nrows)
         # for subfig in subfigs[::2]:
         # for subfig in subfigs:
         #     subfig.subplots(1, ncols, subplot_kw={"projection": coord})
         # for subfig in subfigs[1::2]:
         #     subfig.subplots(1, ncols)
-        axes = fig.subplots(nrows, ncols,
-                            subplot_kw={"projection": self.coords})
+        axes = fig.subplots(nrows, ncols)#,
+                            # subplot_kw={"projection": self.coords})
         # axes = [subfig.axes for subfig in subfigs]
         # axes = list(map(list, zip(*axes)))
         return fig, axes.T
 
-    def _get_axes(self, nrows, ncols):
-        fig = plt.figure(figsize=(ncols * 15, nrows * 15),
-                         dpi=600, frameon=False)
-        axes = fig.subplots(nrows, ncols,
-                            subplot_kw={"projection": self.coords})
-        return fig, axes
+    # def _get_axes(self, nrows, ncols):
+    #     fig = plt.figure(figsize=(ncols * 15, nrows * 15),
+    #                      dpi=600, frameon=False)
+    #     axes = fig.subplots(nrows, ncols,
+    #                         subplot_kw={"projection": self.coords})
+    #     return fig, axes
 
-    def stuff(self, channel_combos, imgpath, grey_mode="normal"):
+    def stuff(self, channel_combos, imgpath, grey_mode="normal", **kwargs):
         """DEBUG ONLY."""
-        grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
+        grey_values = {"normal": .3, "lessback": .08, "moreback": .7}
         nrows, ncols = 1, len(channel_combos)
         fig, axes = self._get_axes(nrows, ncols)
         for combo, column in zip(tqdm(channel_combos), axes):
@@ -968,12 +971,12 @@ class MPLPicture(RGBPicture):
             self.stretch_frames("stiff-d", only_rgb=True,
                                 stretch_function=Frame.stiff_stretch,
                                 stiff_mode="user3",
-                                grey_level=grey_values[grey_mode])
+                                grey_level=grey_values[grey_mode], **kwargs)
 
             title = "R: {}, G: {}, B: {}".format(*combo)
             title += "\nequalize = "
             if self.is_bright:
-                self.equalize("median", offset=.1, norm=True)
+                self.equalize("median", offset=.3)#, norm=True)
                 title += "True"
             else:
                 title += "False"
