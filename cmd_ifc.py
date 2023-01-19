@@ -20,11 +20,11 @@ def main():
 
     # https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument
 
-    parser.add_argument("input-path",
+    parser.add_argument("input_path",
                         type=Path,
                         help="""The file path to the input fits files
                         containing the images that shall be processed.""")
-    parser.add_argument("image-name",
+    parser.add_argument("image_name",
                         help="""Name stem of the images. Image names must have
                         the following structure: <name>_<band>.fits, e.g.
                         V883_Ori_J.fits.""")
