@@ -944,6 +944,8 @@ class MPLPicture(RGBPicture):
                     aspect="equal", origin="lower")
         axis.set_xlabel("right ascension")
         axis.set_ylabel("declination", labelpad=0)
+        axis.coords[0].set_ticklabel(exclude_overlapping=True)
+        axis.coords[1].set_ticklabel(exclude_overlapping=True)
         if center:
             self._plot_center_merker(axis)
         if grid:
@@ -955,7 +957,7 @@ class MPLPicture(RGBPicture):
         self._add_histo(axes[1])
 
     def _get_axes(self, nrows, ncols):
-        fig = plt.figure(figsize=(ncols * 3, nrows * 6), dpi=300)
+        fig = plt.figure(figsize=(ncols * 3, nrows * 5.6), dpi=300)
         # subfigs = fig.subfigures(nrows)
         # for subfig in subfigs[::2]:
         # for subfig in subfigs:
@@ -989,7 +991,7 @@ class MPLPicture(RGBPicture):
     def stuff(self, channel_combos, imgpath, grey_mode="normal",
               figurekwargs=None, **kwargs):
         """DEBUG ONLY."""
-        default_figurekwargs = {"titlemode": "debug"}
+        default_figurekwargs = {"titlemode": "debug", "include_suptitle": True}
         if figurekwargs is not None:
             figurekwargs = default_figurekwargs | figurekwargs
         else:
@@ -1018,8 +1020,9 @@ class MPLPicture(RGBPicture):
             # _display_cube_histo(column[2:], pic.rgb_cube)
             # _display_cube(column[1], pic.rgb_cube)
 
-        suptitle = self.title + "\n" + self.center_coords_str
-        fig.suptitle(suptitle, fontsize="xx-large")
+        if figurekwargs["include_suptitle"]:
+            suptitle = self.title + "\n" + self.center_coords_str
+            fig.suptitle(suptitle, fontsize="xx-large")
 
         fig.tight_layout(pad=self.padding[ncols])
         # fig.tight_layout()
