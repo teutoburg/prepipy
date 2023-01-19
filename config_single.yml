@@ -1,7 +1,7 @@
 ---
 process:
   multiprocess: no
-  grey_mode: lessback # normal or lessback or moreback
+  grey_mode: normal # normal or lessback or moreback
   rgb_adjust: no
   alpha: 1.
   gamma_lum: 1.
