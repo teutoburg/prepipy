@@ -47,6 +47,7 @@ class Band():
     """n/a."""
 
     name: str
+    printname: str = None
     wavelength: float = None
     instrument: str = "unknown"
     telescope: str = "unknown"
@@ -55,10 +56,11 @@ class Band():
     def from_yaml_dict(cls, bands, use_bands=None):
         """Create incstance from YAML dictionary entry (default factory)."""
         # parse shortened names to correct parameter names
-        for band in bands.values():
+        for printname, band in bands.items():
             band["instrument"] = band.pop("inst")
             band["telescope"] = band.pop("tele")
             band["wavelength"] = band.pop("wave")
+            band["printname"] = printname
 
         # either use specified or all, anyway turn into tuple without names
         if use_bands is not None:
@@ -98,7 +100,7 @@ class Frame():
         return str(self)  # DEBUG only
 
     def __str__(self):
-        return f"{self.shape} frame in \"{self.band.name}\" band"
+        return f"{self.shape} frame in \"{self.band.printname}\" band"
 
     @classmethod
     def from_fits(cls, filename, band, **kwargs):
