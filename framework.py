@@ -21,6 +21,7 @@ from astropy.io import fits
 from astropy import wcs
 # from astropy.stats import median_absolute_deviation as mad
 from astropy.stats import sigma_clipped_stats as scs
+from astropy.nddata import Cutout2D
 
 from PIL import Image
 from tqdm import tqdm
@@ -76,15 +77,21 @@ class Frame():
     """n/a."""
 
     def __init__(self, image, band, header=None, **kwargs):
-        if "imgslice" in kwargs:
-            image = image[kwargs["imgslice"]]
-        self.image = image
-        self._band = band
         self.header = header
+        self.coords = wcs.WCS(self.header)
+
+        if "imgslice" in kwargs:
+            cen = [sh//2 for sh in image.shape]
+            cutout = Cutout2D(image, cen, kwargs["imgslice"], self.coords)
+            self.image = cutout.data
+            self.coords = cutout.wcs
+        else:
+            self.image = image
+
+        self._band = band
         self.background = np.nanmedian(self.image)  # estimated background
         self.clip_and_nan(**kwargs)
 
-        self.coords = wcs.WCS(self.header)
         self.sky_mask = None
 
     def __repr__(self):
@@ -930,6 +937,8 @@ class MPLPicture(RGBPicture):
         # FIXME: What about origin="lower" ??
         axis.imshow(self.get_rgb_cube(order="xyc"),
                     aspect="equal", origin="lower")
+        axis.set_xlabel("right ascension")
+        axis.set_ylabel("declination", labelpad=0)
         if center:
             self._plot_center_merker(axis)
         if grid:
@@ -948,8 +957,8 @@ class MPLPicture(RGBPicture):
         #     subfig.subplots(1, ncols, subplot_kw={"projection": coord})
         # for subfig in subfigs[1::2]:
         #     subfig.subplots(1, ncols)
-        axes = fig.subplots(nrows, ncols)#,
-                            # subplot_kw={"projection": self.coords})
+        axes = fig.subplots(nrows, ncols,
+                            subplot_kw={"projection": self.coords})
         # axes = [subfig.axes for subfig in subfigs]
         # axes = list(map(list, zip(*axes)))
         return fig, axes.T
@@ -961,9 +970,26 @@ class MPLPicture(RGBPicture):
     #                         subplot_kw={"projection": self.coords})
     #     return fig, axes
 
-    def stuff(self, channel_combos, imgpath, grey_mode="normal", **kwargs):
+    def _create_title(self, axis, combo, mode="debug", equal=False):
+        if mode == "debug":
+            title = "R: {}, G: {}, B: {}".format(*combo)
+            title += "\nequalize = "
+        elif mode == "pub":
+            title = "Red: {}\nGreen: {}\nBlue: {}".format(*combo)
+        else:
+            raise ValueError("Title mode not understood.")
+        axis.set_title(title, pad=7, fontdict={"multialignment": "left"})
+
+    def stuff(self, channel_combos, imgpath, grey_mode="normal",
+              figurekwargs=None, **kwargs):
         """DEBUG ONLY."""
+        default_figurekwargs = {"titlemode": "debug"}
+        if figurekwargs is not None:
+            figurekwargs = default_figurekwargs | figurekwargs
+        else:
+            figurekwargs = default_figurekwargs
         grey_values = {"normal": .3, "lessback": .08, "moreback": .7}
+
         nrows, ncols = 1, len(channel_combos)
         fig, axes = self._get_axes(nrows, ncols)
         for combo, column in zip(tqdm(channel_combos), axes):
@@ -973,15 +999,13 @@ class MPLPicture(RGBPicture):
                                 stiff_mode="user3",
                                 grey_level=grey_values[grey_mode], **kwargs)
 
-            title = "R: {}, G: {}, B: {}".format(*combo)
-            title += "\nequalize = "
             if self.is_bright:
                 self.equalize("median", offset=.3)#, norm=True)
-                title += "True"
+                equal = "True"
             else:
-                title += "False"
+                equal = "False"
 
-            column.set_title(title)
+            self._create_title(column, combo, figurekwargs["titlemode"], equal)
             # _display_cube_histo(column[:2], pic.rgb_cube)
             # _display_cube(column[0], pic.rgb_cube)
             self._display_cube(column)
@@ -992,7 +1016,7 @@ class MPLPicture(RGBPicture):
         fig.suptitle(suptitle, fontsize="xx-large")
 
         fig.tight_layout(pad=self.padding[ncols])
-        fig.tight_layout()
+        # fig.tight_layout()
 
         fig.savefig(imgpath/f"{self.name}.pdf")
         plt.close(fig)
