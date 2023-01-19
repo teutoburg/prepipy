@@ -15,6 +15,7 @@ from multiprocessing import Pool
 # import yaml
 # from tqdm import tqdm
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from astropy.io import fits
@@ -25,6 +26,8 @@ from astropy.nddata import Cutout2D
 
 from PIL import Image
 from tqdm import tqdm
+
+mpl.rcParams["font.family"] = ["Computer Modern", "serif"]
 
 TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 logger = logging.getLogger(__name__)
