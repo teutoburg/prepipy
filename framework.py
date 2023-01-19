@@ -977,7 +977,8 @@ class MPLPicture(RGBPicture):
             title = "R: {}, G: {}, B: {}".format(*combo)
             title += "\nequalize = "
         elif mode == "pub":
-            title = "Red: {}\nGreen: {}\nBlue: {}".format(*combo)
+            channels = (chnl.band.printname for chnl in self.rgb_channels)
+            title = "Red: {}\nGreen: {}\nBlue: {}".format(*channels)
         else:
             raise ValueError("Title mode not understood.")
         axis.set_title(title, pad=7, fontdict={"multialignment": "left"})
