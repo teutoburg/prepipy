@@ -324,7 +324,7 @@ class Frame():
         kwargs = def_kwargs[stiff_mode] | kwargs
 
         # kwargs["gamma"] = self.auto_gma()
-        assert kwargs['gamma'] == 2.25  # HACK: DEBUG ONLY
+        # assert kwargs['gamma'] == 2.25  # HACK: DEBUG ONLY
 
         b_slope, i_t = kwargs["b"], kwargs["i_t"]
         image_s = kwargs["a"] * image * (image < i_t)
@@ -1008,7 +1008,7 @@ class MPLPicture(RGBPicture):
                                 grey_level=grey_values[grey_mode], **kwargs)
 
             if self.is_bright:
-                self.equalize("median", offset=.3)#, norm=True)
+                self.equalize("median", offset=.3, norm=True)
                 equal = "True"
             else:
                 equal = "False"
