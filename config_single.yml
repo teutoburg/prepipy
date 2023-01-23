@@ -9,9 +9,9 @@ process:
   nanmode: max
   skymode: clipmedian
 use_bands:
-  - VISIONS_J
-  - VISIONS_H
-  - VISIONS_Ks
+  - VISION_J
+  - VISION_H
+  - VISION_Ks
 combinations:
   - ["Ks", "H" , "J" ]
 ...

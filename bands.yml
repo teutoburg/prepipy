@@ -1,15 +1,15 @@
 ---
-VISIONS_J:
+VISION_J:
     name: J
     inst: VIRCAM
     tele: VISTA
     wave: 1.25
-VISIONS_H:
+VISION_H:
     name: H
     inst: VIRCAM
     tele: VISTA
     wave: 1.65
-VISIONS_Ks:
+VISION_Ks:
     name: Ks
     inst: VIRCAM
     tele: VISTA

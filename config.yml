@@ -8,9 +8,9 @@ process:
   clip: 10
   nanmode: max
 use_bands:
-  - VISIONS_J
-  - VISIONS_H
-  - VISIONS_Ks
+  - VISION_J
+  - VISION_H
+  - VISION_Ks
   - IRAC1
   - IRAC2
   - IRAC3
