@@ -919,7 +919,8 @@ class MPLPicture(RGBPicture):
     Matplotlib and saved in pdf format.
     """
 
-    padding = {1: 5, 2: 5, 4: 4}
+    # padding = {1: 5, 2: 5, 4: 4}
+    padding = {2: 3.5}
 
     @property
     def title(self):
@@ -957,6 +958,7 @@ class MPLPicture(RGBPicture):
         self._add_histo(axes[1])
 
     def _get_axes(self, nrows, ncols):
+        # 3, 5.6
         fig = plt.figure(figsize=(ncols * 3, nrows * 5.6), dpi=300)
         # subfigs = fig.subfigures(nrows)
         # for subfig in subfigs[::2]:
@@ -982,7 +984,8 @@ class MPLPicture(RGBPicture):
             title = "R: {}, G: {}, B: {}".format(*combo)
             title += "\nequalize = "
         elif mode == "pub":
-            channels = (chnl.band.printname for chnl in self.rgb_channels)
+            channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
+                        for chnl in self.rgb_channels)
             title = "Red: {}\nGreen: {}\nBlue: {}".format(*channels)
         else:
             raise ValueError("Title mode not understood.")
@@ -1000,7 +1003,7 @@ class MPLPicture(RGBPicture):
 
         nrows, ncols = 1, len(channel_combos)
         fig, axes = self._get_axes(nrows, ncols)
-        for combo, column in zip(tqdm(channel_combos), axes):
+        for combo, column in zip(tqdm(channel_combos), axes.flatten()):
             self.select_rgb_channels(combo)
             self.stretch_frames("stiff-d", only_rgb=True,
                                 stretch_function=Frame.stiff_stretch,
