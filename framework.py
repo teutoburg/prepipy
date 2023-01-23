@@ -936,7 +936,7 @@ class MPLPicture(RGBPicture):
     def _plot_coord_grid(axis):
         axis.grid(color="w", ls=":")
 
-    def _plot_center_merker(self, axis):
+    def _plot_center_marker(self, axis):
         axis.plot(*self.center, "w+", ms=10)
 
     def _display_cube(self, axis, center=False, grid=False):
@@ -948,7 +948,7 @@ class MPLPicture(RGBPicture):
         axis.coords[0].set_ticklabel(exclude_overlapping=True)
         axis.coords[1].set_ticklabel(exclude_overlapping=True)
         if center:
-            self._plot_center_merker(axis)
+            self._plot_center_marker(axis)
         if grid:
             self._plot_coord_grid(axis)
 
