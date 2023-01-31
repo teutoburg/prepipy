@@ -7,6 +7,14 @@ process:
   gamma_lum: 1.
   clip: 10
   nanmode: max
+  skymode: clipmedian
+  slice: None
+  equal_offset: .1
+  equal_norm: yes
+figure:
+  titlemode: debug # debug or pub
+  include_suptitle: yes
+  figsize: [3, 5.6]
 use_bands:
   - VISION_J
   - VISION_H
