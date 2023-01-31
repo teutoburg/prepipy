@@ -573,6 +573,16 @@ class Picture():
         hdr.update(AUTHOR="Fabian Haberhauer")
         return hdr
 
+    def create_supercontrast(self, feature, background):
+        frames_dict = dict(((f.band.name, f) for f in self.frames))
+        featureframe = frames_dict[feature]
+        backframes = itemgetter(*background)(frames_dict)
+        backcube = np.array([frame.image for frame in backframes])
+        contrast_img = featureframe.image - np.nanmean(backcube, 0)
+        contrast_img -= np.nanmin(contrast_img)
+        contrast_img /= np.nanmax(contrast_img)
+        return contrast_img
+
 
 class RGBPicture(Picture):
     """Picture subclass for ccombining frames to colour image (RGB)."""
