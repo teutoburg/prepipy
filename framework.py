@@ -574,6 +574,8 @@ class Picture():
         return hdr
 
     def create_supercontrast(self, feature, background):
+        logger.info(("Creating supercontrast image from %s as feature band "
+                     "using %s as background bands"), feature, background)
         frames_dict = dict(((f.band.name, f) for f in self.frames))
         featureframe = frames_dict[feature]
         backframes = itemgetter(*background)(frames_dict)
