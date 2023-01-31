@@ -957,9 +957,10 @@ class MPLPicture(RGBPicture):
         # self._mk_coord_etc(axes[0])
         self._add_histo(axes[1])
 
-    def _get_axes(self, nrows, ncols):
+    def _get_axes(self, nrows, ncols, figsize_mult):
         # 3, 5.6
-        fig = plt.figure(figsize=(ncols * 3, nrows * 5.6), dpi=300)
+        figsize = tuple(n * s for n, s in zip((ncols, nrows), figsize_mult))
+        fig = plt.figure(figsize=figsize, dpi=300)
         # subfigs = fig.subfigures(nrows)
         # for subfig in subfigs[::2]:
         # for subfig in subfigs:
@@ -994,7 +995,9 @@ class MPLPicture(RGBPicture):
     def stuff(self, channel_combos, imgpath, grey_mode="normal",
               figurekwargs=None, **kwargs):
         """DEBUG ONLY."""
-        default_figurekwargs = {"titlemode": "debug", "include_suptitle": True}
+        default_figurekwargs = {"titlemode": "debug",
+                                "include_suptitle": True,
+                                "figsize": (3, 5.6)}
         if figurekwargs is not None:
             figurekwargs = default_figurekwargs | figurekwargs
         else:
@@ -1002,7 +1005,7 @@ class MPLPicture(RGBPicture):
         grey_values = {"normal": .3, "lessback": .08, "moreback": .7}
 
         nrows, ncols = 1, len(channel_combos)
-        fig, axes = self._get_axes(nrows, ncols)
+        fig, axes = self._get_axes(nrows, ncols, figurekwargs["figsize"])
         for combo, column in zip(tqdm(channel_combos), axes.flatten()):
             self.select_rgb_channels(combo)
             self.stretch_frames("stiff-d", only_rgb=True,
