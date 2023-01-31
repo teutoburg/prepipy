@@ -1014,7 +1014,9 @@ class MPLPicture(RGBPicture):
                                 grey_level=grey_values[grey_mode], **kwargs)
 
             if self.is_bright:
-                self.equalize("median", offset=.3, norm=True)
+                self.equalize("median",
+                              offset=kwargs.get("equal_offset", .1),
+                              norm=True)
                 equal = "True"
             else:
                 equal = "False"
