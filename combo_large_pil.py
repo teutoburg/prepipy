@@ -102,7 +102,7 @@ def setup_rgb_single(input_path, output_path, image_name,
     _pretty_info_log("single")
 
     if config_name is None:
-        config_name = "./config_single.yml"
+        config_name = "./config.yml"
     with open(config_name, "r") as ymlfile:
         config = yaml.load(ymlfile, yaml.SafeLoader)
 
@@ -161,18 +161,18 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     logger = _logging_configurator()
     root = Path("D:/Nemesis/data/HOPS")
-    path = root/"HOPS_53"
+    path = root/"HOPS_99"
     imgpath = root/"RGBs"
     # root = Path("D:/Nemesis/data")
     # path = root/"stamps/LARGE/Orion"
     # imgpath = root/"comps_large"
-    root = Path("C:/Users/ghost/Desktop/nemesis/iras32")
-    path = root
-    imgpath = root
+    # root = Path("C:/Users/ghost/Desktop/nemesis/iras32")
+    # path = root
+    # imgpath = root
 
     # target = "Hand"
-    target = "HOPS_53"
-    target = "larger_IRAS-32"
+    target = "HOPS_99"
+    # target = "larger_IRAS-32"
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
     setup_rgb_single(path, imgpath, target)
