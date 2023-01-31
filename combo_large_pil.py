@@ -80,7 +80,7 @@ def create_rgb_image(input_path, output_path, image_name,
                          "stretching to equalize colors."))
             pic.equalize("median",
                          offset=config["process"].get("equal_offset", .1),
-                         norm=True)
+                         norm=config["process"].get("equal_norm", True))
         else:
             logger.warning(("No equalisation or normalisation performed on "
                             "image %s in %s!"),
