@@ -1004,10 +1004,10 @@ class MPLPicture(RGBPicture):
         # axes = list(map(list, zip(*axes)))
         return fig, axes.T
 
-    def _create_title(self, axis, combo, mode="debug", equal=False):
+    def _create_title(self, axis, combo, mode="debug", equalized=False):
         if mode == "debug":
             title = "R: {}, G: {}, B: {}".format(*combo)
-            title += "\nequalize = "
+            title += "\n{equalized = }"
         elif mode == "pub":
             channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
                         for chnl in self.rgb_channels)
