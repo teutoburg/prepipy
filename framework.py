@@ -953,7 +953,6 @@ class MPLPicture(RGBPicture):
 
     def _display_cube_histo(self, axes, cube):
         axes[0].imshow(cube.T, origin="lower")
-        # self._mk_coord_etc(axes[0])
         self._add_histo(axes[1])
 
     def _get_axes(self, nrows, ncols, figsize_mult):
@@ -971,13 +970,6 @@ class MPLPicture(RGBPicture):
         # axes = [subfig.axes for subfig in subfigs]
         # axes = list(map(list, zip(*axes)))
         return fig, axes.T
-
-    # def _get_axes(self, nrows, ncols):
-    #     fig = plt.figure(figsize=(ncols * 15, nrows * 15),
-    #                      dpi=600, frameon=False)
-    #     axes = fig.subplots(nrows, ncols,
-    #                         subplot_kw={"projection": self.coords})
-    #     return fig, axes
 
     def _create_title(self, axis, combo, mode="debug", equal=False):
         if mode == "debug":
@@ -1023,20 +1015,16 @@ class MPLPicture(RGBPicture):
                 equal = "False"
 
             self._create_title(column, combo, figurekwargs["titlemode"], equal)
-            # _display_cube_histo(column[:2], pic.rgb_cube)
-            # _display_cube(column[0], pic.rgb_cube)
+            # TODO: add histogram option back in
             self._display_cube(column,
                                center=figurekwargs["centermark"],
                                grid=figurekwargs["gridlines"])
-            # _display_cube_histo(column[2:], pic.rgb_cube)
-            # _display_cube(column[1], pic.rgb_cube)
 
         if figurekwargs["include_suptitle"]:
             suptitle = self.title + "\n" + self.center_coords_str
             fig.suptitle(suptitle, fontsize="xx-large")
 
         fig.tight_layout(pad=self.padding[ncols])
-        # fig.tight_layout()
 
         fig.savefig(imgpath/f"{self.name}.pdf")
         plt.close(fig)
