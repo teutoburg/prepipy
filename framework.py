@@ -869,6 +869,9 @@ class RGBPicture(Picture):
 class JPEGPicture(RGBPicture):
     """RGBPicture subclass for single image in JPEG format using Pillow."""
 
+    def __repr__(self):
+        return f"JPEGPicture(\"{self.name}\")"
+
     @staticmethod
     def _make_jpeg_variable_segment(marker: int, payload: bytes) -> bytes:
         """Make a JPEG segment from the given payload."""
@@ -941,6 +944,9 @@ class MPLPicture(RGBPicture):
 
     # padding = {1: 5, 2: 5, 4: 4}
     padding = {2: 3.5}
+
+    def __repr__(self):
+        return f"MPLPicture(\"{self.name}\")"
 
     @property
     def title(self):
