@@ -367,6 +367,12 @@ class Picture():
         self.frames = list()
         self.name = name
 
+    def __repr__(self):
+        return str(self)  # DEBUG only
+
+    def __str__(self):
+        return f"Picture \"{self.name}\" containing {len(self.frames)} frames."
+
     @property
     def bands(self):
         """List of all bands in the frames. Read-only property."""
