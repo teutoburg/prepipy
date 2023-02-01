@@ -581,13 +581,13 @@ class RGBPicture(Picture):
         return f"RGBPicture(\"{self.name}\")"
 
     def __str__(self):
-        outstr = f"RGB Picture \"{self.name}\""
-        outstr += f" containing {len(self.frames):d} frames"
+        outstr = (f"RGB Picture \"{self.name}\""
+                  f" containing {len(self.frames):d} frames")
         if self.rgb_channels is not None:
             channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
                         for chnl in self.rgb_channels)
-            outstr += f" currently set up to use {', '.join(channels)}"
-            outstr += " as RGB channels."
+            outstr += (f" currently set up to use {', '.join(channels)}"
+                       " as RGB channels.")
         else:
             outstr += " currently not set up with any RGB channels."
         return outstr
