@@ -368,7 +368,7 @@ class Picture():
         self.name = name
 
     def __repr__(self):
-        return str(self)  # DEBUG only
+        return f"Picture(\"{self.name}\")"
 
     def __str__(self):
         return f"Picture \"{self.name}\" containing {len(self.frames)} frames."
