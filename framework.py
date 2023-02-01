@@ -945,6 +945,11 @@ class MPLPicture(RGBPicture):
 
     # padding = {1: 5, 2: 5, 4: 4}
     padding = {2: 3.5}
+    default_figurekwargs = {"titlemode": "debug",
+                            "include_suptitle": True,
+                            "figsize": (3, 5.6),
+                            "centermark": False,
+                            "gridlines": False}
 
     def __repr__(self):
         return f"MPLPicture(\"{self.name}\")"
@@ -964,6 +969,7 @@ class MPLPicture(RGBPicture):
         axis.grid(color="w", ls=":")
 
     def _plot_center_marker(self, axis):
+        # TODO: this should be better doable using astropy stuff...
         axis.plot(*self.center, "w+", ms=10)
 
     def _display_cube(self, axis, center=False, grid=False):
@@ -1013,15 +1019,10 @@ class MPLPicture(RGBPicture):
     def stuff(self, channel_combos, imgpath, grey_mode="normal",
               figurekwargs=None, **kwargs):
         """DEBUG ONLY."""
-        default_figurekwargs = {"titlemode": "debug",
-                                "include_suptitle": True,
-                                "figsize": (3, 5.6),
-                                "centermark": False,
-                                "gridlines": False}
         if figurekwargs is not None:
-            figurekwargs = default_figurekwargs | figurekwargs
+            figurekwargs = self.default_figurekwargs | figurekwargs
         else:
-            figurekwargs = default_figurekwargs
+            figurekwargs = self.default_figurekwargs
         grey_values = {"normal": .3, "lessback": .08, "moreback": .7}
 
         nrows, ncols = 1, len(channel_combos)
