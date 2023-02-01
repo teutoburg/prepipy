@@ -577,6 +577,20 @@ class RGBPicture(Picture):
         self.params = None
         self.rgb_channels = None
 
+    def __repr__(self):
+        return f"RGBPicture(\"{self.name}\")"
+
+    def __str__(self):
+        outstr = f"RGB Picture \"{self.name}\""
+        outstr += f" containing {len(self.frames)} frames"
+        if self.rgb_channels is not None:
+            channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
+                        for chnl in self.rgb_channels)
+            outstr += f" currently set up to use {channels} as RGB channels."
+        else:
+            outstr += " currently not set up with any RGB channels."
+        return outstr
+
     @property
     def is_bright(self):
         """Return True is any median of the RGB frames is >.2."""
