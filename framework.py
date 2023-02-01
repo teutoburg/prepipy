@@ -940,7 +940,6 @@ class MPLPicture(RGBPicture):
         axis.plot(*self.center, "w+", ms=10)
 
     def _display_cube(self, axis, center=False, grid=False):
-        # FIXME: What about origin="lower" ??
         axis.imshow(self.get_rgb_cube(order="xyc"),
                     aspect="equal", origin="lower")
         axis.set_xlabel("right ascension")
@@ -997,7 +996,9 @@ class MPLPicture(RGBPicture):
         """DEBUG ONLY."""
         default_figurekwargs = {"titlemode": "debug",
                                 "include_suptitle": True,
-                                "figsize": (3, 5.6)}
+                                "figsize": (3, 5.6),
+                                "centermark": False,
+                                "gridlines": False}
         if figurekwargs is not None:
             figurekwargs = default_figurekwargs | figurekwargs
         else:
@@ -1024,7 +1025,9 @@ class MPLPicture(RGBPicture):
             self._create_title(column, combo, figurekwargs["titlemode"], equal)
             # _display_cube_histo(column[:2], pic.rgb_cube)
             # _display_cube(column[0], pic.rgb_cube)
-            self._display_cube(column)
+            self._display_cube(column,
+                               center=figurekwargs["centermark"],
+                               grid=figurekwargs["gridlines"])
             # _display_cube_histo(column[2:], pic.rgb_cube)
             # _display_cube(column[1], pic.rgb_cube)
 

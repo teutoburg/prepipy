@@ -16,6 +16,8 @@ figure:
   titlemode: debug      # debug or pub
   include_suptitle: yes # yes (default) or no
   figsize: [3, 5.6]     # [col, row]
+  centermark: no        # no (default) or yes
+  gridlines: no         # no (default) or yes
 use_bands:
   - VISION_J
   - VISION_H
