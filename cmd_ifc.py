@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
+"""Debug module to run main functions from command line."""
 
-"""
 import sys
 import argparse
 import logging
 from logging.config import dictConfig
-import yaml
 from pathlib import Path
+
+import yaml
 
 from combo_large_pil import setup_rgb_single, setup_rgb_multiple
 
