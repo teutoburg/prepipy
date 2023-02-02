@@ -1,7 +1,7 @@
 ---
 general:
-  filenames: ${image_name}_${band_name}
-  # e.g. $band/fits/$name or ${image_name}_${band_name}
+  filenames: ${image_name}_${band_name}.fits
+  # e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
 process:
   multiprocess: no      # no (default) or yes
   grey_mode: normal     # normal, lessback or moreback
