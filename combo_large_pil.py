@@ -21,13 +21,14 @@ def _gma(i, g):
     return np.power(i, 1/g)
 
 
-def _pretty_info_log(msg_key):
+def _pretty_info_log(msg_key, width=50):
     msg_dir = {"single": "Start RGB processing for single Image...",
                "multiple": "Start RGB processing for multiple Images...",
                "done": "RGB processing done"}
-    logger.info("****************************************")
-    logger.info(msg_dir.get(msg_key, "Unknown log message."))
-    logger.info("****************************************")
+    msg = msg_dir.get(msg_key, "Unknown log message.")
+    logger.info(width * "*")
+    logger.info("{:^{width}}".format(msg, width=width))
+    logger.info(width * "*")
 
 
 def create_picture(image_name, input_path, bands, n_bands, multi=False):
