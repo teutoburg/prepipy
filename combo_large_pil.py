@@ -7,6 +7,7 @@ import gc
 import logging
 from logging.config import dictConfig
 from pathlib import Path
+from string import Template
 
 import numpy as np
 import yaml
@@ -31,14 +32,16 @@ def _pretty_info_log(msg_key, width=50):
     logger.info(width * "*")
 
 
-def create_picture(image_name, input_path, bands, n_bands, multi=False):
+def create_picture(image_name, input_path, fname_template,
+                   bands, n_bands, multi=False):
     new_pic = JPEGPicture(name=image_name)
     if multi:
         new_pic.add_fits_frames_mp(input_path, bands)
     else:
         for band in tqdm(bands, total=n_bands,
                          bar_format=TQDM_FMT):
-            fname = f"{image_name}_{band.name}.fits"
+            fname = fname_template.substitute(image_name=image_name,
+                                              band_name=band.name)
             new_pic.add_frame_from_file(input_path/fname, band)
     logger.info("Picture %s fully loaded.", new_pic.name)
     return new_pic
@@ -53,8 +56,9 @@ def get_bands(fname, config):
 
 def create_rgb_image(input_path, output_path, image_name,
                      config, bands, channel_combos):
-    pic = create_picture(image_name, input_path, bands,
-                         len(config["use_bands"]),
+    fname_template = Template(config["general"]["filenames"])
+    pic = create_picture(image_name, input_path, fname_template,
+                         bands, len(config["use_bands"]),
                          config["process"]["multiprocess"])
 
     n_combos = len(channel_combos)
