@@ -1,4 +1,6 @@
 ---
+general:
+  filenames: ${foo}_${bar}
 process:
   multiprocess: no      # no (default) or yes
   grey_mode: normal     # normal, lessback or moreback
@@ -28,9 +30,9 @@ use_bands:
   - IRAC4
   - MIPS1
 combinations:
-  - ["i3", "Ks", "J" ]
-  - ["i4", "i3", "i2"]
-  - ["m1", "Ks", "J" ]
-  - ["m1", "i3", "Ks"]
-  - ["Ks", "H" , "J" ]
+  - [i3, Ks, J ]
+  - [i4, i3, i2]
+  - [m1, Ks, J ]
+  - [m1, i3, Ks]
+  - [Ks, H , J ]
 ...
