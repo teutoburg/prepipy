@@ -59,7 +59,7 @@ def create_rgb_image(input_path, output_path, image_name,
     fname_template = Template(config["general"]["filenames"])
     pic = create_picture(image_name, input_path, fname_template,
                          bands, len(config["use_bands"]),
-                         config["process"]["multiprocess"])
+                         config["general"]["multiprocess"])
 
     n_combos = len(channel_combos)
     for combo in tqdm(channel_combos, total=n_combos, bar_format=TQDM_FMT):

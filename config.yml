@@ -2,8 +2,8 @@
 general:
   filenames: ${image_name}_${band_name}.fits
   # e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
-process:
   multiprocess: no      # no (default) or yes
+process:
   grey_mode: normal     # normal, lessback or moreback
   rgb_adjust: no        # no (default) or yes
   alpha: 1.             # float (default=1.), typ. 1-2
