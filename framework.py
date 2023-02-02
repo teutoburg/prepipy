@@ -100,9 +100,13 @@ class Frame():
         self.sky_mask = None
 
     def __repr__(self):
-        return str(self)  # DEBUG only
+        """repr(self)."""
+        outstr = (f"{self.__class__.__name__}({self.image!r}, {self._band!r},"
+                  " {self.header!r}, **kwargs):")
+        return outstr
 
     def __str__(self):
+        """str(self)."""
         return f"{self.shape} frame in \"{self.band.printname}\" band"
 
     @classmethod
@@ -368,9 +372,11 @@ class Picture():
         self.name = name
 
     def __repr__(self):
-        return f"Picture(\"{self.name}\")"
+        """repr(self)."""
+        return f"{self.__class__.__name__}({self.name!r})"
 
     def __str__(self):
+        """str(self)."""
         return f"Picture \"{self.name}\" containing {len(self.frames)} frames."
 
     @property
@@ -577,10 +583,8 @@ class RGBPicture(Picture):
         self.params = None
         self.rgb_channels = None
 
-    def __repr__(self):
-        return f"RGBPicture(\"{self.name}\")"
-
     def __str__(self):
+        """str(self)."""
         outstr = (f"RGB Picture \"{self.name}\""
                   f" containing {len(self.frames):d} frames")
         if self.rgb_channels is not None:
@@ -870,9 +874,6 @@ class RGBPicture(Picture):
 class JPEGPicture(RGBPicture):
     """RGBPicture subclass for single image in JPEG format using Pillow."""
 
-    def __repr__(self):
-        return f"JPEGPicture(\"{self.name}\")"
-
     @staticmethod
     def _make_jpeg_variable_segment(marker: int, payload: bytes) -> bytes:
         """Make a JPEG segment from the given payload."""
@@ -950,9 +951,6 @@ class MPLPicture(RGBPicture):
                             "figsize": (3, 5.6),
                             "centermark": False,
                             "gridlines": False}
-
-    def __repr__(self):
-        return f"MPLPicture(\"{self.name}\")"
 
     @property
     def title(self):
