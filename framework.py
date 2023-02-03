@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Framework for images etc.
+
+My hands are typing words.
 """
 
 # from pathlib import Path
@@ -606,6 +608,7 @@ class Picture():
         return hdr
 
     def create_supercontrast(self, feature, background):
+        """TBA."""
         # BUG: this misses stretching and equalisation (what about norm?)
         logger.info(("Creating supercontrast image from %s as feature band "
                      "using %s as background bands"), feature, background)
