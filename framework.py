@@ -62,7 +62,7 @@ class Band():
             yield cls(**band)
 
     @staticmethod
-    def parse_yaml_dict(yaml_dict):
+    def parse_yaml_dict(yaml_dict: dict) -> dict:
         """Parse shortened names as used in YAML to correct parameter names."""
         for printname, band in yaml_dict.items():
             band["instrument"] = band.pop("inst")
@@ -72,7 +72,7 @@ class Band():
         return yaml_dict
 
     @staticmethod
-    def filter_used_bands(yaml_dict, use_bands=None):
+    def filter_used_bands(yaml_dict: dict, use_bands=None):
         """Either use specified or all, anyway turn into tuple w/o names."""
         if use_bands is not None:
             return itemgetter(*use_bands)(yaml_dict)
@@ -128,18 +128,18 @@ class Frame():
 
         self.sky_mask = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """repr(self)."""
         outstr = (f"{self.__class__.__name__}({self.image!r}, {self._band!r},"
                   " {self.header!r}, **kwargs):")
         return outstr
 
-    def __str__(self):
+    def __str__(self) -> str:
         """str(self)."""
         return f"{self.shape} frame in \"{self.band.printname}\" band"
 
     @classmethod
-    def from_fits(cls, filename, band, **kwargs):
+    def from_fits(cls, filename: str, band, **kwargs):
         """Create instance from fits file."""
         with fits.open(filename) as file:
             return cls(file[0].data, band, file[0].header, **kwargs)
@@ -150,7 +150,7 @@ class Frame():
         return self._band
 
     @property
-    def shape(self):
+    def shape(self) -> str:
         """Get shape of image array as pretty string."""
         return f"{self.image.shape[0]} x {self.image.shape[1]}"
 
@@ -179,7 +179,7 @@ class Frame():
         out = np.where(dst > radius)
         self.image[out] = 0.
 
-    def clip(self, n_sigma=3.):
+    def clip(self, n_sigma: float = 3.):
         """
         Perform n sigma clipping on the image (only affects max values).
 
@@ -200,7 +200,7 @@ class Frame():
         upper_limit = self.background + n_sigma * np.nanstd(self.image)
         self.image = np.clip(self.image, None, upper_limit)
 
-    def clip_and_nan(self, clip=10, nanmode="max", **kwargs):
+    def clip_and_nan(self, clip: float = 10, nanmode: str = "max", **kwargs):
         r"""
         Perform upper sigma clipping and replace NANs.
 
@@ -253,7 +253,7 @@ class Frame():
         axis.set_title(self.band.name)
         plt.show()
 
-    def normalize(self, new_range=1., new_offset=0.):
+    def normalize(self, new_range: float = 1., new_offset: float = 0.):
         """Subtract minimum and devide by maximum."""
         data_max = np.nanmax(self.image)
         data_min = np.nanmin(self.image)
@@ -276,7 +276,7 @@ class Frame():
 
         return data_range, data_max
 
-    def clipped_stats(self):
+    def clipped_stats(self) -> tuple[float]:
         """Calculate sigma-clipped image statistics."""
         data = self.image.flatten()
         mean, median, stddev = np.mean(data), np.median(data), np.std(data)
@@ -289,8 +289,9 @@ class Frame():
                      mean, median, stddev)
         return mean, median, stddev
 
-    def _min_inten(self, gamma_lum, grey_level=.3,
-                   sky_mode="median", max_mode="quantile", **kwargs):
+    def _min_inten(self, gamma_lum: float, grey_level: float = .3,
+                   sky_mode: str = "median", max_mode: str = "quantile",
+                   **kwargs) -> tuple[float]:
         if sky_mode == "quantile":
             i_sky = np.quantile(self.image, .8)
         elif sky_mode == "median":
@@ -320,7 +321,8 @@ class Frame():
         logger.debug("i_min=%-10.4fi_max=%.4f", i_min, i_max)
         return i_min, i_max
 
-    def stiff_d(self, stretch_function, gamma_lum=1.5, grey_level=.1,
+    def stiff_d(self, stretch_function,
+                gamma_lum: float = 1.5, grey_level: float = .1,
                 **kwargs):
         """Stretch frame based on modified STIFF algorithm."""
         logger.info("stretching %s band", self.band.name)
@@ -340,7 +342,7 @@ class Frame():
         logger.info("%s band done", self.band.name)
 
     @staticmethod
-    def stiff_stretch(image, stiff_mode="power-law", **kwargs):
+    def stiff_stretch(image, stiff_mode: str = "power-law", **kwargs):
         """Stretch frame based on STIFF algorithm."""
         def_kwargs = {"power-law": {"gamma": 2.2, "a": 1., "b": 0., "i_t": 0.},
                       "srgb":
@@ -387,7 +389,7 @@ class Frame():
         # image_s *= maximum
         return image_s
 
-    def auto_gma(self):
+    def auto_gma(self) -> float:
         """Find gamma based on exponential function. Highly experimental."""
         clp_mean, _, clp_stddev = self.clipped_stats()
         return np.exp((1 - (clp_mean + clp_stddev)) / 2)
@@ -396,15 +398,15 @@ class Frame():
 class Picture():
     """n/a."""
 
-    def __init__(self, name=None):
+    def __init__(self, name: str = None):
         self.frames = list()
         self.name = name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """repr(self)."""
         return f"{self.__class__.__name__}({self.name!r})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         """str(self)."""
         return f"Picture \"{self.name}\" containing {len(self.frames)} frames."
 
@@ -448,7 +450,7 @@ class Picture():
         return cen.to_string("hmsdms", sep=" ", precision=2)
 
     @property
-    def image_size(self):
+    def image_size(self) -> int:
         """Get number of pixels per frame. Read-only property."""
         return self.frames[0].image.size
 
@@ -512,6 +514,7 @@ class Picture():
 
     def add_fits_frames_mp(self, input_path, bands):
         """Add frames from fits files for each band, using multiprocessing."""
+        # FIXME: this should be updated to use dynamic file name pattern!
         args = [(input_path/f"{self.name}_{band.name}.fits", band)
                 for band in bands]
         with Pool(len(args)) as pool:
@@ -586,7 +589,7 @@ class Picture():
         """Combine multiple 3D picture cubes into one 4D cube."""
         return np.stack([picture.cube for picture in pictures])
 
-    def stretch_frames(self, mode="auto-light", **kwargs):
+    def stretch_frames(self, mode: str = "auto-light", **kwargs):
         """Perform stretching on frames."""
         for frame in self.frames:
             if mode == "auto-light":
@@ -619,13 +622,13 @@ class Picture():
 class RGBPicture(Picture):
     """Picture subclass for ccombining frames to colour image (RGB)."""
 
-    def __init__(self, name=None):
+    def __init__(self, name: str = None):
         super().__init__(name)
 
         self.params = None
         self.rgb_channels = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         """str(self)."""
         outstr = (f"RGB Picture \"{self.name}\""
                   f" containing {len(self.frames):d} frames")
@@ -639,11 +642,11 @@ class RGBPicture(Picture):
         return outstr
 
     @property
-    def is_bright(self):
+    def is_bright(self) -> bool:
         """Return True is any median of the RGB frames is >.2."""
         return any(np.median(c.image) > .2 for c in self.rgb_channels)
 
-    def get_rgb_cube(self, mode="0-1", order="cxy"):
+    def get_rgb_cube(self, mode: str = "0-1", order: str = "cxy"):
         """Stack images from RGB channels into one 3D cube, normalized to 1.
 
         mode can be `0-1` or `0-255`.
@@ -674,7 +677,7 @@ class RGBPicture(Picture):
 
         return rgb
 
-    def select_rgb_channels(self, bands, single=False):
+    def select_rgb_channels(self, bands, single: bool = False):
         """
         Select existing frames to be used as channels for multi-colour image.
 
@@ -747,7 +750,8 @@ class RGBPicture(Picture):
             for channel, weight in zip(self.rgb_channels, weights):
                 channel.image *= weight
 
-    def stretch_frames(self, mode="auto-light", only_rgb=False, **kwargs):
+    def stretch_frames(self, mode: str = "auto-light", only_rgb: bool = False,
+                       **kwargs):
         """Perform stretching on frames."""
         if only_rgb:
             frames = self.rgb_channels
@@ -796,7 +800,8 @@ class RGBPicture(Picture):
         sum_image /= len(self.rgb_channels)
         return sum_image
 
-    def stretch_luminance(self, stretch_fkt_lum, gamma_lum, lum, **kwargs):
+    def stretch_luminance(self, stretch_fkt_lum, gamma_lum: float, lum,
+                          **kwargs):
         """Perform luminance stretching.
 
         The luminance stretch function `stretch_fkt_lum` is expected to take
@@ -809,7 +814,8 @@ class RGBPicture(Picture):
             channel.image /= lum
             channel.image *= lum_stretched
 
-    def adjust_rgb(self, alpha, stretch_fkt_lum, gamma_lum, **kwargs):
+    def adjust_rgb(self, alpha: float, stretch_fkt_lum, gamma_lum: float,
+                   **kwargs):
         """
         Adjust colour saturation of 3-channel (R, G, B) image.
 
@@ -860,7 +866,8 @@ class RGBPicture(Picture):
         #        (as is currently) or with the adjusted one???
         self.stretch_luminance(stretch_fkt_lum, gamma_lum, lum, **kwargs)
 
-    def equalize(self, mode="mean", offset=.5, norm=True, supereq=False):
+    def equalize(self, mode: str = "mean", offset: float = .5,
+                 norm: bool = True, supereq: bool = False):
         """
         Perform a collection of processes to enhance the RGB image.
 
@@ -901,7 +908,7 @@ class RGBPicture(Picture):
                 channel.image *= equal
 
     @staticmethod
-    def cmyk_to_rgb(cmyk, cmyk_scale, rgb_scale=255):
+    def cmyk_to_rgb(cmyk, cmyk_scale: float, rgb_scale: int = 255):
         """Convert CMYK to RGB."""
         cmyk_scale = float(cmyk_scale)
         scale_factor = rgb_scale * (1. - cmyk[3] / cmyk_scale)
@@ -927,7 +934,7 @@ class JPEGPicture(RGBPicture):
         return JPEGPicture._make_jpeg_variable_segment(0xFFFE, comment)
 
     @staticmethod
-    def save_hdr(fname, hdr):
+    def save_hdr(fname: str, hdr):
         """Save header as JPEG comment. Redundant with pillow 9.4.x."""
         # TODO: log all of this crape
         logger.debug("saving header:")
@@ -1012,7 +1019,7 @@ class MPLPicture(RGBPicture):
         # TODO: this should be better doable using astropy stuff...
         axis.plot(*self.center, "w+", ms=10)
 
-    def _display_cube(self, axis, center=False, grid=False):
+    def _display_cube(self, axis, center: bool = False, grid: bool = False):
         axis.imshow(self.get_rgb_cube(order="xyc"),
                     aspect="equal", origin="lower")
         axis.set_xlabel("right ascension")
@@ -1028,7 +1035,7 @@ class MPLPicture(RGBPicture):
         axes[0].imshow(cube.T, origin="lower")
         self._add_histo(axes[1])
 
-    def _get_axes(self, nrows, ncols, figsize_mult):
+    def _get_axes(self, nrows: int, ncols: int, figsize_mult):
         # 3, 5.6
         figsize = tuple(n * s for n, s in zip((ncols, nrows), figsize_mult))
         fig = plt.figure(figsize=figsize, dpi=300)
@@ -1044,7 +1051,8 @@ class MPLPicture(RGBPicture):
         # axes = list(map(list, zip(*axes)))
         return fig, axes.T
 
-    def _create_title(self, axis, combo, mode="debug", equalized=False):
+    def _create_title(self, axis, combo,
+                      mode: str = "debug", equalized: bool = False):
         if mode == "debug":
             title = "R: {}, G: {}, B: {}".format(*combo)
             title += "\n{equalized = }"
