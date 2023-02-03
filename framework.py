@@ -1021,6 +1021,10 @@ class MPLPicture(RGBPicture):
     def _plot_center_marker(self, axis):
         # TODO: this should be better doable using astropy stuff...
         axis.plot(*self.center, "w+", ms=10)
+        axis.scatter(self.center_coords.ra.value, self.center_coords.dec.value,
+                     transform=axis.get_transform("world"))
+        # Why is axis not an instance of WCSAxes???
+        # axis.scatter_coord(self.center_coords)
 
     def _display_cube(self, axis, center: bool = False, grid: bool = False):
         axis.imshow(self.get_rgb_cube(order="xyc"),
