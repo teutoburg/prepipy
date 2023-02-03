@@ -12,7 +12,7 @@ import struct
 from dataclasses import dataclass
 from multiprocessing import Pool
 
-# import yaml
+import yaml
 # from tqdm import tqdm
 import numpy as np
 import matplotlib as mpl
@@ -56,26 +56,55 @@ class Band():
     telescope: str = "unknown"
 
     @classmethod
-    def from_yaml_dict(cls, bands, use_bands=None):
-        """Create incstance from YAML dictionary entry (default factory)."""
-        # parse shortened names to correct parameter names
-        for printname, band in bands.items():
+    def from_dict(cls, bands):
+        """Create incstance from list of dictionaries (default factory)."""
+        for band in bands:
+            yield cls(**band)
+
+    @staticmethod
+    def parse_yaml_dict(yaml_dict):
+        """Parse shortened names as used in YAML to correct parameter names."""
+        for printname, band in yaml_dict.items():
             band["instrument"] = band.pop("inst")
             band["telescope"] = band.pop("tele")
             band["wavelength"] = band.pop("wave")
             band["printname"] = printname.replace("_", " ")
+        return yaml_dict
 
-        # either use specified or all, anyway turn into tuple without names
+    @staticmethod
+    def filter_used_bands(yaml_dict, use_bands=None):
+        """Either use specified or all, anyway turn into tuple w/o names."""
         if use_bands is not None:
-            bands = itemgetter(*use_bands)(bands)
-        else:
-            bands = tuple(bands.values())
+            return itemgetter(*use_bands)(yaml_dict)
+        return yaml_dict.values()
 
-        # in case we ever need the names as well...
-        # for name, band in bands.items():
-        #     yield name, cls(**band)
-        for band in bands:
-            yield cls(**band)
+    @classmethod
+    def from_yaml_file(cls, filename: str, use_bands=None):
+        """
+        Yield newly created instances from YAML config file entries.
+
+        Parameters
+        ----------
+        filename : str
+            Location of the YAML config file containing the band definitions.
+        use_bands : list-like of str, optional
+            Can be used to filter the bands before any instances are created.
+            If supplied, this should be a list (or any iterable) containing
+            string values matching the band names used in the YAML file.
+            If None, all bands from the YAML file are used.
+            The default is None.
+
+        Returns
+        -------
+        bands : iterable
+            Generator object containing the new Band instances.
+
+        """
+        with open(filename, "r") as ymlfile:
+            yaml_dict = yaml.load(ymlfile, yaml.SafeLoader)
+        yaml_dict = cls.parse_yaml_dict(yaml_dict)
+        bands = cls.filter_used_bands(yaml_dict, use_bands)
+        return cls.from_dict(bands)
 
 
 class Frame():
