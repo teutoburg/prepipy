@@ -1,6 +1,9 @@
 ---
-process:
+general:
+  filenames: ${image_name}_${band_name}.fits
+  # e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
   multiprocess: no      # no (default) or yes
+process:
   grey_mode: normal     # normal, lessback or moreback
   rgb_adjust: no        # no (default) or yes
   alpha: 1.             # float (default=1.), typ. 1-2
@@ -28,9 +31,9 @@ use_bands:
   - IRAC4
   - MIPS1
 combinations:
-  - ["i3", "Ks", "J" ]
-  - ["i4", "i3", "i2"]
-  - ["m1", "Ks", "J" ]
-  - ["m1", "i3", "Ks"]
-  - ["Ks", "H" , "J" ]
+  - [i3, Ks, J ]
+  - [i4, i3, i2]
+  - [m1, Ks, J ]
+  - [m1, i3, Ks]
+  - [Ks, H , J ]
 ...

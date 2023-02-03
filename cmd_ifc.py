@@ -25,9 +25,10 @@ def main():
                         help="""The file path to the input fits files
                         containing the images that shall be processed.""")
     parser.add_argument("image_name",
-                        help="""Name stem of the images. Image names must have
-                        the following structure: <name>_<band>.fits, e.g.
-                        V883_Ori_J.fits.""")
+                        help="""Name stem of the images. Image names and paths
+                        to data from individual bands can be defined in the
+                        config file. Default structure is: <name>_<band>.fits,
+                        e.g. V883_Ori_J.fits.""")
     parser.add_argument("-o", "--output-path",
                         help="""The file path where the combined images will
                         be saved to. If omitted, images are dumped back into
