@@ -1020,7 +1020,6 @@ class MPLPicture(RGBPicture):
         axis.grid(color="w", ls=":")
 
     def _plot_center_marker(self, axis):
-        # TODO: this should be better doable using astropy stuff...
         axis.scatter(*self.center_coords,
                      transform=axis.get_transform("world"), s=50,
                      edgecolor="white", facecolor="none")
@@ -1044,7 +1043,6 @@ class MPLPicture(RGBPicture):
         self._add_histo(axes[1])
 
     def _get_axes(self, nrows: int, ncols: int, figsize_mult):
-        # 3, 5.6
         figsize = tuple(n * s for n, s in zip((ncols, nrows), figsize_mult))
         fig = plt.figure(figsize=figsize, dpi=300)
         # subfigs = fig.subfigures(nrows)
