@@ -1088,6 +1088,8 @@ class MPLPicture(RGBPicture):
         grey_values = {"normal": .3, "lessback": .08, "moreback": .7}
 
         nrows, ncols = 1, len(channel_combos)
+        assert nrows * ncols >= len(channel_combos)
+
         fig, axes = self._get_axes(nrows, ncols, figurekwargs["figsize"])
         for combo, column in zip(tqdm(channel_combos), axes.flatten()):
             self.select_rgb_channels(combo)
