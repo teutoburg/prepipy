@@ -1019,14 +1019,19 @@ class MPLPicture(RGBPicture):
     def _plot_coord_grid(axis):
         axis.grid(color="w", ls=":")
 
-    def _plot_center_marker(self, axis, size=50):
-        axis.scatter(*self.center_coords,
+    @staticmethod
+    def _plot_roi(axis, radec, size=50):
+        axis.scatter(*radec,
                      transform=axis.get_transform("world"), s=size,
                      edgecolor="w", facecolor="none")
         # Why is axis not an instance of WCSAxes???
         # axis.scatter_coord(self.center_coords)
 
-    def _display_cube(self, axis, center: bool = False, grid: bool = False):
+    def _plot_center_marker(self, axis, size=50):
+        self._plot_roi(axis, self.center_coords, size)
+
+    def _display_cube(self, axis, center: bool = False, grid: bool = False,
+                      additional_roi=None):
         axis.imshow(self.get_rgb_cube(order="xyc"),
                     aspect="equal", origin="lower")
         axis.set_xlabel("right ascension")
@@ -1037,6 +1042,9 @@ class MPLPicture(RGBPicture):
             self._plot_center_marker(axis)
         if grid:
             self._plot_coord_grid(axis)
+        if additional_roi is not None:
+            for radec in additional_roi:
+                self._plot_roi(axis, radec)
 
     def _display_cube_histo(self, axes, cube):
         axes[0].imshow(cube.T, origin="lower")
@@ -1100,7 +1108,8 @@ class MPLPicture(RGBPicture):
             # TODO: add histogram option back in
             self._display_cube(column,
                                center=figurekwargs["centermark"],
-                               grid=figurekwargs["gridlines"])
+                               grid=figurekwargs["gridlines"],
+                               additional_roi=figurekwargs["additional_roi"])
 
         if figurekwargs["include_suptitle"]:
             suptitle = self.title + "\n" + self.center_coords_str
