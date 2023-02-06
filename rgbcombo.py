@@ -17,6 +17,9 @@ from framework import JPEGPicture, Frame, Band
 
 TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 
+DEFAULT_CONFIG_FNAME = "./config.yml"
+DEFAULT_BANDS_FNAME = "./bands.yml"
+
 
 def _gma(i, g):
     return np.power(i, 1/g)
@@ -99,13 +102,11 @@ def setup_rgb_single(input_path, output_path, image_name,
                      config_name=None, bands_name=None):
     _pretty_info_log("single")
 
-    if config_name is None:
-        config_name = "./config.yml"
+    config_name = config_name or DEFAULT_CONFIG_FNAME
     with open(config_name, "r") as ymlfile:
         config = yaml.load(ymlfile, yaml.SafeLoader)
 
-    if bands_name is None:
-        bands_name = "./bands.yml"
+    bands_name = bands_name or DEFAULT_BANDS_FNAME
     bands = Band.from_yaml_file(bands_name, config["use_bands"])
     channel_combos = config["combinations"]
 
@@ -120,13 +121,11 @@ def setup_rgb_multiple(input_path, output_path, image_names,
                        create_outfolder=False):
     _pretty_info_log("multiple")
 
-    if config_name is None:
-        config_name = "./config.yml"
+    config_name = config_name or DEFAULT_CONFIG_FNAME
     with open(config_name, "r") as ymlfile:
         config = yaml.load(ymlfile, yaml.SafeLoader)
 
-    if bands_name is None:
-        bands_name = "./bands.yml"
+    bands_name = bands_name or DEFAULT_BANDS_FNAME
     bands = Band.from_yaml_file(bands_name, config["use_bands"])
     channel_combos = config["combinations"]
 
