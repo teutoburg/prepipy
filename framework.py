@@ -438,17 +438,18 @@ class Picture():
     @property
     def center(self):
         """Pixel coordinates of center of first frame. Read-only property."""
-        return [sh//2 for sh in self.image.shape]
+        # HACK: does this always return the correct order??
+        return [sh//2 for sh in self.image.shape[::-1]]
 
     @property
     def center_coords(self):
         """WCS coordinates of the center of first frame. Read-only property."""
-        return self.coords.pixel_to_world(*self.center)
+        return self.coords.pixel_to_world_values(*self.center)
 
     @property
     def center_coords_str(self):
         """Get string conversion of center coords. Read-only property."""
-        cen = self.center_coords
+        cen = self.coords.pixel_to_world(*self.center)
         return cen.to_string("hmsdms", sep=" ", precision=2)
 
     @property
@@ -1020,9 +1021,9 @@ class MPLPicture(RGBPicture):
 
     def _plot_center_marker(self, axis):
         # TODO: this should be better doable using astropy stuff...
-        axis.plot(*self.center, "w+", ms=10)
-        axis.scatter(self.center_coords.ra.value, self.center_coords.dec.value,
-                     transform=axis.get_transform("world"))
+        axis.scatter(*self.center_coords,
+                     transform=axis.get_transform("world"), s=50,
+                     edgecolor="white", facecolor="none")
         # Why is axis not an instance of WCSAxes???
         # axis.scatter_coord(self.center_coords)
 
