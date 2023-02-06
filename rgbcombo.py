@@ -142,51 +142,6 @@ def setup_rgb_multiple(input_path, output_path, image_names,
     _pretty_info_log("RGB processing done")
 
 
-def _logging_configurator():
-    main_logger = logging.getLogger("main")
-    try:
-        with open("./log/logging_config.yml", "r") as ymlfile:
-            dictConfig(yaml.load(ymlfile, yaml.SafeLoader))
-    except FileNotFoundError as err:
-        logging.error(err)
-        logging.basicConfig()
-        logger.setLevel(logging.INFO)
-    return main_logger
-
-
-logger = logging.getLogger(__name__)
-
-if __name__ == "__main__":
-    logger = _logging_configurator()
-    root = Path("D:/Nemesis/data/HOPS")
-    path = root/"HOPS_99"
-    imgpath = root/"RGBs"
-    # root = Path("D:/Nemesis/data")
-    # path = root/"stamps/LARGE/Orion"
-    # imgpath = root/"comps_large"
-    # root = Path("C:/Users/ghost/Desktop/nemesis/iras32")
-    # path = root
-    # imgpath = root
-
-    # target = "Hand"
-    target = "HOPS_99"
-    # target = "larger_IRAS-32"
-    # https://note.nkmk.me/en/python-pillow-concat-images/
-
-    setup_rgb_single(path, imgpath, target)
-
-    # root = Path("D:/Nemesis/data/perseus")
-    # path = root/"stamps/"
-
-    # for i in range(1, 4):
-    #     target = f"IC 348-{i}"
-    #     setup_rgb(path, root/"RGBs", target)
-
-    gc.collect()
-    sys.exit(0)
-
-
-
 def main():
     """Execute in script mode."""
     parser = argparse.ArgumentParser(prog="rgbcombo",
@@ -261,4 +216,34 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     _logging_configurator()
     main()
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    logger = _logging_configurator()
+    root = Path("D:/Nemesis/data/HOPS")
+    path = root/"HOPS_99"
+    imgpath = root/"RGBs"
+    # root = Path("D:/Nemesis/data")
+    # path = root/"stamps/LARGE/Orion"
+    # imgpath = root/"comps_large"
+    # root = Path("C:/Users/ghost/Desktop/nemesis/iras32")
+    # path = root
+    # imgpath = root
+
+    # target = "Hand"
+    target = "HOPS_99"
+    # target = "larger_IRAS-32"
+    # https://note.nkmk.me/en/python-pillow-concat-images/
+
+    setup_rgb_single(path, imgpath, target)
+
+    # root = Path("D:/Nemesis/data/perseus")
+    # path = root/"stamps/"
+
+    # for i in range(1, 4):
+    #     target = f"IC 348-{i}"
+    #     setup_rgb(path, root/"RGBs", target)
+
+    gc.collect()
     sys.exit(0)
