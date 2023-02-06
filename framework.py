@@ -1078,6 +1078,20 @@ class MPLPicture(RGBPicture):
             raise ValueError("Title mode not understood.")
         axis.set_title(title, pad=7, fontdict={"multialignment": "left"})
 
+    @staticmethod
+    def _get_nrows_ncols(n_combos, maxcols=4):
+        """Determine necessary number of rows and columns for subplots.
+
+        The `maxcols` argument allows for a maximum number of columns to
+        be set. If more `n_combos` is greater, additional rows will be
+        created as needed. This will result in 'empty' positions, if `n_combos`
+        is not divisible by `maxcols`.
+        """
+        ncols = min(n_combos, maxcols)
+        nrows = n_combos // ncols + bool(n_combos % ncols)
+        assert nrows * ncols >= n_combos
+        return nrows, ncols
+
     def stuff(self, channel_combos, imgpath, grey_mode="normal",
               figurekwargs=None, **kwargs):
         """DEBUG ONLY."""
@@ -1087,8 +1101,8 @@ class MPLPicture(RGBPicture):
             figurekwargs = self.default_figurekwargs
         grey_values = {"normal": .3, "lessback": .08, "moreback": .7}
 
-        nrows, ncols = 1, len(channel_combos)
-        assert nrows * ncols >= len(channel_combos)
+        nrows, ncols = self._get_nrows_ncols(len(channel_combos),
+                                             figurekwargs.get("max_cols", 4))
 
         fig, axes = self._get_axes(nrows, ncols, figurekwargs["figsize"])
         for combo, column in zip(tqdm(channel_combos), axes.flatten()):
