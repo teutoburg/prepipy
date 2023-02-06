@@ -21,6 +21,7 @@ figure:
   figsize: [3, 5.6]     # [col, row]
   centermark: no        # no (default) or yes
   gridlines: no         # no (default) or yes
+  additional_roi:       # each as [ra, dec] in decimal deg format
 use_bands:
   - VISION_J
   - VISION_H
