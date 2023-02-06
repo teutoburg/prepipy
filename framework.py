@@ -438,17 +438,18 @@ class Picture():
     @property
     def center(self):
         """Pixel coordinates of center of first frame. Read-only property."""
-        return [sh//2 for sh in self.image.shape]
+        # HACK: does this always return the correct order??
+        return [sh//2 for sh in self.image.shape[::-1]]
 
     @property
     def center_coords(self):
         """WCS coordinates of the center of first frame. Read-only property."""
-        return self.coords.pixel_to_world(*self.center)
+        return self.coords.pixel_to_world_values(*self.center)
 
     @property
     def center_coords_str(self):
         """Get string conversion of center coords. Read-only property."""
-        cen = self.center_coords
+        cen = self.coords.pixel_to_world(*self.center)
         return cen.to_string("hmsdms", sep=" ", precision=2)
 
     @property
@@ -1018,11 +1019,19 @@ class MPLPicture(RGBPicture):
     def _plot_coord_grid(axis):
         axis.grid(color="w", ls=":")
 
-    def _plot_center_marker(self, axis):
-        # TODO: this should be better doable using astropy stuff...
-        axis.plot(*self.center, "w+", ms=10)
+    @staticmethod
+    def _plot_roi(axis, radec, size=50):
+        axis.scatter(*radec,
+                     transform=axis.get_transform("world"), s=size,
+                     edgecolor="w", facecolor="none")
+        # Why is axis not an instance of WCSAxes???
+        # axis.scatter_coord(self.center_coords)
 
-    def _display_cube(self, axis, center: bool = False, grid: bool = False):
+    def _plot_center_marker(self, axis, size=50):
+        self._plot_roi(axis, self.center_coords, size)
+
+    def _display_cube(self, axis, center: bool = False, grid: bool = False,
+                      rois=None):
         axis.imshow(self.get_rgb_cube(order="xyc"),
                     aspect="equal", origin="lower")
         axis.set_xlabel("right ascension")
@@ -1033,13 +1042,15 @@ class MPLPicture(RGBPicture):
             self._plot_center_marker(axis)
         if grid:
             self._plot_coord_grid(axis)
+        if rois is not None:
+            for radec in rois:
+                self._plot_roi(axis, radec)
 
     def _display_cube_histo(self, axes, cube):
         axes[0].imshow(cube.T, origin="lower")
         self._add_histo(axes[1])
 
     def _get_axes(self, nrows: int, ncols: int, figsize_mult):
-        # 3, 5.6
         figsize = tuple(n * s for n, s in zip((ncols, nrows), figsize_mult))
         fig = plt.figure(figsize=figsize, dpi=300)
         # subfigs = fig.subfigures(nrows)
@@ -1097,7 +1108,8 @@ class MPLPicture(RGBPicture):
             # TODO: add histogram option back in
             self._display_cube(column,
                                center=figurekwargs["centermark"],
-                               grid=figurekwargs["gridlines"])
+                               grid=figurekwargs["gridlines"],
+                               rois=figurekwargs.get("additional_roi", None))
 
         if figurekwargs["include_suptitle"]:
             suptitle = self.title + "\n" + self.center_coords_str
