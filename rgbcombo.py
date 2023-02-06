@@ -214,16 +214,10 @@ logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
-    _logging_configurator()
-    main()
-    sys.exit(0)
-
-
-if __name__ == "__main__":
     logger = _logging_configurator()
-    root = Path("D:/Nemesis/data/HOPS")
-    path = root/"HOPS_99"
-    imgpath = root/"RGBs"
+    # root = Path("D:/Nemesis/data/HOPS")
+    # path = root/"HOPS_99"
+    # imgpath = root/"RGBs"
     # root = Path("D:/Nemesis/data")
     # path = root/"stamps/LARGE/Orion"
     # imgpath = root/"comps_large"
@@ -232,11 +226,11 @@ if __name__ == "__main__":
     # imgpath = root
 
     # target = "Hand"
-    target = "HOPS_99"
+    # target = "HOPS_99"
     # target = "larger_IRAS-32"
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
-    setup_rgb_single(path, imgpath, target)
+    # setup_rgb_single(path, imgpath, target)
 
     # root = Path("D:/Nemesis/data/perseus")
     # path = root/"stamps/"
@@ -245,5 +239,6 @@ if __name__ == "__main__":
     #     target = f"IC 348-{i}"
     #     setup_rgb(path, root/"RGBs", target)
 
+    main()
     gc.collect()
     sys.exit(0)
