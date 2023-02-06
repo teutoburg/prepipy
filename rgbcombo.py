@@ -2,26 +2,15 @@
 """Debug module to run main functions from command line."""
 
 import sys
+import gc
 import argparse
 import logging
 from logging.config import dictConfig
-from pathlib import Path
-
-import yaml
-
-from combo_large_pil import setup_rgb_single, setup_rgb_multiple
-
-
-
-import sys
-import gc
-import logging
-from logging.config import dictConfig
-from pathlib import Path
 from string import Template
+from pathlib import Path
 
-import numpy as np
 import yaml
+import numpy as np
 from tqdm import tqdm
 
 from framework import JPEGPicture, Frame, Band
@@ -56,13 +45,6 @@ def create_picture(image_name, input_path, fname_template,
             new_pic.add_frame_from_file(input_path/fname, band)
     logger.info("Picture %s fully loaded.", new_pic.name)
     return new_pic
-
-
-def get_bands(fname, config):
-    with open(fname, "r") as ymlfile:
-        bands_config = yaml.load(ymlfile, yaml.SafeLoader)
-    bands = Band.from_yaml_dict(bands_config, config["use_bands"])
-    return bands
 
 
 def create_rgb_image(input_path, output_path, image_name,
@@ -124,7 +106,7 @@ def setup_rgb_single(input_path, output_path, image_name,
 
     if bands_name is None:
         bands_name = "./bands.yml"
-    bands = get_bands(bands_name, config)
+    bands = Band.from_yaml_file(bands_name, config["use_bands"])
     channel_combos = config["combinations"]
 
     create_rgb_image(input_path, output_path, image_name, config, bands,
@@ -145,7 +127,7 @@ def setup_rgb_multiple(input_path, output_path, image_names,
 
     if bands_name is None:
         bands_name = "./bands.yml"
-    bands = get_bands(bands_name, config)
+    bands = Band.from_yaml_file(bands_name, config["use_bands"])
     channel_combos = config["combinations"]
 
     for image_name in image_names:
