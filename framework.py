@@ -1019,10 +1019,10 @@ class MPLPicture(RGBPicture):
     def _plot_coord_grid(axis):
         axis.grid(color="w", ls=":")
 
-    def _plot_center_marker(self, axis):
+    def _plot_center_marker(self, axis, size=50):
         axis.scatter(*self.center_coords,
-                     transform=axis.get_transform("world"), s=50,
-                     edgecolor="white", facecolor="none")
+                     transform=axis.get_transform("world"), s=size,
+                     edgecolor="w", facecolor="none")
         # Why is axis not an instance of WCSAxes???
         # axis.scatter_coord(self.center_coords)
 
