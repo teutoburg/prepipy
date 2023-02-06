@@ -14,7 +14,7 @@ from combo_large_pil import setup_rgb_single, setup_rgb_multiple
 
 def main():
     """Execute in script mode."""
-    parser = argparse.ArgumentParser(prog="RGBCOMBO",
+    parser = argparse.ArgumentParser(prog="rgbcombo",
                                      description="""Combines RGB channels to
                                      color image including stretching.""")
 
