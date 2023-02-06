@@ -1031,7 +1031,7 @@ class MPLPicture(RGBPicture):
         self._plot_roi(axis, self.center_coords, size)
 
     def _display_cube(self, axis, center: bool = False, grid: bool = False,
-                      additional_roi=None):
+                      rois=None):
         axis.imshow(self.get_rgb_cube(order="xyc"),
                     aspect="equal", origin="lower")
         axis.set_xlabel("right ascension")
@@ -1042,8 +1042,8 @@ class MPLPicture(RGBPicture):
             self._plot_center_marker(axis)
         if grid:
             self._plot_coord_grid(axis)
-        if additional_roi is not None:
-            for radec in additional_roi:
+        if rois is not None:
+            for radec in rois:
                 self._plot_roi(axis, radec)
 
     def _display_cube_histo(self, axes, cube):
@@ -1109,7 +1109,7 @@ class MPLPicture(RGBPicture):
             self._display_cube(column,
                                center=figurekwargs["centermark"],
                                grid=figurekwargs["gridlines"],
-                               additional_roi=figurekwargs["additional_roi"])
+                               rois=figurekwargs.get("additional_roi", None))
 
         if figurekwargs["include_suptitle"]:
             suptitle = self.title + "\n" + self.center_coords_str
