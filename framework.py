@@ -397,6 +397,8 @@ class Frame():
         clp_mean, _, clp_stddev = self.clipped_stats()
         return np.exp((1 - (clp_mean + clp_stddev)) / 2)
 
+    def save_fits(self, fname):
+        fits.writeto(fname, self.image, self.header)
 
 class Picture():
     """n/a."""

@@ -97,10 +97,11 @@ def create_rgb_image(input_path, output_path, image_name,
         pic.save_pil(output_path/fname)
         logger.info("Image %s in %s done.", pic.name, cols)
     logger.info("Image %s fully completed.", pic.name)
+    return pic
 
 
 def setup_rgb_single(input_path, output_path, image_name,
-                     config_name=None, bands_name=None):
+                     config_name=None, bands_name=None, dsf=False):
     _pretty_info_log("single")
 
     config_name = config_name or DEFAULT_CONFIG_FNAME
@@ -111,15 +112,20 @@ def setup_rgb_single(input_path, output_path, image_name,
     bands = Band.from_yaml_file(bands_name, config["use_bands"])
     channel_combos = config["combinations"]
 
-    create_rgb_image(input_path, output_path, image_name, config, bands,
-                     channel_combos)
+    pic = create_rgb_image(input_path, output_path, image_name, config, bands,
+                           channel_combos)
 
     _pretty_info_log("done")
+    if dsf:
+        for ch in pic.rgb_channels:
+            fname = output_path/f"{ch.band.name}_stretched.fits"
+            ch.save_fits(fname)
+    return pic
 
 
 def setup_rgb_multiple(input_path, output_path, image_names,
                        config_name=None, bands_name=None,
-                       create_outfolder=False):
+                       create_outfolder=False, dsf=False):
     _pretty_info_log("multiple")
 
     config_name = config_name or DEFAULT_CONFIG_FNAME
@@ -181,6 +187,10 @@ def main():
                         help="""Whether to create a separate folder in the
                         output path for each picture, which may already exist.
                         Can only be used if -m option is set.""")
+    parser.add_argument("--dump-stretched-fits",
+                        dest="dsf",
+                        action="store_true",
+                        help="""Nomen est omen.""")
     args = parser.parse_args()
 
     if args.output_path is not None:
@@ -192,10 +202,10 @@ def main():
     if args.many:
         setup_rgb_multiple(args.input_path, output_path, args.image_name,
                            args.config_file, args.bands_file,
-                           args.create_outfolders)
+                           args.create_outfolders, args.dsf)
     else:
         setup_rgb_single(args.input_path, output_path, args.image_name,
-                         args.config_file, args.bands_file)
+                         args.config_file, args.bands_file, args.dsf)
 
 
 def _logging_configurator():
@@ -230,7 +240,7 @@ if __name__ == "__main__":
     # target = "larger_IRAS-32"
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
-    # setup_rgb_single(path, imgpath, target)
+    # mypic = setup_rgb_single(path, imgpath, target, dsf=True)
 
     # root = Path("D:/Nemesis/data/perseus")
     # path = root/"stamps/"
