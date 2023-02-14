@@ -9,6 +9,7 @@ import logging
 from logging.config import dictConfig
 from string import Template
 from pathlib import Path
+from shutil import get_terminal_size
 
 import yaml
 import numpy as np
@@ -16,7 +17,8 @@ from tqdm import tqdm
 
 from framework import JPEGPicture, Frame, Band
 
-TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
+width, _ = get_terminal_size((50, 20))
+tqdm_fmt = f"{{l_bar}}{{bar:{width}}}{{r_bar}}{{bar:-{width}b}}"
 
 DEFAULT_CONFIG_FNAME = "./config.yml"
 DEFAULT_BANDS_FNAME = "./bands.yml"
@@ -43,7 +45,7 @@ def create_picture(image_name, input_path, fname_template,
         new_pic.add_fits_frames_mp(input_path, bands)
     else:
         for band in tqdm(bands, total=n_bands,
-                         bar_format=TQDM_FMT):
+                         bar_format=tqdm_fmt):
             fname = fname_template.substitute(image_name=image_name,
                                               band_name=band.name)
             new_pic.add_frame_from_file(input_path/fname, band)
@@ -52,14 +54,14 @@ def create_picture(image_name, input_path, fname_template,
 
 
 def create_rgb_image(input_path, output_path, image_name,
-                     config, bands, channel_combos):
+                     config, bands, channel_combos, dump_stretch):
     fname_template = Template(config["general"]["filenames"])
     pic = create_picture(image_name, input_path, fname_template,
                          bands, len(config["use_bands"]),
                          config["general"]["multiprocess"])
 
     n_combos = len(channel_combos)
-    for combo in tqdm(channel_combos, total=n_combos, bar_format=TQDM_FMT):
+    for combo in tqdm(channel_combos, total=n_combos, bar_format=tqdm_fmt):
         cols = "".join(combo)
         logger.info("Processing image %s in %s.", pic.name, cols)
         pic.select_rgb_channels(combo, single=(n_combos == 1))
@@ -95,13 +97,22 @@ def create_rgb_image(input_path, output_path, image_name,
             logger.info("Used normal grey mode.")
             fname = f"{pic.name}_img_{cols}.JPEG"
         pic.save_pil(output_path/fname)
+
+        if dump_stretch:
+            logger.info("Dumping stretched FITS files for each channel.")
+            for channel in pic.rgb_channels:
+                dump_name = channel.band.name
+                fname = output_path/f"{dump_name}_stretched.fits"
+                channel.save_fits(fname)
+                logger.info("Done dumping %s image.", dump_name)
+            logger.info("Done dumping all channels for this combination.")
         logger.info("Image %s in %s done.", pic.name, cols)
     logger.info("Image %s fully completed.", pic.name)
     return pic
 
 
 def setup_rgb_single(input_path, output_path, image_name,
-                     config_name=None, bands_name=None, dsf=False):
+                     config_name=None, bands_name=None, dump_stretch=False):
     _pretty_info_log("single")
 
     config_name = config_name or DEFAULT_CONFIG_FNAME
@@ -113,19 +124,15 @@ def setup_rgb_single(input_path, output_path, image_name,
     channel_combos = config["combinations"]
 
     pic = create_rgb_image(input_path, output_path, image_name, config, bands,
-                           channel_combos)
+                           channel_combos, dump_stretch)
 
     _pretty_info_log("done")
-    if dsf:
-        for ch in pic.rgb_channels:
-            fname = output_path/f"{ch.band.name}_stretched.fits"
-            ch.save_fits(fname)
     return pic
 
 
 def setup_rgb_multiple(input_path, output_path, image_names,
                        config_name=None, bands_name=None,
-                       create_outfolder=False, dsf=False):
+                       create_outfolder=False, dump_stretch=False):
     _pretty_info_log("multiple")
 
     config_name = config_name or DEFAULT_CONFIG_FNAME
@@ -142,9 +149,9 @@ def setup_rgb_multiple(input_path, output_path, image_names,
             imgpath.mkdir(parents=True, exist_ok=True)
         else:
             imgpath = output_path
-        create_rgb_image(input_path, imgpath, image_name, config, bands,
-                         channel_combos)
-
+        pic = create_rgb_image(input_path, imgpath, image_name, config, bands,
+                               channel_combos, dump_stretch)
+        yield pic
     _pretty_info_log("RGB processing done")
 
 
@@ -188,9 +195,10 @@ def main():
                         output path for each picture, which may already exist.
                         Can only be used if -m option is set.""")
     parser.add_argument("--dump-stretched-fits",
-                        dest="dsf",
+                        dest="dump_stretch",
                         action="store_true",
-                        help="""Nomen est omen.""")
+                        help="""Dump stretched single-band FITS files into the
+                        specified output directory.""")
     args = parser.parse_args()
 
     if args.output_path is not None:
@@ -202,10 +210,10 @@ def main():
     if args.many:
         setup_rgb_multiple(args.input_path, output_path, args.image_name,
                            args.config_file, args.bands_file,
-                           args.create_outfolders, args.dsf)
+                           args.create_outfolders, args.dump_stretch)
     else:
         setup_rgb_single(args.input_path, output_path, args.image_name,
-                         args.config_file, args.bands_file, args.dsf)
+                         args.config_file, args.bands_file, args.dump_stretch)
 
 
 def _logging_configurator():
@@ -240,7 +248,7 @@ if __name__ == "__main__":
     # target = "larger_IRAS-32"
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
-    # mypic = setup_rgb_single(path, imgpath, target, dsf=True)
+    # mypic = setup_rgb_single(path, imgpath, target, dump_stretch=True)
 
     # root = Path("D:/Nemesis/data/perseus")
     # path = root/"stamps/"
