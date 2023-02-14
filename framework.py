@@ -6,7 +6,6 @@ Framework for images etc.
 My hands are typing words.
 """
 
-# from pathlib import Path
 import logging
 # from logging.config import dictConfig
 from operator import itemgetter
@@ -14,6 +13,7 @@ import copy
 import struct
 from dataclasses import dataclass
 from multiprocessing import Pool
+from pathlib import Path
 
 import yaml
 # from tqdm import tqdm
@@ -398,7 +398,8 @@ class Frame():
         return np.exp((1 - (clp_mean + clp_stddev)) / 2)
 
     def save_fits(self, fname):
-        fits.writeto(fname, self.image, self.header)
+        if not Path(fname).exists():
+            fits.writeto(fname, self.image, self.header)
 
 class Picture():
     """n/a."""

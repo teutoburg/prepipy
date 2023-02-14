@@ -18,6 +18,7 @@ from tqdm import tqdm
 from framework import JPEGPicture, Frame, Band
 
 width, _ = get_terminal_size((50, 20))
+width *= .8
 tqdm_fmt = f"{{l_bar}}{{bar:{width}}}{{r_bar}}{{bar:-{width}b}}"
 
 DEFAULT_CONFIG_FNAME = "./config.yml"
