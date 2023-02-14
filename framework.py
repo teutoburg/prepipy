@@ -7,16 +7,13 @@ My hands are typing words.
 """
 
 import logging
-# from logging.config import dictConfig
 from operator import itemgetter
 import copy
 import struct
 from dataclasses import dataclass
 from multiprocessing import Pool
-from pathlib import Path
 
 import yaml
-# from tqdm import tqdm
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -398,8 +395,7 @@ class Frame():
         return np.exp((1 - (clp_mean + clp_stddev)) / 2)
 
     def save_fits(self, fname):
-        if not Path(fname).exists():
-            fits.writeto(fname, self.image, self.header)
+        fits.writeto(fname, self.image, self.header)
 
 class Picture():
     """n/a."""

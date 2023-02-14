@@ -18,7 +18,7 @@ from tqdm import tqdm
 from framework import JPEGPicture, Frame, Band
 
 width, _ = get_terminal_size((50, 20))
-width *= .8
+width = int(.6 * width)
 tqdm_fmt = f"{{l_bar}}{{bar:{width}}}{{r_bar}}{{bar:-{width}b}}"
 
 DEFAULT_CONFIG_FNAME = "./config.yml"
@@ -104,8 +104,12 @@ def create_rgb_image(input_path, output_path, image_name,
             for channel in pic.rgb_channels:
                 dump_name = channel.band.name
                 fname = output_path/f"{dump_name}_stretched.fits"
-                channel.save_fits(fname)
-                logger.info("Done dumping %s image.", dump_name)
+                if not fname.exists():
+                    channel.save_fits(fname)
+                    logger.info("Done dumping %s image.", dump_name)
+                else:
+                    logger.warning(("Stretched FITS file for %s exists, not"
+                                    " overwriting."), dump_name)
             logger.info("Done dumping all channels for this combination.")
         logger.info("Image %s in %s done.", pic.name, cols)
     logger.info("Image %s fully completed.", pic.name)
