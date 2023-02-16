@@ -15,7 +15,8 @@ import yaml
 import numpy as np
 from tqdm import tqdm
 
-from Astropy import Angle, SkyCoord
+from astropy.coordinates import Angle, SkyCoord
+from regions import PixCoord
 from regions import CircleSkyRegion, RectangleSkyRegion, PolygonSkyRegion
 
 from framework import JPEGPicture, Frame, Band
@@ -43,20 +44,26 @@ def _pretty_info_log(msg_key, width=50):
 
 
 def _maskparse(mask_dict):
-    typedict = {"circ": CircleSkyRegion,
-                "rect": RectangleSkyRegion,
-                "poly": PolygonSkyRegion}
-
-    def _get_sky_points(coords):
-        for coord in coords:
-            yield SkyCoord(*coord, unit="deg")
-
     for name, mask in mask_dict.items():
-        sky_points = list(_get_sky_points(mask["coords"]))
-        if len(sky_points) == 1:
-            sky_points = sky_points[0]
+        sky_points = SkyCoord(mask["coords"], unit="deg")
         size = Angle(**mask["size"])
-        yield typedict[mask["type"]](sky_points, size)
+
+        if mask["type"] == "circ":
+            region = CircleSkyRegion(sky_points[0], size)
+        elif mask["type"] == "rect":
+            region = RectangleSkyRegion(sky_points[0], *size)
+        elif mask["type"] == "poly":
+            region = PolygonSkyRegion(sky_points)
+        else:
+            region = None
+        yield region
+
+
+def _region_mask(region, frame):
+    pixels = PixCoord(*np.indices(frame.image.shape))
+    pixel_region = region.to_pixel(frame.coords)
+    cont = pixel_region.contains(pixels).T
+    return cont
 
 
 def create_picture(image_name, input_path, fname_template,
