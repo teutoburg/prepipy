@@ -56,6 +56,11 @@ def _maskparse(mask_dict):
             region = PolygonSkyRegion(sky_points)
         else:
             region = None
+
+        if region is not None:
+            region.meta["name"] = name
+            region.meta["comment"] = mask["mode"]
+
         yield region
 
 
@@ -64,6 +69,15 @@ def _region_mask(region, frame):
     pixel_region = region.to_pixel(frame.coords)
     cont = pixel_region.contains(pixels).T
     return cont
+
+
+def _merge_masks(regions, frame):
+    fill = all(region.meta["comment"] == "exclude" for region in regions)
+    mask = np.full_like(frame.image, fill_value=fill, dtype=bool)
+    for region in regions:
+        cont = _region_mask(region, frame)
+        mask = mask & ~cont | cont * (region.meta["comment"] == "limit")
+    return mask
 
 
 def create_picture(image_name, input_path, fname_template,
