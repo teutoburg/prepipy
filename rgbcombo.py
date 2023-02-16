@@ -15,6 +15,9 @@ import yaml
 import numpy as np
 from tqdm import tqdm
 
+from Astropy import Angle, SkyCoord
+from regions import CircleSkyRegion, RectangleSkyRegion, PolygonSkyRegion
+
 from framework import JPEGPicture, Frame, Band
 
 width, _ = get_terminal_size((50, 20))
@@ -37,6 +40,23 @@ def _pretty_info_log(msg_key, width=50):
     logger.info(width * "*")
     logger.info("{:^{width}}".format(msg, width=width))
     logger.info(width * "*")
+
+
+def _maskparse(mask_dict):
+    typedict = {"circ": CircleSkyRegion,
+                "rect": RectangleSkyRegion,
+                "poly": PolygonSkyRegion}
+
+    def _get_sky_points(coords):
+        for coord in coords:
+            yield SkyCoord(*coord, unit="deg")
+
+    for name, mask in mask_dict.items():
+        sky_points = list(_get_sky_points(mask["coords"]))
+        if len(sky_points) == 1:
+            sky_points = sky_points[0]
+        size = Angle(**mask["size"])
+        yield typedict[mask["type"]](sky_points, size)
 
 
 def create_picture(image_name, input_path, fname_template,
