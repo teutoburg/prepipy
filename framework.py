@@ -882,7 +882,7 @@ class RGBPicture(Picture):
         self.stretch_luminance(stretch_fkt_lum, gamma_lum, lum, **kwargs)
 
     def equalize(self, mode: str = "mean", offset: float = .5,
-                 norm: bool = True, supereq: bool = False):
+                 norm: bool = True, supereq: bool = False, mask=None):
         """
         Perform a collection of processes to enhance the RGB image.
 
@@ -906,12 +906,14 @@ class RGBPicture(Picture):
         """
         means = []
         for channel in self.rgb_channels:
-            channel.image /= np.nanmax(channel.image)
+            if mask is None:
+                mask = np.full_like(channel.image, True, dtype=bool)
+            channel.image /= np.nanmax(channel.image[mask])
             if mode == "median":
-                channel.image -= np.nanmedian(channel.image)
+                channel.image -= np.nanmedian(channel.image[mask])
             elif mode == "mean":
-                channel.image -= np.nanmean(channel.image)
-            means.append(np.nanmean(channel.image))
+                channel.image -= np.nanmean(channel.image[mask])
+            means.append(np.nanmean(channel.image[mask]))
             channel.image += offset
             channel.image[channel.image < 0.] = 0.
             if norm:

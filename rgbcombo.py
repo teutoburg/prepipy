@@ -134,9 +134,10 @@ def create_rgb_image(input_path, output_path, image_name,
         if pic.is_bright:
             logger.info(("Image is bright, performing additional color space "
                          "stretching to equalize colors."))
-            pic.equalize("median",
+            pic.equalize("mean",
                          offset=config["process"].get("equal_offset", .1),
-                         norm=config["process"].get("equal_norm", True))
+                         norm=config["process"].get("equal_norm", True),
+                         mask=mask)
         else:
             logger.warning(("No equalisation or normalisation performed on "
                             "image %s in %s!"),
