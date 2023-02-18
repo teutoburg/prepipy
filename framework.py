@@ -276,9 +276,10 @@ class Frame():
 
         return data_range, data_max
 
-    def clipped_stats(self) -> tuple[float]:
+    @staticmethod
+    def clipped_stats(data) -> tuple[float]:
         """Calculate sigma-clipped image statistics."""
-        data = self.image.flatten()
+        data = data.flatten()
         mean, median, stddev = np.mean(data), np.median(data), np.std(data)
         logger.debug("%10s:  mean=%-8.4fmedian=%-8.4fstddev=%.4f", "unclipped",
                      mean, median, stddev)
@@ -315,8 +316,7 @@ class Frame():
         elif sky_mode == "median":
             i_sky = np.nanmedian(data)
         elif sky_mode == "clipmedian":
-            # FIXME: update clipped stats to use mask
-            _, clp_median, _ = self.clipped_stats()
+            _, clp_median, _ = self.clipped_stats(data)
             i_sky = clp_median
         elif sky_mode == "debug":
             i_sky = .01
