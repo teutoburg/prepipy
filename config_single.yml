@@ -1,6 +1,6 @@
 ---
 general:
-  filenames: ${image_name}_${band_name}.fits
+  filenames: ${band_name}_${image_name}.fits
   # e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
   multiprocess: no      # no (default) or yes
 process:

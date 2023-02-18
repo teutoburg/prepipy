@@ -15,13 +15,17 @@ import yaml
 import numpy as np
 from tqdm import tqdm
 
+from astropy.coordinates import Angle, SkyCoord
+from regions import PixCoord
+from regions import CircleSkyRegion, RectangleSkyRegion, PolygonSkyRegion
+
 from framework import JPEGPicture, Frame, Band
 
 width, _ = get_terminal_size((50, 20))
 width = int(.6 * width)
 tqdm_fmt = f"{{l_bar}}{{bar:{width}}}{{r_bar}}{{bar:-{width}b}}"
 
-DEFAULT_CONFIG_FNAME = "./config.yml"
+DEFAULT_CONFIG_FNAME = "./config_single.yml"
 DEFAULT_BANDS_FNAME = "./bands.yml"
 
 
@@ -37,6 +41,50 @@ def _pretty_info_log(msg_key, width=50):
     logger.info(width * "*")
     logger.info("{:^{width}}".format(msg, width=width))
     logger.info(width * "*")
+
+
+def _maskparse(mask_dict):
+    for name, mask in mask_dict.items():
+        sky_points = SkyCoord(mask["coords"], unit="deg")
+        size = Angle(**mask["size"])
+
+        if mask["type"] == "circ":
+            region = CircleSkyRegion(sky_points[0], size)
+        elif mask["type"] == "rect":
+            region = RectangleSkyRegion(sky_points[0], *size)
+        elif mask["type"] == "poly":
+            region = PolygonSkyRegion(sky_points)
+        else:
+            region = None
+
+        if region is not None:
+            region.meta["name"] = name
+            region.meta["comment"] = mask["mode"]
+
+        yield region
+
+
+def _region_mask(region, frame):
+    pixels = PixCoord(*np.indices(frame.image.shape))
+    pixel_region = region.to_pixel(frame.coords)
+    cont = pixel_region.contains(pixels).T
+    return cont
+
+
+def _merge_masks(regions, frame):
+    fill = all(region.meta["comment"] == "exclude" for region in regions)
+    mask = np.full_like(frame.image, fill_value=fill, dtype=bool)
+    for region in regions:
+        cont = _region_mask(region, frame)
+        mask = mask & ~cont | cont * (region.meta["comment"] == "limit")
+    return mask
+
+
+def _get_mask(fname, frame):
+    with open(fname, "r") as ymlfile:
+        mask_dict = yaml.load(ymlfile, yaml.SafeLoader)
+    mask_regions = list(_maskparse(mask_dict))
+    return _merge_masks(mask_regions, frame)
 
 
 def create_picture(image_name, input_path, fname_template,
@@ -67,13 +115,16 @@ def create_rgb_image(input_path, output_path, image_name,
         logger.info("Processing image %s in %s.", pic.name, cols)
         pic.select_rgb_channels(combo, single=(n_combos == 1))
 
+        mask = _get_mask("masking.yml", pic.primary_frame)
+
         grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
         grey_mode = config["process"]["grey_mode"]
         pic.stretch_frames("stiff-d", only_rgb=True,
                            stretch_function=Frame.stiff_stretch,
                            stiff_mode="user3",
                            grey_level=grey_values[grey_mode],
-                           skymode=config["process"]["skymode"])
+                           skymode=config["process"]["skymode"],
+                           mask=mask)
 
         if config["process"]["rgb_adjust"]:
             pic.adjust_rgb(config["process"]["alpha"], _gma,
@@ -83,9 +134,10 @@ def create_rgb_image(input_path, output_path, image_name,
         if pic.is_bright:
             logger.info(("Image is bright, performing additional color space "
                          "stretching to equalize colors."))
-            pic.equalize("median",
+            pic.equalize("mean",
                          offset=config["process"].get("equal_offset", .1),
-                         norm=config["process"].get("equal_norm", True))
+                         norm=config["process"].get("equal_norm", True),
+                         mask=mask)
         else:
             logger.warning(("No equalisation or normalisation performed on "
                             "image %s in %s!"),
@@ -238,22 +290,25 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     logger = _logging_configurator()
+
     # root = Path("D:/Nemesis/data/HOPS")
     # path = root/"HOPS_99"
     # imgpath = root/"RGBs"
+    # target = "HOPS_99"
+
     # root = Path("D:/Nemesis/data")
     # path = root/"stamps/LARGE/Orion"
     # imgpath = root/"comps_large"
-    # root = Path("C:/Users/ghost/Desktop/nemesis/iras32")
-    # path = root
-    # imgpath = root
-
     # target = "Hand"
-    # target = "HOPS_99"
-    # target = "larger_IRAS-32"
+
+    root = Path("C:/Users/ghost/Desktop/nemesis/outreach/regions")
+    path = root/"input"
+    imgpath = root/"JPEGS"
+    target = "outreach_2"
+
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
-    # mypic = setup_rgb_single(path, imgpath, target, dump_stretch=True)
+    mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
 
     # root = Path("D:/Nemesis/data/perseus")
     # path = root/"stamps/"
@@ -262,6 +317,6 @@ if __name__ == "__main__":
     #     target = f"IC 348-{i}"
     #     setup_rgb(path, root/"RGBs", target)
 
-    main()
+    # main()
     gc.collect()
     sys.exit(0)

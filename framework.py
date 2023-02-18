@@ -276,9 +276,10 @@ class Frame():
 
         return data_range, data_max
 
-    def clipped_stats(self) -> tuple[float]:
+    @staticmethod
+    def clipped_stats(data) -> tuple[float]:
         """Calculate sigma-clipped image statistics."""
-        data = self.image.flatten()
+        data = data.flatten()
         mean, median, stddev = np.mean(data), np.median(data), np.std(data)
         logger.debug("%10s:  mean=%-8.4fmedian=%-8.4fstddev=%.4f", "unclipped",
                      mean, median, stddev)
@@ -289,15 +290,33 @@ class Frame():
                      mean, median, stddev)
         return mean, median, stddev
 
+    @staticmethod
+    def _apply_mask(data, mask):
+        if mask is None:
+            return data
+
+        if mask.sum() <= 0:
+            logger.error("Mask has no used pixels in frame, ignoring mask.")
+            return data
+
+        try:
+            data = data[mask]
+        except IndexError:
+            logger.error("Masking failed with IndexError, ignoring mask.")
+
+        return data
+
     def _min_inten(self, gamma_lum: float, grey_level: float = .3,
                    sky_mode: str = "median", max_mode: str = "quantile",
-                   **kwargs) -> tuple[float]:
+                   mask=None, **kwargs) -> tuple[float]:
+        data = self._apply_mask(self.image, mask)
+
         if sky_mode == "quantile":
-            i_sky = np.quantile(self.image, .8)
+            i_sky = np.quantile(data, .8)
         elif sky_mode == "median":
-            i_sky = np.nanmedian(self.image)
+            i_sky = np.nanmedian(data)
         elif sky_mode == "clipmedian":
-            _, clp_median, _ = self.clipped_stats()
+            _, clp_median, _ = self.clipped_stats(data)
             i_sky = clp_median
         elif sky_mode == "debug":
             i_sky = .01
@@ -305,10 +324,10 @@ class Frame():
             raise ValueError("sky_mode not understood")
 
         if max_mode == "quantile":
-            i_max = np.quantile(self.image, .995)
+            i_max = np.quantile(data, .995)
         elif max_mode == "max":
             # FIXME: if we normalize before, this will always be == 1.0
-            i_max = np.nanmax(self.image)
+            i_max = np.nanmax(data)
         elif max_mode == "debug":
             i_max = .99998
         else:
@@ -328,14 +347,11 @@ class Frame():
         logger.info("stretching %s band", self.band.name)
         data_range, _ = self.normalize()
 
-        # gamma_lum = self.auto_gma()
-
         i_min, i_max = self._min_inten(gamma_lum, grey_level, **kwargs)
         self.sky_mask = self.image < i_min
         self.image = self.image.clip(i_min, i_max)
 
         new_img = stretch_function(self.image, **kwargs)
-        # new_img = self.stiff_stretch(self.image, **kwargs)
         new_img *= data_range
 
         self.image = new_img
@@ -357,9 +373,6 @@ class Frame():
             raise KeyError(f"Mode must be one of {list(def_kwargs.keys())}.")
 
         kwargs = def_kwargs[stiff_mode] | kwargs
-
-        # kwargs["gamma"] = self.auto_gma()
-        # assert kwargs['gamma'] == 2.25  # HACK: DEBUG ONLY
 
         b_slope, i_t = kwargs["b"], kwargs["i_t"]
         image_s = kwargs["a"] * image * (image < i_t)
@@ -657,7 +670,6 @@ class RGBPicture(Picture):
         order can be `cxy` or `xyc`.
         """
         rgb = np.stack([frame.image for frame in self.rgb_channels])
-        # rgb[rgb<0.] = 0.
         rgb /= rgb.max()
 
         # invert alpha channel if RGB(A)
@@ -865,13 +877,12 @@ class RGBPicture(Picture):
         for channel, adjusted in zip(self.rgb_channels, channels_adj):
             channel.image = adjusted
 
-        # gamma_lum = kwargs.get("gamma_lum", gamma)
         # FIXME: should the lu stretch be done with the original luminance
         #        (as is currently) or with the adjusted one???
         self.stretch_luminance(stretch_fkt_lum, gamma_lum, lum, **kwargs)
 
     def equalize(self, mode: str = "mean", offset: float = .5,
-                 norm: bool = True, supereq: bool = False):
+                 norm: bool = True, supereq: bool = False, mask=None):
         """
         Perform a collection of processes to enhance the RGB image.
 
@@ -885,7 +896,7 @@ class RGBPicture(Picture):
             Whether to perform normalisation in each channel.
             The default is True.
         supereq : bool, optional
-            Whether to perform additional crocc-channel equalisation. Currently
+            Whether to perform additional cross-channel equalisation. Currently
             highly experimental feature. The default is False.
 
         Returns
@@ -895,12 +906,14 @@ class RGBPicture(Picture):
         """
         means = []
         for channel in self.rgb_channels:
-            channel.image /= np.nanmax(channel.image)
+            if mask is None:
+                mask = np.full_like(channel.image, True, dtype=bool)
+            channel.image /= np.nanmax(channel.image[mask])
             if mode == "median":
-                channel.image -= np.nanmedian(channel.image)
+                channel.image -= np.nanmedian(channel.image[mask])
             elif mode == "mean":
-                channel.image -= np.nanmean(channel.image)
-            means.append(np.nanmean(channel.image))
+                channel.image -= np.nanmean(channel.image[mask])
+            means.append(np.nanmean(channel.image[mask]))
             channel.image += offset
             channel.image[channel.image < 0.] = 0.
             if norm:

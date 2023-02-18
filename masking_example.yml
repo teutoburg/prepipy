@@ -1,0 +1,28 @@
+---
+center:
+  mode: limit    # limit or exclude
+  type: circ     # circ, rect or poly
+  coords:
+    - [83.5, -5.38]
+  size:
+    angle: 5
+    unit: arcmin
+test1:
+  mode: exclude  # limit or exclude
+  type: rect     # circ, rect or poly
+  coords:
+    - [83.5604, -5.4462]
+  size:
+    angle: [2, 3]
+    unit: arcmin
+test2:
+  mode: exclude  # limit or exclude
+  type: poly     # circ, rect or poly
+  coords:
+    - [83.5, -5.38]
+    - [83.5046, -5.3243]
+    - [83.5486, -5.3843]
+  size:
+    angle: [2, 3]
+    unit: arcmin
+...
