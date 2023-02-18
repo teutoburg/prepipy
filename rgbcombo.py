@@ -115,6 +115,8 @@ def create_rgb_image(input_path, output_path, image_name,
         logger.info("Processing image %s in %s.", pic.name, cols)
         pic.select_rgb_channels(combo, single=(n_combos == 1))
 
+        mask = _get_mask("masking.yml", pic.primary_frame)
+
         grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
         grey_mode = config["process"]["grey_mode"]
         pic.stretch_frames("stiff-d", only_rgb=True,
@@ -122,7 +124,7 @@ def create_rgb_image(input_path, output_path, image_name,
                            stiff_mode="user3",
                            grey_level=grey_values[grey_mode],
                            skymode=config["process"]["skymode"],
-                           mask="hui")
+                           mask=mask)
 
         if config["process"]["rgb_adjust"]:
             pic.adjust_rgb(config["process"]["alpha"], _gma,
