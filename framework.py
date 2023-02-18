@@ -295,7 +295,7 @@ class Frame():
             return data
 
         if mask.sum() <= 0:
-            logger.error("Mask has no used pixels, ignoring mask.")
+            logger.error("Mask has no used pixels in frame, ignoring mask.")
             return data
 
         try:
@@ -904,7 +904,7 @@ class RGBPicture(Picture):
             Whether to perform normalisation in each channel.
             The default is True.
         supereq : bool, optional
-            Whether to perform additional crocc-channel equalisation. Currently
+            Whether to perform additional cross-channel equalisation. Currently
             highly experimental feature. The default is False.
 
         Returns
