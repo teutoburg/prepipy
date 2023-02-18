@@ -289,15 +289,26 @@ class Frame():
                      mean, median, stddev)
         return mean, median, stddev
 
+    @staticmethod
+    def _apply_mask(data, mask):
+        if mask is None:
+            return data
+
+        if mask.sum() <= 0:
+            logger.error("Mask has no used pixels, ignoring mask.")
+            return data
+
+        try:
+            data = data[mask]
+        except IndexError:
+            logger.error("Masking failed with IndexError, ignoring mask.")
+
+        return data
+
     def _min_inten(self, gamma_lum: float, grey_level: float = .3,
                    sky_mode: str = "median", max_mode: str = "quantile",
                    mask=None, **kwargs) -> tuple[float]:
-        data = self.image
-        if mask is not None:
-            try:
-                data = data[mask]
-            except IndexError:
-                logger.error("Masking failed with IndexError, ignoring mask.")
+        data = self._apply_mask(self.image, mask)
 
         if sky_mode == "quantile":
             i_sky = np.quantile(data, .8)
