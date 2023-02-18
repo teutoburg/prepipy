@@ -292,12 +292,12 @@ class Frame():
     def _min_inten(self, gamma_lum: float, grey_level: float = .3,
                    sky_mode: str = "median", max_mode: str = "quantile",
                    mask=None, **kwargs) -> tuple[float]:
-
-        print(mask)
+        data = self.image
         if mask is not None:
-            data = self.image
-        else:
-            data = self.image
+            try:
+                data = data[mask]
+            except IndexError:
+                logger.error("Masking failed with IndexError, ignoring mask.")
 
         if sky_mode == "quantile":
             i_sky = np.quantile(data, .8)
