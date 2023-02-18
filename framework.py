@@ -385,6 +385,7 @@ class Frame():
         image_s = kwargs["a"] * image * (image < i_t)
         image_s += (1 + b_slope) * image**(1/kwargs["gamma"])
         image_s -= b_slope * (image >= i_t)
+        # BUG: shuoldn't this be multiplied with the whole 2nd line???????
         return image_s
 
     @staticmethod

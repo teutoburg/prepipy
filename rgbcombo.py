@@ -121,10 +121,10 @@ def create_rgb_image(input_path, output_path, image_name,
         grey_mode = config["process"]["grey_mode"]
         pic.stretch_frames("stiff-d", only_rgb=True,
                            stretch_function=Frame.stiff_stretch,
-                           stiff_mode="user3",
+                           stiff_mode="debug3",
                            grey_level=grey_values[grey_mode],
                            skymode=config["process"]["skymode"],
-                           mask=mask)
+                           mask=None)
 
         if config["process"]["rgb_adjust"]:
             pic.adjust_rgb(config["process"]["alpha"], _gma,
@@ -137,7 +137,7 @@ def create_rgb_image(input_path, output_path, image_name,
             pic.equalize("mean",
                          offset=config["process"].get("equal_offset", .1),
                          norm=config["process"].get("equal_norm", True),
-                         mask=mask)
+                         mask=None)
         else:
             logger.warning(("No equalisation or normalisation performed on "
                             "image %s in %s!"),
