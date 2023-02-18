@@ -291,12 +291,20 @@ class Frame():
 
     def _min_inten(self, gamma_lum: float, grey_level: float = .3,
                    sky_mode: str = "median", max_mode: str = "quantile",
-                   **kwargs) -> tuple[float]:
+                   mask=None, **kwargs) -> tuple[float]:
+
+        print(mask)
+        if mask is not None:
+            data = self.image
+        else:
+            data = self.image
+
         if sky_mode == "quantile":
-            i_sky = np.quantile(self.image, .8)
+            i_sky = np.quantile(data, .8)
         elif sky_mode == "median":
-            i_sky = np.nanmedian(self.image)
+            i_sky = np.nanmedian(data)
         elif sky_mode == "clipmedian":
+            # FIXME: update clipped stats to use mask
             _, clp_median, _ = self.clipped_stats()
             i_sky = clp_median
         elif sky_mode == "debug":
@@ -305,10 +313,10 @@ class Frame():
             raise ValueError("sky_mode not understood")
 
         if max_mode == "quantile":
-            i_max = np.quantile(self.image, .995)
+            i_max = np.quantile(data, .995)
         elif max_mode == "max":
             # FIXME: if we normalize before, this will always be == 1.0
-            i_max = np.nanmax(self.image)
+            i_max = np.nanmax(data)
         elif max_mode == "debug":
             i_max = .99998
         else:
