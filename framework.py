@@ -347,14 +347,11 @@ class Frame():
         logger.info("stretching %s band", self.band.name)
         data_range, _ = self.normalize()
 
-        # gamma_lum = self.auto_gma()
-
         i_min, i_max = self._min_inten(gamma_lum, grey_level, **kwargs)
         self.sky_mask = self.image < i_min
         self.image = self.image.clip(i_min, i_max)
 
         new_img = stretch_function(self.image, **kwargs)
-        # new_img = self.stiff_stretch(self.image, **kwargs)
         new_img *= data_range
 
         self.image = new_img
@@ -376,9 +373,6 @@ class Frame():
             raise KeyError(f"Mode must be one of {list(def_kwargs.keys())}.")
 
         kwargs = def_kwargs[stiff_mode] | kwargs
-
-        # kwargs["gamma"] = self.auto_gma()
-        # assert kwargs['gamma'] == 2.25  # HACK: DEBUG ONLY
 
         b_slope, i_t = kwargs["b"], kwargs["i_t"]
         image_s = kwargs["a"] * image * (image < i_t)
@@ -676,7 +670,6 @@ class RGBPicture(Picture):
         order can be `cxy` or `xyc`.
         """
         rgb = np.stack([frame.image for frame in self.rgb_channels])
-        # rgb[rgb<0.] = 0.
         rgb /= rgb.max()
 
         # invert alpha channel if RGB(A)
@@ -884,7 +877,6 @@ class RGBPicture(Picture):
         for channel, adjusted in zip(self.rgb_channels, channels_adj):
             channel.image = adjusted
 
-        # gamma_lum = kwargs.get("gamma_lum", gamma)
         # FIXME: should the lu stretch be done with the original luminance
         #        (as is currently) or with the adjusted one???
         self.stretch_luminance(stretch_fkt_lum, gamma_lum, lum, **kwargs)
