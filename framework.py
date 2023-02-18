@@ -365,10 +365,17 @@ class Frame():
                           {"gamma": 2.4, "a": 12.92, "b": .055, "i_t": .00304},
                       "rec709":
                           {"gamma": 2.22, "a": 4.5, "b": .099, "i_t": .018},
-                      "user": {"gamma": 2.25, "a": 3., "b": .08, "i_t": .003},
-                      "user2": {"gamma": 2.25, "a": 3., "b": .1, "i_t": .8},
-                      "user3": {"gamma": 2.25, "a": 3., "b": .05, "i_t": .001},
-                      "user4": {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003}}
+                      "prepi":
+                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .001},
+                      "debug0":
+                          {"gamma": 2.25, "a": 3., "b": .08, "i_t": .003},
+                      "debug1":
+                          {"gamma": 2.25, "a": 3., "b": .1, "i_t": .8},
+                      "debug2":
+                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003},
+                      "debug3":
+                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003}
+                      }
         if stiff_mode not in def_kwargs:
             raise KeyError(f"Mode must be one of {list(def_kwargs.keys())}.")
 
