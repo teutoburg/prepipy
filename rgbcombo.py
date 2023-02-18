@@ -80,6 +80,13 @@ def _merge_masks(regions, frame):
     return mask
 
 
+def _get_mask(fname, frame):
+    with open(fname, "r") as ymlfile:
+        mask_dict = yaml.load(ymlfile, yaml.SafeLoader)
+    mask_regions = _maskparse(mask_dict)
+    return _merge_masks(mask_regions, frame)
+
+
 def create_picture(image_name, input_path, fname_template,
                    bands, n_bands, multi=False):
     new_pic = JPEGPicture(name=image_name)
@@ -114,7 +121,8 @@ def create_rgb_image(input_path, output_path, image_name,
                            stretch_function=Frame.stiff_stretch,
                            stiff_mode="user3",
                            grey_level=grey_values[grey_mode],
-                           skymode=config["process"]["skymode"])
+                           skymode=config["process"]["skymode"],
+                           mask="hui")
 
         if config["process"]["rgb_adjust"]:
             pic.adjust_rgb(config["process"]["alpha"], _gma,
@@ -293,7 +301,7 @@ if __name__ == "__main__":
     root = Path("C:/Users/ghost/Desktop/nemesis/outreach/regions")
     path = root/"input"
     imgpath = root/"JPEGS"
-    target = "outreach_1"
+    target = "outreach_4"
 
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
