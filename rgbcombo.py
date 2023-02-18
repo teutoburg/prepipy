@@ -25,7 +25,7 @@ width, _ = get_terminal_size((50, 20))
 width = int(.6 * width)
 tqdm_fmt = f"{{l_bar}}{{bar:{width}}}{{r_bar}}{{bar:-{width}b}}"
 
-DEFAULT_CONFIG_FNAME = "./config.yml"
+DEFAULT_CONFIG_FNAME = "./config_single.yml"
 DEFAULT_BANDS_FNAME = "./bands.yml"
 
 
