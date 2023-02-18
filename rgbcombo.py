@@ -303,7 +303,7 @@ if __name__ == "__main__":
     root = Path("C:/Users/ghost/Desktop/nemesis/outreach/regions")
     path = root/"input"
     imgpath = root/"JPEGS"
-    target = "outreach_4"
+    target = "outreach_2"
 
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
