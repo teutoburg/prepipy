@@ -297,7 +297,7 @@ if __name__ == "__main__":
 
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
-    # mypic = setup_rgb_single(path, imgpath, target, dump_stretch=True)
+    mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
 
     # root = Path("D:/Nemesis/data/perseus")
     # path = root/"stamps/"
