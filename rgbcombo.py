@@ -83,7 +83,7 @@ def _merge_masks(regions, frame):
 def _get_mask(fname, frame):
     with open(fname, "r") as ymlfile:
         mask_dict = yaml.load(ymlfile, yaml.SafeLoader)
-    mask_regions = _maskparse(mask_dict)
+    mask_regions = list(_maskparse(mask_dict))
     return _merge_masks(mask_regions, frame)
 
 
