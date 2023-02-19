@@ -28,6 +28,10 @@ tqdm_fmt = f"{{l_bar}}{{bar:{width}}}{{r_bar}}{{bar:-{width}b}}"
 DEFAULT_CONFIG_FNAME = "./config_single.yml"
 DEFAULT_BANDS_FNAME = "./bands.yml"
 
+print(Path.cwd())
+print(Path(".").resolve())
+print(Path("/").resolve())
+
 
 def _gma(i, g):
     return np.power(i, 1/g)
@@ -304,7 +308,7 @@ if __name__ == "__main__":
     root = Path("C:/Users/ghost/Desktop/nemesis/outreach/regions")
     path = root/"input"
     imgpath = root/"JPEGS"
-    target = "outreach_2"
+    target = "outreach_4"
 
     # https://note.nkmk.me/en/python-pillow-concat-images/
 

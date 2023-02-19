@@ -11,7 +11,7 @@ TODO prepipy, in no particular order...
     3. before-after choice
     4. multiple sources in one figure, if feasable (low priority)
 * Configuration class (where to put it...)
-* If bands.yml not found &rarr; default use all, aka perform glob.
+* If bands.yml not found &rarr; try to use those specified in config, if not &rarr; glob
 * Check if clipping and normalisation are still performed multiple times. Can this be reduced?
 * Command-line mode with \* in image name for multiple &rarr; maybe this can replace the current `-m` keyword, which could then become mask.
 * Put parameters for different stiff modes in separate config file? Should not have to be read every time stretch is run though...
