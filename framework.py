@@ -12,6 +12,7 @@ import copy
 import struct
 from dataclasses import dataclass
 from multiprocessing import Pool
+from pathlib import Path
 
 import yaml
 import numpy as np
@@ -31,6 +32,10 @@ mpl.rcParams["font.family"] = ["Computer Modern", "serif"]
 
 TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 logger = logging.getLogger(__name__)
+
+absolute_path = Path(__file__).resolve(strict=True).parent
+with open(absolute_path/"stiff_params.yml", "r") as ymlfile:
+    STIFF_PARAMS = yaml.load(ymlfile, yaml.SafeLoader)
 
 
 class Error(Exception):
@@ -360,22 +365,23 @@ class Frame():
     @staticmethod
     def stiff_stretch(image, stiff_mode: str = "power-law", **kwargs):
         """Stretch frame based on STIFF algorithm."""
-        def_kwargs = {"power-law": {"gamma": 2.2, "a": 1., "b": 0., "i_t": 0.},
-                      "srgb":
-                          {"gamma": 2.4, "a": 12.92, "b": .055, "i_t": .00304},
-                      "rec709":
-                          {"gamma": 2.22, "a": 4.5, "b": .099, "i_t": .018},
-                      "prepi":
-                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .001},
-                      "debug0":
-                          {"gamma": 2.25, "a": 3., "b": .08, "i_t": .003},
-                      "debug1":
-                          {"gamma": 2.25, "a": 3., "b": .1, "i_t": .8},
-                      "debug2":
-                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003},
-                      "debug3":
-                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003}
-                      }
+        # def_kwargs = {"power-law": {"gamma": 2.2, "a": 1., "b": 0., "i_t": 0.},
+        #               "srgb":
+        #                   {"gamma": 2.4, "a": 12.92, "b": .055, "i_t": .00304},
+        #               "rec709":
+        #                   {"gamma": 2.22, "a": 4.5, "b": .099, "i_t": .018},
+        #               "prepi":
+        #                   {"gamma": 2.25, "a": 3., "b": .05, "i_t": .001},
+        #               "debug0":
+        #                   {"gamma": 2.25, "a": 3., "b": .08, "i_t": .003},
+        #               "debug1":
+        #                   {"gamma": 2.25, "a": 3., "b": .1, "i_t": .8},
+        #               "debug2":
+        #                   {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003},
+        #               "debug3":
+        #                   {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003}
+        #               }
+        def_kwargs = STIFF_PARAMS
         if stiff_mode not in def_kwargs:
             raise KeyError(f"Mode must be one of {list(def_kwargs.keys())}.")
 
