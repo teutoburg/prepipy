@@ -365,8 +365,8 @@ class Frame():
     @staticmethod
     def stiff_stretch_legacy(image, stiff_mode: str = "power-law", **kwargs):
         """Stretch frame based on STIFF algorithm."""
-        raise DeprecationWarning(("stiff_stretch_legacy is deprecated and only"
-                                  " included for backwards compatibility."))
+        logger.warning(("stiff_stretch_legacy is deprecated and only"
+                        " included for backwards compatibility."))
 
         def_kwargs = {"power-law": {"gamma": 2.2, "a": 1., "b": 0., "i_t": 0.},
                       "srgb":
@@ -405,11 +405,10 @@ class Frame():
 
         kwargs = def_kwargs[stiff_mode] | kwargs
 
-        b_slope, i_t = kwargs["b"], kwargs["i_t"]
+        b_slp, i_t = kwargs["b"], kwargs["i_t"]
+        gamma = kwargs["gamma"]
         image_s = kwargs["a"] * image * (image < i_t)
-        image_s += (1 + b_slope) * image**(1/kwargs["gamma"])
-        image_s -= b_slope * (image >= i_t)
-        # BUG: shuoldn't this be multiplied with the whole 2nd line???????
+        image_s += ((1 + b_slp) * image**(1/gamma) - b_slp) * (image >= i_t)
         return image_s
 
     @staticmethod
