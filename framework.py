@@ -363,24 +363,42 @@ class Frame():
         logger.info("%s band done", self.band.name)
 
     @staticmethod
+    def stiff_stretch_legacy(image, stiff_mode: str = "power-law", **kwargs):
+        """Stretch frame based on STIFF algorithm."""
+        raise DeprecationWarning(("stiff_stretch_legacy is deprecated and only"
+                                  " included for backwards compatibility."))
+
+        def_kwargs = {"power-law": {"gamma": 2.2, "a": 1., "b": 0., "i_t": 0.},
+                      "srgb":
+                          {"gamma": 2.4, "a": 12.92, "b": .055, "i_t": .00304},
+                      "rec709":
+                          {"gamma": 2.22, "a": 4.5, "b": .099, "i_t": .018},
+                      "prepi":
+                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .001},
+                      "debug0":
+                          {"gamma": 2.25, "a": 3., "b": .08, "i_t": .003},
+                      "debug1":
+                          {"gamma": 2.25, "a": 3., "b": .1, "i_t": .8},
+                      "debug2":
+                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003},
+                      "debug3":
+                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003}
+                      }
+        if stiff_mode not in def_kwargs:
+            raise KeyError(f"Mode must be one of {list(def_kwargs.keys())}.")
+
+        kwargs = def_kwargs[stiff_mode] | kwargs
+
+        b_slope, i_t = kwargs["b"], kwargs["i_t"]
+        image_s = kwargs["a"] * image * (image < i_t)
+        image_s += (1 + b_slope) * image**(1/kwargs["gamma"])
+        image_s -= b_slope * (image >= i_t)
+        # BUG: shuoldn't this be multiplied with the whole 2nd line???????
+        return image_s
+
+    @staticmethod
     def stiff_stretch(image, stiff_mode: str = "power-law", **kwargs):
         """Stretch frame based on STIFF algorithm."""
-        # def_kwargs = {"power-law": {"gamma": 2.2, "a": 1., "b": 0., "i_t": 0.},
-        #               "srgb":
-        #                   {"gamma": 2.4, "a": 12.92, "b": .055, "i_t": .00304},
-        #               "rec709":
-        #                   {"gamma": 2.22, "a": 4.5, "b": .099, "i_t": .018},
-        #               "prepi":
-        #                   {"gamma": 2.25, "a": 3., "b": .05, "i_t": .001},
-        #               "debug0":
-        #                   {"gamma": 2.25, "a": 3., "b": .08, "i_t": .003},
-        #               "debug1":
-        #                   {"gamma": 2.25, "a": 3., "b": .1, "i_t": .8},
-        #               "debug2":
-        #                   {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003},
-        #               "debug3":
-        #                   {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003}
-        #               }
         def_kwargs = STIFF_PARAMS
         if stiff_mode not in def_kwargs:
             raise KeyError(f"Mode must be one of {list(def_kwargs.keys())}.")
@@ -1135,7 +1153,7 @@ class MPLPicture(RGBPicture):
         for combo, column in zip(tqdm(channel_combos), axes.flatten()):
             self.select_rgb_channels(combo)
             self.stretch_frames("stiff-d", only_rgb=True,
-                                stretch_function=Frame.stiff_stretch,
+                                stretch_function=Frame.stiff_stretch_legacy,
                                 stiff_mode="user3",
                                 grey_level=grey_values[grey_mode], **kwargs)
 
