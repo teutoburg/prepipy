@@ -1,0 +1,42 @@
+---
+power-law:
+  gamma: 2.2
+  a: 1.
+  b: 0.
+  i_t: 0.
+srgb:
+  gamma: 2.4
+  a: 12.92
+  b: .055
+  i_t: .00304
+rec709:
+  gamma: 2.22
+  a: 4.5
+  b: .099
+  i_t: .018
+prepi:
+  gamma: 2.25
+  a: 3.
+  b: .05
+  i_t: .001
+debug0:
+  gamma: 2.25
+  a: 3.
+  b: .08
+  i_t: .003
+debug1:
+  gamma: 2.25
+  a: 3.
+  b: .1
+  i_t: .8
+debug2:
+  gamma: 2.25
+  a: 3.
+  b: .05
+  i_t: .003
+debug3:
+  gamma: 2.25
+  a: 3.
+  b: .05
+  i_t: .003
+...
