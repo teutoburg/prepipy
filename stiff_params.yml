@@ -27,16 +27,16 @@ debug0:
 debug1:
   gamma: 2.25
   a: 3.
-  b: .1
-  i_t: .8
-debug2:
-  gamma: 2.25
-  a: 3.
   b: .05
   i_t: .003
+debug2:
+  gamma: 2.05
+  a: 4.
+  b: .0742
+  i_t: .03
 debug3:
-  gamma: 2.25
-  a: 3.
-  b: .05
+  gamma: 2.9
+  a: 40.
+  b: .0172
   i_t: .003
 ...
