@@ -19,6 +19,11 @@ prepipy:
   a: 3.
   b: .05
   i_t: .001
+prepipy2:
+  gamma: 2.9
+  a: 40.
+  b: .0172
+  i_t: .003
 debug0:
   gamma: 2.25
   a: 3.
@@ -34,9 +39,4 @@ debug2:
   a: 4.
   b: .0742
   i_t: .03
-debug3:
-  gamma: 2.9
-  a: 40.
-  b: .0172
-  i_t: .003
 ...

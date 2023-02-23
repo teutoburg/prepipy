@@ -1,6 +1,6 @@
 ---
 center:
-  mode: exclude    # limit or exclude
+  mode: limit    # limit or exclude
   type: circ     # circ, rect or poly
   coords:
     - [83.8235, -5.3844]
