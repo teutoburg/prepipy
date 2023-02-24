@@ -813,14 +813,10 @@ class RGBPicture(Picture):
             for channel, weight in zip(self.rgb_channels, weights):
                 channel.image *= weight
 
-    def stretch_frames(self, mode: str = "stiff", only_rgb: bool = False,
-                       **kwargs):
-        """Perform stretching on frames."""
-        if only_rgb:
-            frames = self.rgb_channels
-        else:
-            frames = self.frames
-        for frame in frames:
+    def stretch_rgb_channels(self, mode: str = "stiff",
+                             **kwargs):
+        """Perform stretching on frames which are selected as rgb channels."""
+        for frame in self.rgb_channels:
             if mode == "auto-light":
                 frame.autostretch_light(**kwargs)
             elif mode == "stiff":
@@ -1167,10 +1163,10 @@ class MPLPicture(RGBPicture):
         fig, axes = self._get_axes(nrows, ncols, figurekwargs["figsize"])
         for combo, column in zip(tqdm(channel_combos), axes.flatten()):
             self.select_rgb_channels(combo)
-            self.stretch_frames("stiff", only_rgb=True,
-                                stretch_function=Frame.stiff_stretch_legacy,
-                                stiff_mode="user3",
-                                grey_level=grey_values[grey_mode], **kwargs)
+            self.stretch_rgb_channels("stiff",
+                                      stiff_mode="prepipy",
+                                      grey_level=grey_values[grey_mode],
+                                      **kwargs)
 
             if self.is_bright:
                 self.equalize("median",
