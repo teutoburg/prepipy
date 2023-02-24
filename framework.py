@@ -131,8 +131,6 @@ class Frame():
         self.background = np.nanmedian(self.image)  # estimated background
         self.clip_and_nan(**kwargs)
 
-        self.sky_mask = None
-
     def __repr__(self) -> str:
         """repr(self)."""
         outstr = (f"{self.__class__.__name__}({self.image!r}, {self._band!r},"
@@ -331,6 +329,7 @@ class Frame():
             i_sky = .01
         else:
             raise ValueError("sky_mode not understood")
+        logger.debug("i_sky=%.4f", i_sky)
 
         if max_mode == "quantile":
             i_max = np.quantile(data, .995)
@@ -344,9 +343,10 @@ class Frame():
 
         p_grey_g = grey_level**gamma_lum
         logger.debug("p_grey_g=%.4f", p_grey_g)
-        logger.debug("i_sky=%.4f", i_sky)
+
         i_min = max((i_sky - p_grey_g * i_max) / (1. - p_grey_g), 0.)
         logger.debug("i_min=%-10.4fi_max=%.4f", i_min, i_max)
+
         return i_min, i_max
 
     def setup_stiff(self,
@@ -358,7 +358,6 @@ class Frame():
         data_range, _ = self.normalize()
 
         i_min, i_max = self._min_inten(gamma_lum, grey_level, **kwargs)
-        self.sky_mask = self.image < i_min
         self.image = self.image.clip(i_min, i_max)
 
         legacy = kwargs.get("legacy", False)
@@ -404,7 +403,6 @@ class Frame():
         image_s = kwargs["a"] * image * (image < i_t)
         image_s += (1 + b_slope) * image**(1/kwargs["gamma"])
         image_s -= b_slope * (image >= i_t)
-        # BUG: shuoldn't this be multiplied with the whole 2nd line???????
         return image_s
 
     @staticmethod
