@@ -311,9 +311,13 @@ class Frame():
 
         return data
 
-    def _min_inten(self, gamma_lum: float, grey_level: float = .3,
-                   sky_mode: str = "median", max_mode: str = "quantile",
-                   mask=None, **kwargs) -> tuple[float]:
+    def _min_inten(self,
+                   gamma_lum: float = 1.,
+                   grey_level: float = .3,
+                   sky_mode: str = "median",
+                   max_mode: str = "quantile",
+                   mask=None,
+                   **kwargs) -> tuple[float]:
         data = self._apply_mask(self.image, mask)
 
         if sky_mode == "quantile":
@@ -345,7 +349,9 @@ class Frame():
         logger.debug("i_min=%-10.4fi_max=%.4f", i_min, i_max)
         return i_min, i_max
 
-    def setup_stiff(self, gamma_lum: float = 1.5, grey_level: float = .1,
+    def setup_stiff(self,
+                    gamma_lum: float = 1.,
+                    grey_level: float = .3,
                     **kwargs):
         """Stretch frame based on modified STIFF algorithm."""
         logger.info("stretching %s band", self.band.name)
