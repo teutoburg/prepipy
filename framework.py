@@ -652,13 +652,13 @@ class Picture():
         """Combine multiple 3D picture cubes into one 4D cube."""
         return np.stack([picture.cube for picture in pictures])
 
-    def stretch_frames(self, mode: str = "auto-light", **kwargs):
+    def stretch_frames(self, mode: str = "stiff", **kwargs):
         """Perform stretching on frames."""
         for frame in self.frames:
             if mode == "auto-light":
                 frame.autostretch_light(**kwargs)
-            elif mode == "stiff-d":
-                frame.stiff_d(**kwargs)
+            elif mode == "stiff":
+                frame.setup_stiff(**kwargs)
             else:
                 raise ValueError("stretch mode not understood")
 
@@ -813,7 +813,7 @@ class RGBPicture(Picture):
             for channel, weight in zip(self.rgb_channels, weights):
                 channel.image *= weight
 
-    def stretch_frames(self, mode: str = "auto-light", only_rgb: bool = False,
+    def stretch_frames(self, mode: str = "stiff", only_rgb: bool = False,
                        **kwargs):
         """Perform stretching on frames."""
         if only_rgb:
@@ -823,8 +823,8 @@ class RGBPicture(Picture):
         for frame in frames:
             if mode == "auto-light":
                 frame.autostretch_light(**kwargs)
-            elif mode == "stiff-d":
-                frame.stiff_d(**kwargs)
+            elif mode == "stiff":
+                frame.setup_stiff(**kwargs)
             else:
                 raise ValueError("stretch mode not understood")
 
@@ -1167,7 +1167,7 @@ class MPLPicture(RGBPicture):
         fig, axes = self._get_axes(nrows, ncols, figurekwargs["figsize"])
         for combo, column in zip(tqdm(channel_combos), axes.flatten()):
             self.select_rgb_channels(combo)
-            self.stretch_frames("stiff-d", only_rgb=True,
+            self.stretch_frames("stiff", only_rgb=True,
                                 stretch_function=Frame.stiff_stretch_legacy,
                                 stiff_mode="user3",
                                 grey_level=grey_values[grey_mode], **kwargs)
