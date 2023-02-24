@@ -345,9 +345,8 @@ class Frame():
         logger.debug("i_min=%-10.4fi_max=%.4f", i_min, i_max)
         return i_min, i_max
 
-    def stiff_d(self, stretch_function,
-                gamma_lum: float = 1.5, grey_level: float = .1,
-                **kwargs):
+    def setup_stiff(self, gamma_lum: float = 1.5, grey_level: float = .1,
+                    **kwargs):
         """Stretch frame based on modified STIFF algorithm."""
         logger.info("stretching %s band", self.band.name)
         data_range, _ = self.normalize()
@@ -355,6 +354,12 @@ class Frame():
         i_min, i_max = self._min_inten(gamma_lum, grey_level, **kwargs)
         self.sky_mask = self.image < i_min
         self.image = self.image.clip(i_min, i_max)
+
+        legacy = kwargs.get("legacy", False)
+        if legacy:
+            stretch_function = self.stiff_stretch_legacy
+        else:
+            stretch_function = self.stiff_stretch
 
         new_img = stretch_function(self.image, **kwargs)
         new_img *= data_range
@@ -365,8 +370,8 @@ class Frame():
     @staticmethod
     def stiff_stretch_legacy(image, stiff_mode: str = "power-law", **kwargs):
         """Stretch frame based on STIFF algorithm."""
-        logger.warning(("stiff_stretch_legacy is deprecated and only"
-                        " included for backwards compatibility."))
+        logger.warning(("The method stiff_stretch_legacy is deprecated and "
+                        "only included for backwards compatibility."))
 
         def_kwargs = {"power-law": {"gamma": 2.2, "a": 1., "b": 0., "i_t": 0.},
                       "srgb":
@@ -403,12 +408,17 @@ class Frame():
         if stiff_mode not in def_kwargs:
             raise KeyError(f"Mode must be one of {list(def_kwargs.keys())}.")
 
-        kwargs = def_kwargs[stiff_mode] | kwargs
+        items = itemgetter("gamma", "a", "b", "i_t")
+        gamma, slope, offset, thresh = items(def_kwargs[stiff_mode] | kwargs)
+        logger.debug("STIFF stretching using gamma=%.3f, a=%f, b=%f, i_t=%f",
+                     gamma, slope, offset, thresh)
 
-        b_slp, i_t = kwargs["b"], kwargs["i_t"]
-        gamma = kwargs["gamma"]
-        image_s = kwargs["a"] * image * (image < i_t)
-        image_s += ((1 + b_slp) * image**(1/gamma) - b_slp) * (image >= i_t)
+        linear_part = image < thresh
+        logger.debug("%f percent of pixels in linear portion",
+                     linear_part.sum()/linear_part.size*100)
+
+        image_s = slope * image * linear_part
+        image_s += ((1 + offset) * image**(1/gamma) - offset) * ~linear_part
         return image_s
 
     @staticmethod
