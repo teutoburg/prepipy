@@ -12,6 +12,7 @@ import copy
 import struct
 from dataclasses import dataclass
 from multiprocessing import Pool
+from pathlib import Path
 
 import yaml
 import numpy as np
@@ -31,6 +32,10 @@ mpl.rcParams["font.family"] = ["Computer Modern", "serif"]
 
 TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 logger = logging.getLogger(__name__)
+
+absolute_path = Path(__file__).resolve(strict=True).parent
+with open(absolute_path/"stiff_params.yml", "r") as ymlfile:
+    STIFF_PARAMS = yaml.load(ymlfile, yaml.SafeLoader)
 
 
 class Error(Exception):
@@ -125,8 +130,6 @@ class Frame():
         self._band = band
         self.background = np.nanmedian(self.image)  # estimated background
         self.clip_and_nan(**kwargs)
-
-        self.sky_mask = None
 
     def __repr__(self) -> str:
         """repr(self)."""
@@ -306,9 +309,13 @@ class Frame():
 
         return data
 
-    def _min_inten(self, gamma_lum: float, grey_level: float = .3,
-                   sky_mode: str = "median", max_mode: str = "quantile",
-                   mask=None, **kwargs) -> tuple[float]:
+    def _min_inten(self,
+                   gamma_lum: float = 1.,
+                   grey_level: float = .3,
+                   sky_mode: str = "median",
+                   max_mode: str = "quantile",
+                   mask=None,
+                   **kwargs) -> tuple[float]:
         data = self._apply_mask(self.image, mask)
 
         if sky_mode == "quantile":
@@ -322,6 +329,7 @@ class Frame():
             i_sky = .01
         else:
             raise ValueError("sky_mode not understood")
+        logger.debug("i_sky=%.4f", i_sky)
 
         if max_mode == "quantile":
             i_max = np.quantile(data, .995)
@@ -335,21 +343,28 @@ class Frame():
 
         p_grey_g = grey_level**gamma_lum
         logger.debug("p_grey_g=%.4f", p_grey_g)
-        logger.debug("i_sky=%.4f", i_sky)
+
         i_min = max((i_sky - p_grey_g * i_max) / (1. - p_grey_g), 0.)
         logger.debug("i_min=%-10.4fi_max=%.4f", i_min, i_max)
+
         return i_min, i_max
 
-    def stiff_d(self, stretch_function,
-                gamma_lum: float = 1.5, grey_level: float = .1,
-                **kwargs):
+    def setup_stiff(self,
+                    gamma_lum: float = 1.,
+                    grey_level: float = .3,
+                    **kwargs):
         """Stretch frame based on modified STIFF algorithm."""
         logger.info("stretching %s band", self.band.name)
         data_range, _ = self.normalize()
 
         i_min, i_max = self._min_inten(gamma_lum, grey_level, **kwargs)
-        self.sky_mask = self.image < i_min
         self.image = self.image.clip(i_min, i_max)
+
+        legacy = kwargs.get("legacy", False)
+        if legacy:
+            stretch_function = self.stiff_stretch_legacy
+        else:
+            stretch_function = self.stiff_stretch
 
         new_img = stretch_function(self.image, **kwargs)
         new_img *= data_range
@@ -358,8 +373,11 @@ class Frame():
         logger.info("%s band done", self.band.name)
 
     @staticmethod
-    def stiff_stretch(image, stiff_mode: str = "power-law", **kwargs):
+    def stiff_stretch_legacy(image, stiff_mode: str = "power-law", **kwargs):
         """Stretch frame based on STIFF algorithm."""
+        logger.warning(("The method stiff_stretch_legacy is deprecated and "
+                        "only included for backwards compatibility."))
+
         def_kwargs = {"power-law": {"gamma": 2.2, "a": 1., "b": 0., "i_t": 0.},
                       "srgb":
                           {"gamma": 2.4, "a": 12.92, "b": .055, "i_t": .00304},
@@ -385,7 +403,26 @@ class Frame():
         image_s = kwargs["a"] * image * (image < i_t)
         image_s += (1 + b_slope) * image**(1/kwargs["gamma"])
         image_s -= b_slope * (image >= i_t)
-        # BUG: shuoldn't this be multiplied with the whole 2nd line???????
+        return image_s
+
+    @staticmethod
+    def stiff_stretch(image, stiff_mode: str = "power-law", **kwargs):
+        """Stretch frame based on STIFF algorithm."""
+        def_kwargs = STIFF_PARAMS
+        if stiff_mode not in def_kwargs:
+            raise KeyError(f"Mode must be one of {list(def_kwargs.keys())}.")
+
+        items = itemgetter("gamma", "a", "b", "i_t")
+        gamma, slope, offset, thresh = items(def_kwargs[stiff_mode] | kwargs)
+        logger.debug("STIFF stretching using gamma=%.3f, a=%f, b=%f, i_t=%f",
+                     gamma, slope, offset, thresh)
+
+        linear_part = image < thresh
+        logger.debug("%f percent of pixels in linear portion",
+                     linear_part.sum()/linear_part.size*100)
+
+        image_s = slope * image * linear_part
+        image_s += ((1 + offset) * image**(1/gamma) - offset) * ~linear_part
         return image_s
 
     @staticmethod
@@ -613,13 +650,13 @@ class Picture():
         """Combine multiple 3D picture cubes into one 4D cube."""
         return np.stack([picture.cube for picture in pictures])
 
-    def stretch_frames(self, mode: str = "auto-light", **kwargs):
+    def stretch_frames(self, mode: str = "stiff", **kwargs):
         """Perform stretching on frames."""
         for frame in self.frames:
             if mode == "auto-light":
                 frame.autostretch_light(**kwargs)
-            elif mode == "stiff-d":
-                frame.stiff_d(**kwargs)
+            elif mode == "stiff":
+                frame.setup_stiff(**kwargs)
             else:
                 raise ValueError("stretch mode not understood")
 
@@ -774,18 +811,14 @@ class RGBPicture(Picture):
             for channel, weight in zip(self.rgb_channels, weights):
                 channel.image *= weight
 
-    def stretch_frames(self, mode: str = "auto-light", only_rgb: bool = False,
-                       **kwargs):
-        """Perform stretching on frames."""
-        if only_rgb:
-            frames = self.rgb_channels
-        else:
-            frames = self.frames
-        for frame in frames:
+    def stretch_rgb_channels(self, mode: str = "stiff",
+                             **kwargs):
+        """Perform stretching on frames which are selected as rgb channels."""
+        for frame in self.rgb_channels:
             if mode == "auto-light":
                 frame.autostretch_light(**kwargs)
-            elif mode == "stiff-d":
-                frame.stiff_d(**kwargs)
+            elif mode == "stiff":
+                frame.setup_stiff(**kwargs)
             else:
                 raise ValueError("stretch mode not understood")
 
@@ -1128,10 +1161,10 @@ class MPLPicture(RGBPicture):
         fig, axes = self._get_axes(nrows, ncols, figurekwargs["figsize"])
         for combo, column in zip(tqdm(channel_combos), axes.flatten()):
             self.select_rgb_channels(combo)
-            self.stretch_frames("stiff-d", only_rgb=True,
-                                stretch_function=Frame.stiff_stretch,
-                                stiff_mode="user3",
-                                grey_level=grey_values[grey_mode], **kwargs)
+            self.stretch_rgb_channels("stiff",
+                                      stiff_mode="prepipy",
+                                      grey_level=grey_values[grey_mode],
+                                      **kwargs)
 
             if self.is_bright:
                 self.equalize("median",

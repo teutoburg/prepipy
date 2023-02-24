@@ -1,0 +1,42 @@
+---
+power-law:
+  gamma: 2.2
+  a: 1.
+  b: 0.
+  i_t: 0.
+sRGB:
+  gamma: 2.4
+  a: 12.92
+  b: .055
+  i_t: .00304
+Rec709:
+  gamma: 2.22
+  a: 4.5
+  b: .099
+  i_t: .018
+prepipy:
+  gamma: 2.25
+  a: 3.
+  b: .05
+  i_t: .001
+prepipy2:
+  gamma: 2.9
+  a: 40.
+  b: .0172
+  i_t: .003
+debug0:
+  gamma: 2.25
+  a: 3.
+  b: .08
+  i_t: .003
+debug1:
+  gamma: 2.25
+  a: 3.
+  b: .05
+  i_t: .003
+debug2:
+  gamma: 2.05
+  a: 4.
+  b: .0742
+  i_t: .03
+...

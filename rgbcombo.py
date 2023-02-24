@@ -123,12 +123,11 @@ def create_rgb_image(input_path, output_path, image_name,
 
         grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
         grey_mode = config["process"]["grey_mode"]
-        pic.stretch_frames("stiff-d", only_rgb=True,
-                           stretch_function=Frame.stiff_stretch,
-                           stiff_mode="debug3",
-                           grey_level=grey_values[grey_mode],
-                           skymode=config["process"]["skymode"],
-                           mask=None)
+        pic.stretch_rgb_channels("stiff",
+                                 stiff_mode="prepipy2",
+                                 grey_level=grey_values[grey_mode],
+                                 skymode=config["process"]["skymode"],
+                                 mask=mask)
 
         if config["process"]["rgb_adjust"]:
             pic.adjust_rgb(config["process"]["alpha"], _gma,
@@ -141,7 +140,7 @@ def create_rgb_image(input_path, output_path, image_name,
             pic.equalize("mean",
                          offset=config["process"].get("equal_offset", .1),
                          norm=config["process"].get("equal_norm", True),
-                         mask=None)
+                         mask=mask)
         else:
             logger.warning(("No equalisation or normalisation performed on "
                             "image %s in %s!"),
@@ -307,8 +306,8 @@ if __name__ == "__main__":
 
     root = Path("C:/Users/ghost/Desktop/nemesis/outreach/regions")
     path = root/"input"
-    imgpath = root/"JPEGS"
-    target = "outreach_4"
+    imgpath = root/"JPEGS/new"
+    target = "outreach_1"
 
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
