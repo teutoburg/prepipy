@@ -61,7 +61,34 @@ class FileTypeError(Error):
 
 @dataclass
 class Band():
-    """n/a."""
+    """
+    Data class used to store information about a passband.
+
+    The recommended way to construct instances is via a YAML config file.
+    Use the `Band.from_yaml_file(filename)` constructor to do so.
+
+    Parameters
+    ----------
+    name: str
+        Used for internal reference.
+    printname: str, optional
+        Used for output on figures.
+    wavelength: float, optional
+        Used for checking order in RGB mode. Must be the same unit for all
+        instances used simultanously.
+    instrument: str, optional
+        Currently unused, defaults to 'unknown' if omitted.
+    telescope: str, optional
+        Currently unused, defaults to 'unknown' if omitted.
+
+    Notes
+    -----
+    Within the YAML file, the parameter names are abbreviated to the first four
+    characters each. The key for each sub-dictionary in the YAML file is used
+    as `printname` in the constructor, allowing for a more readable file.
+    When the `use_bands` argument is used, the names given there are expected
+    to match the `name` parameter, as is the case anywhere else in this module.
+    """
 
     name: str
     printname: str = None
@@ -213,7 +240,7 @@ class Frame():
         self.image = np.clip(self.image, None, upper_limit)
 
     def clip_and_nan(self, clip: float = 10, nanmode: str = "max", **kwargs):
-        r"""
+        """
         Perform upper sigma clipping and replace NANs.
 
         Parameters
@@ -221,10 +248,10 @@ class Frame():
         clip : int, optional
             Number of sigmas to be used for clipping. If 0, no clipping is
             performed. The default is 10.
-        nanmode : str, optional
+        nanmode : {'max', 'median'}, optional
             Which value to use for replacing NANs. Allowed values are
-            \"median\" or \"max\" (clipped if clipping is performed).
-            The default is "max".
+            'median' or 'max' (clipped if clipping is performed).
+            The default is 'max'.
 
         Raises
         ------
@@ -719,10 +746,30 @@ class RGBPicture(Picture):
         return any(np.median(c.image) > .2 for c in self.rgb_channels)
 
     def get_rgb_cube(self, mode: str = "0-1", order: str = "cxy"):
-        """Stack images from RGB channels into one 3D cube, normalized to 1.
+        """
+        Stack images from RGB channels into one 3D cube, normalized to 1.
 
-        mode can be `0-1` or `0-255`.
-        order can be `cxy` or `xyc`.
+        Parameters
+        ----------
+        mode : {'0-1', '0-255'}, optional
+            Return array as float ('0-1') or 8-bit integer ('0-255').
+            The default is '0-1'.
+        order : {'cxy', 'xyc'}, optional
+            Order of coordinate and color dimensions. 'cxy' returns an array of
+            shape (3, N, M), 'xyc' returns an array of shape (N, M, 3).
+            Different use cases may expect either order. The default is 'cxy'.
+
+        Raises
+        ------
+        ValueError
+            If invalid values are passed to `mode` or `order`.
+
+        Returns
+        -------
+        rgb : (3, N, M) or (N, M, 3) ndarray
+            Cube array containing three channels of pixels. The shape is
+            determined from the value of the `order` keyword.
+
         """
         rgb = np.stack([frame.image for frame in self.rgb_channels])
         rgb /= rgb.max()
@@ -939,9 +986,9 @@ class RGBPicture(Picture):
 
         Parameters
         ----------
-        mode : str, optional
-            "median" or "mean". The default is "mean".
-        offset : TYPE, optional
+        mode : {'mean', 'median'}, optional
+            Function used to determine subtraction. The default is 'mean'.
+        offset : float, optional
             To be added before clipping negative values. The default is 0.5.
         norm : bool, optional
             Whether to perform normalisation in each channel.
@@ -960,6 +1007,7 @@ class RGBPicture(Picture):
             if mask is None:
                 mask = np.full_like(channel.image, True, dtype=bool)
             channel.image /= np.nanmax(channel.image[mask])
+            # TODO: This can be refactored into passing the np function.
             if mode == "median":
                 channel.image -= np.nanmedian(channel.image[mask])
             elif mode == "mean":
