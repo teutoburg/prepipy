@@ -3,7 +3,9 @@
 """
 Framework for images etc.
 
-My hands are typing words.
+Experimental, may be changed at any point.
+
+Detailed documentation currently work in prgress.
 """
 
 import logging
@@ -21,12 +23,19 @@ import matplotlib.pyplot as plt
 
 from astropy.io import fits
 from astropy import wcs
-# from astropy.stats import median_absolute_deviation as mad
 from astropy.stats import sigma_clipped_stats as scs
 from astropy.nddata import Cutout2D
 
 from PIL import Image
 from tqdm import tqdm
+
+__author__ = "Fabian Haberhauer"
+__copyright__ = "Copyright 2023"
+__credits__ = []  # add Stiff, mostly
+__license__ = "GPL"
+__maintainer__ = "Fabian Haberhauer"
+__email__ = "fabian.haberhauer@univie.ac.at"
+__status__ = "Prototype"
 
 mpl.rcParams["font.family"] = ["Computer Modern", "serif"]
 
@@ -491,6 +500,7 @@ class Picture():
     @property
     def coords(self):
         """WCS coordinates of the first frame. Read-only property."""
+        # TODO: only return WCS if WCS of all frames agree, otherwise raise.
         return self.primary_frame.coords
 
     @property
@@ -994,7 +1004,7 @@ class JPEGPicture(RGBPicture):
     @staticmethod
     def save_hdr(fname: str, hdr):
         """Save header as JPEG comment. Redundant with pillow 9.4.x."""
-        # TODO: log all of this crape
+        # TODO: add proper logging
         logger.debug("saving header:")
         logger.debug(hdr.tostring(sep="\n"))
         with Image.open(fname) as img:
@@ -1039,8 +1049,8 @@ class JPEGPicture(RGBPicture):
                 logger.warning("Cannot save RGBA as JPEG, converting to RGB.")
                 img = img.convert("RGB")
                 img.save(fname)
-            # img.save(fname, comment=hdr.tostring())
 
+        # HACK: update this as soon as pillow 9.4 is available
         self.save_hdr(fname, hdr)
 
 
@@ -1175,7 +1185,6 @@ class MPLPicture(RGBPicture):
                 equal = "False"
 
             self._create_title(column, combo, figurekwargs["titlemode"], equal)
-            # TODO: add histogram option back in
             self._display_cube(column,
                                center=figurekwargs["centermark"],
                                grid=figurekwargs["gridlines"],
