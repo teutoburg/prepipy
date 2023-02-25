@@ -979,8 +979,12 @@ class RGBPicture(Picture):
         #        (as is currently) or with the adjusted one???
         self.stretch_luminance(stretch_fkt_lum, gamma_lum, lum, **kwargs)
 
-    def equalize(self, mode: str = "mean", offset: float = .5,
-                 norm: bool = True, supereq: bool = False, mask=None):
+    def equalize(self,
+                 mode: str = "mean",
+                 offset: float = .5,
+                 norm: bool = True,
+                 supereq: bool = False,
+                 mask=None):
         """
         Perform a collection of processes to enhance the RGB image.
 
@@ -1118,7 +1122,7 @@ class MPLPicture(RGBPicture):
                             "gridlines": False}
 
     @property
-    def title(self):
+    def title(self) -> str:
         """Get string-formatted name of Picture."""
         return f"Source ID: {self.name}"
 
@@ -1132,18 +1136,25 @@ class MPLPicture(RGBPicture):
         axis.grid(color="w", ls=":")
 
     @staticmethod
-    def _plot_roi(axis, radec, size=50):
+    def _plot_roi(axis: plt.Axes,
+                  radec,
+                  size: int = 50) -> None:
         axis.scatter(*radec,
                      transform=axis.get_transform("world"), s=size,
                      edgecolor="w", facecolor="none")
         # Why is axis not an instance of WCSAxes???
         # axis.scatter_coord(self.center_coords)
 
-    def _plot_center_marker(self, axis, size=50):
+    def _plot_center_marker(self,
+                            axis: plt.Axes,
+                            size: int = 50) -> None:
         self._plot_roi(axis, self.center_coords, size)
 
-    def _display_cube(self, axis, center: bool = False, grid: bool = False,
-                      rois=None):
+    def _display_cube(self,
+                      axis: plt.Axes,
+                      center: bool = False,
+                      grid: bool = False,
+                      rois: list | None = None) -> None:
         axis.imshow(self.get_rgb_cube(order="xyc"),
                     aspect="equal", origin="lower")
         axis.set_xlabel("right ascension")
@@ -1162,7 +1173,10 @@ class MPLPicture(RGBPicture):
         axes[0].imshow(cube.T, origin="lower")
         self._add_histo(axes[1])
 
-    def _get_axes(self, nrows: int, ncols: int, figsize_mult):
+    def _get_axes(self,
+                  nrows: int,
+                  ncols: int,
+                  figsize_mult: tuple[int]):
         figsize = tuple(n * s for n, s in zip((ncols, nrows), figsize_mult))
         fig = plt.figure(figsize=figsize, dpi=300)
         # subfigs = fig.subfigures(nrows)
