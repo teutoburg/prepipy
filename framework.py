@@ -15,6 +15,7 @@ import struct
 from dataclasses import dataclass
 from multiprocessing import Pool
 from pathlib import Path
+from typing import Union
 
 import yaml
 import numpy as np
@@ -36,6 +37,8 @@ __license__ = "GPL"
 __maintainer__ = "Fabian Haberhauer"
 __email__ = "fabian.haberhauer@univie.ac.at"
 __status__ = "Prototype"
+
+# FIXME: Replace Union everywhere as soon as Python 3.10 is available!
 
 mpl.rcParams["font.family"] = ["Computer Modern", "serif"]
 
@@ -91,8 +94,8 @@ class Band():
     """
 
     name: str
-    printname: str = None
-    wavelength: float = None
+    printname: Union[str, None] = None
+    wavelength: Union[float, None] = None
     instrument: str = "unknown"
     telescope: str = "unknown"
 
@@ -178,13 +181,14 @@ class Frame():
         return f"{self.shape} frame in \"{self.band.printname}\" band"
 
     @classmethod
-    def from_fits(cls, filename: str, band, **kwargs):
+    def from_fits(cls, filename: Union[Path, str],
+                  band: Band, **kwargs):
         """Create instance from fits file."""
         with fits.open(filename) as file:
             return cls(file[0].data, band, file[0].header, **kwargs)
 
     @property
-    def band(self):
+    def band(self) -> Band:
         """Get pass-band in which the frame was taken. Read-only property."""
         return self._band
 
@@ -193,7 +197,7 @@ class Frame():
         """Get shape of image array as pretty string."""
         return f"{self.image.shape[0]} x {self.image.shape[1]}"
 
-    def camera_aperture(self, center: tuple[int], radius: float) -> None:
+    def camera_aperture(self, center: tuple[int, int], radius: float) -> None:
         """
         Remove vignetting effects.
 
@@ -316,7 +320,7 @@ class Frame():
         return data_range, data_max
 
     @staticmethod
-    def clipped_stats(data) -> tuple[float]:
+    def clipped_stats(data: np.ndarray) -> tuple[float, float, float]:
         """Calculate sigma-clipped image statistics."""
         data = data.flatten()
         mean, median, stddev = np.mean(data), np.median(data), np.std(data)
@@ -351,7 +355,7 @@ class Frame():
                    sky_mode: str = "median",
                    max_mode: str = "quantile",
                    mask=None,
-                   **kwargs) -> tuple[float]:
+                   **kwargs) -> tuple[float, float]:
         data = self._apply_mask(self.image, mask)
 
         if sky_mode == "quantile":
@@ -388,7 +392,7 @@ class Frame():
     def setup_stiff(self,
                     gamma_lum: float = 1.,
                     grey_level: float = .3,
-                    **kwargs):
+                    **kwargs) -> None:
         """Stretch frame based on modified STIFF algorithm."""
         logger.info("stretching %s band", self.band.name)
         data_range, _ = self.normalize()
@@ -442,7 +446,8 @@ class Frame():
         return image_s
 
     @staticmethod
-    def stiff_stretch(image, stiff_mode: str = "power-law", **kwargs):
+    def stiff_stretch(image, stiff_mode: str = "power-law",
+                      **kwargs) -> np.ndarray:
         """Stretch frame based on STIFF algorithm."""
         def_kwargs = STIFF_PARAMS
         if stiff_mode not in def_kwargs:
@@ -462,7 +467,7 @@ class Frame():
         return image_s
 
     @staticmethod
-    def autostretch_light(image, **kwargs):
+    def autostretch_light(image, **kwargs) -> np.ndarray:
         """Stretch frame based on autostretch algorithm."""
         # logger.info("Begin autostretch for \"%s\" band", self.band.name)
         # maximum = self.normalize()
@@ -485,17 +490,18 @@ class Frame():
 
     def auto_gma(self) -> float:
         """Find gamma based on exponential function. Highly experimental."""
-        clp_mean, _, clp_stddev = self.clipped_stats()
+        clp_mean, _, clp_stddev = self.clipped_stats(self.image)
         return np.exp((1 - (clp_mean + clp_stddev)) / 2)
 
-    def save_fits(self, fname):
+    def save_fits(self, fname) -> None:
         fits.writeto(fname, self.image, self.header)
+
 
 class Picture():
     """n/a."""
 
     def __init__(self, name: str = None):
-        self.frames = list()
+        self.frames: list[Frame] = list()
         self.name = name
 
     def __repr__(self) -> str:
@@ -507,19 +513,19 @@ class Picture():
         return f"Picture \"{self.name}\" containing {len(self.frames)} frames."
 
     @property
-    def bands(self):
+    def bands(self) -> list[Band]:
         """List of all bands in the frames. Read-only property."""
         return [frame.band for frame in self.frames]
 
     @property
-    def primary_frame(self):
+    def primary_frame(self) -> Frame:
         """Get the first frame from the frames list. Read-only property."""
         if not self.frames:
             raise ValueError("No frame loaded.")
         return self.frames[0]
 
     @property
-    def image(self):
+    def image(self) -> np.ndarray:
         """Get combined image of all frames. Read-only property."""
         # HACK: actually combine all images!
         return self.primary_frame.image
@@ -531,7 +537,7 @@ class Picture():
         return self.primary_frame.coords
 
     @property
-    def center(self):
+    def center(self) -> list[int]:
         """Pixel coordinates of center of first frame. Read-only property."""
         # HACK: does this always return the correct order??
         return [sh//2 for sh in self.image.shape[::-1]]
@@ -542,7 +548,7 @@ class Picture():
         return self.coords.pixel_to_world_values(*self.center)
 
     @property
-    def center_coords_str(self):
+    def center_coords_str(self) -> str:
         """Get string conversion of center coords. Read-only property."""
         cen = self.coords.pixel_to_world(*self.center)
         return cen.to_string("hmsdms", sep=" ", precision=2)
@@ -553,11 +559,11 @@ class Picture():
         return self.frames[0].image.size
 
     @property
-    def cube(self):
+    def cube(self) -> np.ndarray:
         """Stack images from all frames in one 3D cube. Read-only property."""
         return np.stack([frame.image for frame in self.frames])
 
-    def _check_band(self, band):
+    def _check_band(self, band: Union[Band, str]) -> Band:
         if isinstance(band, str):
             band = Band(band)
         elif not isinstance(band, Band):
@@ -569,14 +575,19 @@ class Picture():
 
         return band
 
-    def add_frame(self, image, band, header=None, **kwargs):
+    def add_frame(self, image: np.ndarray, band: Band,
+                  header=None, **kwargs) -> Frame:
         """Add new frame to Picture using image array and band information."""
         band = self._check_band(band)
         new_frame = Frame(image, band, header, **kwargs)
         self.frames.append(new_frame)
         return new_frame
 
-    def add_frame_from_file(self, filename, band, framelist=None, **kwargs):
+    def add_frame_from_file(self,
+                            filename: Path,
+                            band: Union[Band, str],
+                            framelist: Union[list, None] = None,
+                            **kwargs) -> Frame:
         """
         Add a new frame to the picture. File must be in FITS format.
 
@@ -610,7 +621,7 @@ class Picture():
             framelist.append(new_frame)
         return new_frame
 
-    def add_fits_frames_mp(self, input_path, bands):
+    def add_fits_frames_mp(self, input_path, bands) -> None:
         """Add frames from fits files for each band, using multiprocessing."""
         # FIXME: this should be updated to use dynamic file name pattern!
         args = [(input_path/f"{self.name}_{band.name}.fits", band)
@@ -703,7 +714,9 @@ class Picture():
         hdr.update(AUTHOR="Fabian Haberhauer")
         return hdr
 
-    def create_supercontrast(self, feature, background):
+    def create_supercontrast(self,
+                             feature: str,
+                             background: str) -> np.ndarray:
         """TBA."""
         # BUG: this misses stretching and equalisation (what about norm?)
         logger.info(("Creating supercontrast image from %s as feature band "
@@ -725,13 +738,13 @@ class RGBPicture(Picture):
         super().__init__(name)
 
         self.params = None
-        self.rgb_channels = None
+        self.rgb_channels: list[Frame] = []
 
     def __str__(self) -> str:
         """str(self)."""
         outstr = (f"RGB Picture \"{self.name}\""
                   f" containing {len(self.frames):d} frames")
-        if self.rgb_channels is not None:
+        if self.rgb_channels:
             channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
                         for chnl in self.rgb_channels)
             outstr += (f" currently set up to use {', '.join(channels)}"
@@ -795,7 +808,7 @@ class RGBPicture(Picture):
 
         return rgb
 
-    def select_rgb_channels(self, bands, single: bool = False):
+    def select_rgb_channels(self, bands, single: bool = False) -> list[Frame]:
         """
         Select existing frames to be used as channels for multi-colour image.
 
@@ -1054,7 +1067,7 @@ class JPEGPicture(RGBPicture):
         return JPEGPicture._make_jpeg_variable_segment(0xFFFE, comment)
 
     @staticmethod
-    def save_hdr(fname: str, hdr):
+    def save_hdr(fname: str, hdr) -> None:
         """Save header as JPEG comment. Redundant with pillow 9.4.x."""
         # TODO: add proper logging
         logger.debug("saving header:")
@@ -1073,7 +1086,7 @@ class JPEGPicture(RGBPicture):
         with open(fname, mode="wb") as file:
             file.write(bout)
 
-    def save_pil(self, fname: str):
+    def save_pil(self, fname: str) -> None:
         """
         Save RGB image to specified file name using pillow.
 
@@ -1114,7 +1127,7 @@ class MPLPicture(RGBPicture):
     """
 
     # padding = {1: 5, 2: 5, 4: 4}
-    padding = {2: 3.5}
+    padding: dict[int, float] = {2: 3.5}
     default_figurekwargs = {"titlemode": "debug",
                             "include_suptitle": True,
                             "figsize": (3, 5.6),
@@ -1126,13 +1139,13 @@ class MPLPicture(RGBPicture):
         """Get string-formatted name of Picture."""
         return f"Source ID: {self.name}"
 
-    def _add_histo(self, axis):
+    def _add_histo(self, axis) -> None:
         cube = self.get_rgb_cube(order="cxy")
         axis.hist([img.flatten() for img in cube],
                   20, color=("r", "g", "b"))
 
     @staticmethod
-    def _plot_coord_grid(axis):
+    def _plot_coord_grid(axis) -> None:
         axis.grid(color="w", ls=":")
 
     @staticmethod
@@ -1154,7 +1167,7 @@ class MPLPicture(RGBPicture):
                       axis: plt.Axes,
                       center: bool = False,
                       grid: bool = False,
-                      rois: list | None = None) -> None:
+                      rois: Union[list, None] = None) -> None:
         axis.imshow(self.get_rgb_cube(order="xyc"),
                     aspect="equal", origin="lower")
         axis.set_xlabel("right ascension")
@@ -1169,14 +1182,15 @@ class MPLPicture(RGBPicture):
             for radec in rois:
                 self._plot_roi(axis, radec)
 
-    def _display_cube_histo(self, axes, cube):
+    def _display_cube_histo(self, axes, cube) -> None:
         axes[0].imshow(cube.T, origin="lower")
         self._add_histo(axes[1])
 
     def _get_axes(self,
                   nrows: int,
                   ncols: int,
-                  figsize_mult: tuple[int]):
+                  figsize_mult: tuple[int]
+                  ) -> tuple[plt.Figure, plt.Axes]:
         figsize = tuple(n * s for n, s in zip((ncols, nrows), figsize_mult))
         fig = plt.figure(figsize=figsize, dpi=300)
         # subfigs = fig.subfigures(nrows)
@@ -1192,7 +1206,7 @@ class MPLPicture(RGBPicture):
         return fig, axes.T
 
     def _create_title(self, axis, combo,
-                      mode: str = "debug", equalized: bool = False):
+                      mode: str = "debug", equalized: bool = False) -> None:
         if mode == "debug":
             title = "R: {}, G: {}, B: {}".format(*combo)
             title += "\n{equalized = }"
@@ -1205,7 +1219,7 @@ class MPLPicture(RGBPicture):
         axis.set_title(title, pad=7, fontdict={"multialignment": "left"})
 
     @staticmethod
-    def _get_nrows_ncols(n_combos, maxcols=4):
+    def _get_nrows_ncols(n_combos: int, maxcols: int = 4) -> tuple[int, int]:
         """Determine necessary number of rows and columns for subplots.
 
         The `maxcols` argument allows for a maximum number of columns to
@@ -1219,7 +1233,7 @@ class MPLPicture(RGBPicture):
         return nrows, ncols
 
     def stuff(self, channel_combos, imgpath, grey_mode="normal",
-              figurekwargs=None, **kwargs):
+              figurekwargs=None, **kwargs) -> None:
         """DEBUG ONLY."""
         if figurekwargs is not None:
             figurekwargs = self.default_figurekwargs | figurekwargs
@@ -1242,9 +1256,9 @@ class MPLPicture(RGBPicture):
                 self.equalize("median",
                               offset=kwargs.get("equal_offset", .1),
                               norm=kwargs.get("equal_norm", True))
-                equal = "True"
+                equal = True
             else:
-                equal = "False"
+                equal = False
 
             self._create_title(column, combo, figurekwargs["titlemode"], equal)
             self._display_cube(column,
