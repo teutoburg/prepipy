@@ -1067,7 +1067,7 @@ class JPEGPicture(RGBPicture):
         return JPEGPicture._make_jpeg_variable_segment(0xFFFE, comment)
 
     @staticmethod
-    def save_hdr(fname: str, hdr) -> None:
+    def save_hdr(fname: Union[Path, str], hdr) -> None:
         """Save header as JPEG comment. Redundant with pillow 9.4.x."""
         # TODO: add proper logging
         logger.debug("saving header:")
@@ -1086,7 +1086,7 @@ class JPEGPicture(RGBPicture):
         with open(fname, mode="wb") as file:
             file.write(bout)
 
-    def save_pil(self, fname: str) -> None:
+    def save_pil(self, fname: Union[Path, str]) -> None:
         """
         Save RGB image to specified file name using pillow.
 

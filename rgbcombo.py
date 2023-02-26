@@ -10,6 +10,7 @@ from logging.config import dictConfig
 from string import Template
 from pathlib import Path
 from shutil import get_terminal_size
+from typing import Iterator, Union
 
 import yaml
 import numpy as np
@@ -17,9 +18,10 @@ from tqdm import tqdm
 
 from astropy.coordinates import Angle, SkyCoord
 from regions import PixCoord
-from regions import CircleSkyRegion, RectangleSkyRegion, PolygonSkyRegion
+from regions import SkyRegion, CircleSkyRegion, \
+                    RectangleSkyRegion, PolygonSkyRegion
 
-from framework import JPEGPicture, Frame, Band
+from framework import RGBPicture, JPEGPicture, Frame, Band
 
 width, _ = get_terminal_size((50, 20))
 width = int(.6 * width)
@@ -37,7 +39,7 @@ def _gma(i, g):
     return np.power(i, 1/g)
 
 
-def _pretty_info_log(msg_key, width=50):
+def _pretty_info_log(msg_key, width=50) -> None:
     msg_dir = {"single": "Start RGB processing for single Image...",
                "multiple": "Start RGB processing for multiple Images...",
                "done": "RGB processing done"}
@@ -47,7 +49,7 @@ def _pretty_info_log(msg_key, width=50):
     logger.info(width * "*")
 
 
-def _maskparse(mask_dict):
+def _maskparse(mask_dict) -> Iterator[SkyRegion]:
     for name, mask in mask_dict.items():
         sky_points = SkyCoord(mask["coords"], unit="deg")
         size = Angle(**mask["size"])
@@ -68,14 +70,14 @@ def _maskparse(mask_dict):
         yield region
 
 
-def _region_mask(region, frame):
+def _region_mask(region: SkyRegion, frame: Frame) -> np.ndarray:
     pixels = PixCoord(*np.indices(frame.image.shape))
     pixel_region = region.to_pixel(frame.coords)
     cont = pixel_region.contains(pixels).T
     return cont
 
 
-def _merge_masks(regions, frame):
+def _merge_masks(regions: list[SkyRegion], frame: Frame) -> np.ndarray:
     fill = all(region.meta["comment"] == "exclude" for region in regions)
     mask = np.full_like(frame.image, fill_value=fill, dtype=bool)
     for region in regions:
@@ -84,15 +86,19 @@ def _merge_masks(regions, frame):
     return mask
 
 
-def _get_mask(fname, frame):
+def _get_mask(fname: str, frame: Frame) -> np.ndarray:
     with open(fname, "r") as ymlfile:
         mask_dict = yaml.load(ymlfile, yaml.SafeLoader)
     mask_regions = list(_maskparse(mask_dict))
     return _merge_masks(mask_regions, frame)
 
 
-def create_picture(image_name, input_path, fname_template,
-                   bands, n_bands, multi=False):
+def create_picture(image_name: str,
+                   input_path,
+                   fname_template,
+                   bands,
+                   n_bands: int,
+                   multi: bool = False) -> JPEGPicture:
     new_pic = JPEGPicture(name=image_name)
     if multi:
         new_pic.add_fits_frames_mp(input_path, bands)
@@ -106,8 +112,14 @@ def create_picture(image_name, input_path, fname_template,
     return new_pic
 
 
-def create_rgb_image(input_path, output_path, image_name,
-                     config, bands, channel_combos, dump_stretch):
+def create_rgb_image(input_path: Path,
+                     output_path: Path,
+                     image_name: str,
+                     config,
+                     bands,
+                     channel_combos,
+                     dump_stretch) -> RGBPicture:
+    fname: Union[Path, str]
     fname_template = Template(config["general"]["filenames"])
     pic = create_picture(image_name, input_path, fname_template,
                          bands, len(config["use_bands"]),
@@ -172,7 +184,8 @@ def create_rgb_image(input_path, output_path, image_name,
 
 
 def setup_rgb_single(input_path, output_path, image_name,
-                     config_name=None, bands_name=None, dump_stretch=False):
+                     config_name=None, bands_name=None,
+                     dump_stretch=False) -> RGBPicture:
     _pretty_info_log("single")
 
     config_name = config_name or DEFAULT_CONFIG_FNAME
@@ -192,7 +205,8 @@ def setup_rgb_single(input_path, output_path, image_name,
 
 def setup_rgb_multiple(input_path, output_path, image_names,
                        config_name=None, bands_name=None,
-                       create_outfolder=False, dump_stretch=False):
+                       create_outfolder=False,
+                       dump_stretch=False) -> Iterator[RGBPicture]:
     _pretty_info_log("multiple")
 
     config_name = config_name or DEFAULT_CONFIG_FNAME
@@ -215,7 +229,7 @@ def setup_rgb_multiple(input_path, output_path, image_names,
     _pretty_info_log("RGB processing done")
 
 
-def main():
+def main() -> None:
     """Execute in script mode."""
     parser = argparse.ArgumentParser(prog="rgbcombo",
                                      description="""Combines RGB channels to
