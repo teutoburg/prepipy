@@ -255,6 +255,8 @@ class Frame():
         """
         Perform upper sigma clipping and replace NANs.
 
+        This method will modify the data internally.
+
         Parameters
         ----------
         clip : int, optional
@@ -276,14 +278,14 @@ class Frame():
 
         """
         med = np.nanmean(self.image)
+        upper_limit = np.nanmax(self.image)
+
         if clip:
             if clip < 0:
                 raise ValueError("clip must be positive integer or 0.")
-            logger.debug("Clipping to %s sigma.", clip)
             upper_limit = med + clip * np.nanstd(self.image)
+            logger.debug("Clipping to %s sigma: %.5f.", clip, upper_limit)
             np.clip(self.image, a_min=None, a_max=upper_limit, out=self.image)
-        else:
-            upper_limit = np.nanmax(self.image)
 
         if nanmode == "max":
             nan = upper_limit
