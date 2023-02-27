@@ -246,7 +246,7 @@ class Frame():
 
         """
         upper_limit = self.background + n_sigma * np.nanstd(self.image)
-        np.clip(self.image, a_min=None, a_max=upper_limit, out=self.image)
+        self.image.clip(None, upper_limit, out=self.image)
 
     def clip_and_nan(self,
                      clip: float = 10,
@@ -285,7 +285,7 @@ class Frame():
                 raise ValueError("clip must be positive integer or 0.")
             upper_limit = med + clip * np.nanstd(self.image)
             logger.debug("Clipping to %s sigma: %.5f.", clip, upper_limit)
-            np.clip(self.image, a_min=None, a_max=upper_limit, out=self.image)
+            self.image.clip(None, upper_limit, out=self.image)
 
         if nanmode == "max":
             nan = upper_limit
@@ -414,7 +414,7 @@ class Frame():
         data_range, _ = self.normalize()
 
         i_min, i_max = self._min_inten(gamma_lum, grey_level, **kwargs)
-        self.image = self.image.clip(i_min, i_max)
+        self.image.clip(i_min, i_max, out=self.image)
 
         legacy = kwargs.get("legacy", False)
         if legacy:
@@ -1053,7 +1053,7 @@ class RGBPicture(Picture):
             channel.image -= meanfct(channel.image[mask])
             means.append(np.nanmean(channel.image[mask]))
             channel.image += offset
-            np.clip(channel.image, a_min=0., a_max=None, out=channel.image)
+            channel.image.clip(0., None, out=channel.image)
             assert channel.image.min() == 0.
             if norm:
                 channel.normalize()
