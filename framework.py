@@ -1032,21 +1032,26 @@ class RGBPicture(Picture):
         None.
 
         """
+        if mode == "mean":
+            meanfct = np.mean
+        elif mode == "median":
+            meanfct = np.median
+        else:
+            raise ValueError("Mode not understood.")
+
         means = []
         for channel in self.rgb_channels:
             if mask is None:
                 mask = np.full_like(channel.image, True, dtype=bool)
             channel.image /= np.nanmax(channel.image[mask])
-            # TODO: This can be refactored into passing the np function.
-            if mode == "median":
-                channel.image -= np.nanmedian(channel.image[mask])
-            elif mode == "mean":
-                channel.image -= np.nanmean(channel.image[mask])
+            channel.image -= meanfct(channel.image[mask])
             means.append(np.nanmean(channel.image[mask]))
             channel.image += offset
-            channel.image[channel.image < 0.] = 0.
+            np.clip(channel.image, a_min=0., a_max=None, out=channel.image)
+            assert channel.image.min() == 0.
             if norm:
                 channel.normalize()
+
         if supereq:
             maxmean = max(means)
             for channel, mean in zip(self.rgb_channels, means):
