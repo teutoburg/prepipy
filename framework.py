@@ -321,8 +321,8 @@ class Frame():
         if np.isclose((data_min, data_max), (0., 1.), atol=1e-5).all():
             return data_range, data_max
 
-        self.image -= data_min
-        self.image /= data_range
+        np.subtract(self.image, data_min, out=self.image)
+        np.divide(self.image, data_range, out=self.image)
 
         try:
             assert np.nanmin(self.image) == 0.0
@@ -330,7 +330,8 @@ class Frame():
         except AssertionError:
             logger.error("Normalisation error: %f, %f", data_max, data_min)
 
-        self.image = self.image * new_range + new_offset
+        np.multiply(self.image, new_range, out=self.image)
+        np.add(self.image, new_offset, out=self.image)
 
         return data_range, data_max
 
