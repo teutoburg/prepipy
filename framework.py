@@ -246,7 +246,7 @@ class Frame():
 
         """
         upper_limit = self.background + n_sigma * np.nanstd(self.image)
-        self.image = np.clip(self.image, None, upper_limit)
+        np.clip(self.image, a_min=None, a_max=upper_limit, out=self.image)
 
     def clip_and_nan(self,
                      clip: float = 10,
@@ -280,19 +280,22 @@ class Frame():
             if clip < 0:
                 raise ValueError("clip must be positive integer or 0.")
             logger.debug("Clipping to %s sigma.", clip)
-            v_max = med + clip * np.nanstd(self.image)
-            self.image = np.clip(self.image, None, v_max)
+            upper_limit = med + clip * np.nanstd(self.image)
+            np.clip(self.image, a_min=None, a_max=upper_limit, out=self.image)
         else:
-            v_max = np.nanmax(self.image)
+            upper_limit = np.nanmax(self.image)
 
         if nanmode == "max":
-            logger.debug("Replacing NANs with clipped max value.")
-            self.image = np.nan_to_num(self.image, False, nan=v_max)
+            nan = upper_limit
+            logmsg = "clipped max"
         elif nanmode == "median":
-            logger.debug("Replacing NANs with median value.")
-            self.image = np.nan_to_num(self.image, False, nan=med)
+            nan = med
+            logmsg = "median"
         else:
             raise ValueError("nanmode not understood")
+
+        logger.debug("Replacing NANs with %s value: %.5f.", logmsg, nan)
+        self.image = np.nan_to_num(self.image, copy=False, nan=nan)
 
     def display_3d(self) -> None:
         """Show frame as 3D plot (z=intensity)."""
