@@ -722,7 +722,7 @@ class RGBPicture(Picture):
         outstr = (f"RGB Picture \"{self.name}\""
                   f" containing {len(self.frames):d} frames")
         if self.rgb_channels:
-            channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
+            channels = (f"{chnl.band.printname} ({chnl.band.wavelength} um)"
                         for chnl in self.rgb_channels)
             outstr += (f" currently set up to use {', '.join(channels)}"
                        " as RGB channels.")
@@ -1180,7 +1180,7 @@ class MPLPicture(RGBPicture):
             title = "R: {}, G: {}, B: {}".format(*combo)
             title += "\n{equalized = }"
         elif mode == "pub":
-            channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
+            channels = (f"{chnl.band.printname} ({chnl.band.wavelength} um)"
                         for chnl in self.rgb_channels)
             title = "Red: {}\nGreen: {}\nBlue: {}".format(*channels)
         else:
