@@ -209,6 +209,8 @@ class Frame():
         Set everything outside a defined radius around a defined center to
         zero.
 
+        This method will modify the data internally.
+
         Parameters
         ----------
         center : 2-tuple of ints
@@ -297,7 +299,8 @@ class Frame():
             raise ValueError("nanmode not understood")
 
         logger.debug("Replacing NANs with %s value: %.5f.", logmsg, nan)
-        self.image = np.nan_to_num(self.image, copy=False, nan=nan)
+        np.nan_to_num(self.image, copy=False, nan=nan)
+        assert np.isnan(self.image).sum() == 0
 
     def display_3d(self) -> None:
         """Show frame as 3D plot (z=intensity)."""
@@ -312,7 +315,28 @@ class Frame():
     def normalize(self,
                   new_range: float = 1.,
                   new_offset: float = 0.) -> tuple[float, float]:
-        """Subtract minimum and devide by maximum."""
+        """
+        Normalize the image data array to the given range.
+
+        Data is normalized to a range of 0.0 to `new_range`, with the default
+        being 1.0, meaning a 0-1 normalisation is performed. Additionally,
+        a constant value `new_offset` can be added, the default for this is 0.
+
+        This method will modify the data internally.
+
+        Parameters
+        ----------
+        new_range : float, optional
+            New maximum value. The default is 1.0.
+        new_offset : float, optional
+            Constant value added to data. The default is 0.0.
+
+        Returns
+        -------
+        data_range, data_max
+            Previous range and maximum value before normalisation.
+
+        """
         data_max = np.nanmax(self.image)
         data_min = np.nanmin(self.image)
         data_range = data_max - data_min
