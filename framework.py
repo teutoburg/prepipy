@@ -100,13 +100,14 @@ class Band():
     telescope: str = "unknown"
 
     @classmethod
-    def from_dict(cls, bands):
+    def from_dict(cls, bands: dict[str, Union[str, float]]):
         """Create incstance from list of dictionaries (default factory)."""
         for band in bands:
             yield cls(**band)
 
     @staticmethod
-    def parse_yaml_dict(yaml_dict: dict) -> dict:
+    def parse_yaml_dict(yaml_dict: dict[str, Union[str, float]]
+                        ) -> dict[str, Union[str, float]]:
         """Parse shortened names as used in YAML to correct parameter names."""
         for printname, band in yaml_dict.items():
             band["instrument"] = band.pop("inst")
@@ -116,14 +117,17 @@ class Band():
         return yaml_dict
 
     @staticmethod
-    def filter_used_bands(yaml_dict: dict, use_bands=None):
+    def filter_used_bands(yaml_dict: dict[str, Union[str, float]],
+                          use_bands: Union[list[str], None] = None
+                          ) -> list[str]:
         """Either use specified or all, anyway turn into tuple w/o names."""
         if use_bands is not None:
             return itemgetter(*use_bands)(yaml_dict)
         return yaml_dict.values()
 
     @classmethod
-    def from_yaml_file(cls, filename: str, use_bands=None):
+    def from_yaml_file(cls, filename: str,
+                       use_bands: Union[list[str], None] = None):
         """
         Yield newly created instances from YAML config file entries.
 
@@ -154,7 +158,8 @@ class Band():
 class Frame():
     """n/a."""
 
-    def __init__(self, image, band, header=None, **kwargs):
+    def __init__(self, image: np.ndarray, band: Band,
+                 header: Union[fits.Header, None] = None, **kwargs):
         self.header = header
         self.coords = wcs.WCS(self.header)
 
@@ -222,7 +227,7 @@ class Frame():
         out = np.where(dst > radius)
         self.image[out] = 0.
 
-    def clip(self, n_sigma: float = 3.):
+    def clip(self, n_sigma: float = 3.) -> None:
         """
         Perform n sigma clipping on the image (only affects max values).
 
@@ -243,7 +248,10 @@ class Frame():
         upper_limit = self.background + n_sigma * np.nanstd(self.image)
         self.image = np.clip(self.image, None, upper_limit)
 
-    def clip_and_nan(self, clip: float = 10, nanmode: str = "max", **kwargs):
+    def clip_and_nan(self,
+                     clip: float = 10,
+                     nanmode: str = "max",
+                     **kwargs) -> None:
         """
         Perform upper sigma clipping and replace NANs.
 
@@ -286,7 +294,7 @@ class Frame():
         else:
             raise ValueError("nanmode not understood")
 
-    def display_3d(self):
+    def display_3d(self) -> None:
         """Show frame as 3D plot (z=intensity)."""
         x_grid, y_grid = np.mgrid[0:self.image.shape[0], 0:self.image.shape[1]]
         fig = plt.figure()
@@ -296,7 +304,9 @@ class Frame():
         axis.set_title(self.band.name)
         plt.show()
 
-    def normalize(self, new_range: float = 1., new_offset: float = 0.):
+    def normalize(self,
+                  new_range: float = 1.,
+                  new_offset: float = 0.) -> tuple[float, float]:
         """Subtract minimum and devide by maximum."""
         data_max = np.nanmax(self.image)
         data_min = np.nanmin(self.image)
@@ -531,7 +541,7 @@ class Picture():
         return self.primary_frame.image
 
     @property
-    def coords(self):
+    def coords(self) -> wcs.WCS:
         """WCS coordinates of the first frame. Read-only property."""
         # TODO: only return WCS if WCS of all frames agree, otherwise raise.
         return self.primary_frame.coords
@@ -576,7 +586,7 @@ class Picture():
         return band
 
     def add_frame(self, image: np.ndarray, band: Band,
-                  header=None, **kwargs) -> Frame:
+                  header: Union[fits.Header, None] = None, **kwargs) -> Frame:
         """Add new frame to Picture using image array and band information."""
         band = self._check_band(band)
         new_frame = Frame(image, band, header, **kwargs)
@@ -708,7 +718,7 @@ class Picture():
             else:
                 raise ValueError("stretch mode not understood")
 
-    def _update_header(self):
+    def _update_header(self) -> fits.Header:
         hdr = self.frames[0].header
         # TODO: properly do this ^^
         hdr.update(AUTHOR="Fabian Haberhauer")
@@ -758,7 +768,8 @@ class RGBPicture(Picture):
         """Return True is any median of the RGB frames is >.2."""
         return any(np.median(c.image) > .2 for c in self.rgb_channels)
 
-    def get_rgb_cube(self, mode: str = "0-1", order: str = "cxy"):
+    def get_rgb_cube(self, mode: str = "0-1",
+                     order: str = "cxy") -> np.ndarray:
         """
         Stack images from RGB channels into one 3D cube, normalized to 1.
 
@@ -808,7 +819,9 @@ class RGBPicture(Picture):
 
         return rgb
 
-    def select_rgb_channels(self, bands, single: bool = False) -> list[Frame]:
+    def select_rgb_channels(self,
+                            bands: list[str],
+                            single: bool = False) -> list[Frame]:
         """
         Select existing frames to be used as channels for multi-colour image.
 
@@ -1067,7 +1080,7 @@ class JPEGPicture(RGBPicture):
         return JPEGPicture._make_jpeg_variable_segment(0xFFFE, comment)
 
     @staticmethod
-    def save_hdr(fname: Union[Path, str], hdr) -> None:
+    def save_hdr(fname: Union[Path, str], hdr: fits.Header) -> None:
         """Save header as JPEG comment. Redundant with pillow 9.4.x."""
         # TODO: add proper logging
         logger.debug("saving header:")
