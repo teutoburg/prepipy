@@ -30,10 +30,6 @@ tqdm_fmt = f"{{l_bar}}{{bar:{width}}}{{r_bar}}{{bar:-{width}b}}"
 DEFAULT_CONFIG_FNAME = "./config_single.yml"
 DEFAULT_BANDS_FNAME = "./bands.yml"
 
-print(Path.cwd())
-print(Path(".").resolve())
-print(Path("/").resolve())
-
 
 def _gma(i, g):
     return np.power(i, 1/g)
@@ -235,8 +231,6 @@ def main() -> None:
                                      description="""Combines RGB channels to
                                      color image including stretching.""")
 
-    # https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument
-
     parser.add_argument("input_path",
                         type=Path,
                         help="""The file path to the input fits files
@@ -307,33 +301,6 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     logger = _logging_configurator()
-
-    # root = Path("D:/Nemesis/data/HOPS")
-    # path = root/"HOPS_99"
-    # imgpath = root/"RGBs"
-    # target = "HOPS_99"
-
-    # root = Path("D:/Nemesis/data")
-    # path = root/"stamps/LARGE/Orion"
-    # imgpath = root/"comps_large"
-    # target = "Hand"
-
-    root = Path("C:/Users/ghost/Desktop/nemesis/outreach/regions")
-    path = root/"input"
-    imgpath = root/"JPEGS/new"
-    target = "outreach_1"
-
-    # https://note.nkmk.me/en/python-pillow-concat-images/
-
-    mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
-
-    # root = Path("D:/Nemesis/data/perseus")
-    # path = root/"stamps/"
-
-    # for i in range(1, 4):
-    #     target = f"IC 348-{i}"
-    #     setup_rgb(path, root/"RGBs", target)
-
-    # main()
+    main()
     gc.collect()
     sys.exit(0)

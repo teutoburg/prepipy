@@ -423,39 +423,6 @@ class Frame():
         logger.info("%s band done", self.band.name)
 
     @staticmethod
-    def stiff_stretch_legacy(image, stiff_mode: str = "power-law", **kwargs):
-        """Stretch frame based on STIFF algorithm."""
-        logger.warning(("The method stiff_stretch_legacy is deprecated and "
-                        "only included for backwards compatibility."))
-
-        def_kwargs = {"power-law": {"gamma": 2.2, "a": 1., "b": 0., "i_t": 0.},
-                      "srgb":
-                          {"gamma": 2.4, "a": 12.92, "b": .055, "i_t": .00304},
-                      "rec709":
-                          {"gamma": 2.22, "a": 4.5, "b": .099, "i_t": .018},
-                      "prepi":
-                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .001},
-                      "debug0":
-                          {"gamma": 2.25, "a": 3., "b": .08, "i_t": .003},
-                      "debug1":
-                          {"gamma": 2.25, "a": 3., "b": .1, "i_t": .8},
-                      "debug2":
-                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003},
-                      "debug3":
-                          {"gamma": 2.25, "a": 3., "b": .05, "i_t": .003}
-                      }
-        if stiff_mode not in def_kwargs:
-            raise KeyError(f"Mode must be one of {list(def_kwargs.keys())}.")
-
-        kwargs = def_kwargs[stiff_mode] | kwargs
-
-        b_slope, i_t = kwargs["b"], kwargs["i_t"]
-        image_s = kwargs["a"] * image * (image < i_t)
-        image_s += (1 + b_slope) * image**(1/kwargs["gamma"])
-        image_s -= b_slope * (image >= i_t)
-        return image_s
-
-    @staticmethod
     def stiff_stretch(image, stiff_mode: str = "power-law",
                       **kwargs) -> np.ndarray:
         """Stretch frame based on STIFF algorithm."""
@@ -1139,7 +1106,6 @@ class MPLPicture(RGBPicture):
     Matplotlib and saved in pdf format.
     """
 
-    # padding = {1: 5, 2: 5, 4: 4}
     padding: dict[int, float] = {2: 3.5}
     default_figurekwargs = {"titlemode": "debug",
                             "include_suptitle": True,
@@ -1168,8 +1134,6 @@ class MPLPicture(RGBPicture):
         axis.scatter(*radec,
                      transform=axis.get_transform("world"), s=size,
                      edgecolor="w", facecolor="none")
-        # Why is axis not an instance of WCSAxes???
-        # axis.scatter_coord(self.center_coords)
 
     def _plot_center_marker(self,
                             axis: plt.Axes,
@@ -1206,16 +1170,8 @@ class MPLPicture(RGBPicture):
                   ) -> tuple[plt.Figure, plt.Axes]:
         figsize = tuple(n * s for n, s in zip((ncols, nrows), figsize_mult))
         fig = plt.figure(figsize=figsize, dpi=300)
-        # subfigs = fig.subfigures(nrows)
-        # for subfig in subfigs[::2]:
-        # for subfig in subfigs:
-        #     subfig.subplots(1, ncols, subplot_kw={"projection": coord})
-        # for subfig in subfigs[1::2]:
-        #     subfig.subplots(1, ncols)
         axes = fig.subplots(nrows, ncols,
                             subplot_kw={"projection": self.coords})
-        # axes = [subfig.axes for subfig in subfigs]
-        # axes = list(map(list, zip(*axes)))
         return fig, axes.T
 
     def _create_title(self, axis, combo,
