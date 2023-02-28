@@ -1075,16 +1075,28 @@ class RGBPicture(Picture):
         for channel in self.rgb_channels:
             if mask is None:
                 mask = np.full_like(channel.image, True, dtype=bool)
-            masked_max = np.nanmax(channel.image[mask])
-            print(masked_max)
-            masked_mean = meanfct(channel.image[mask])
-            print(masked_mean)
-            means.append(masked_mean)
+            # masked_max = np.nanmax(channel.image[mask])
+            # print(masked_max)
+            # masked_mean = meanfct(channel.image[mask])
+            # print(masked_mean)
+            # means.append(masked_mean)
 
-            np.divide(channel.image, masked_max, out=channel.image)
-            np.subtract(channel.image, masked_mean, out=channel.image)
-            np.add(channel.image, offset, out=channel.image)
-            channel.image.clip(0., None, out=channel.image)
+            # np.divide(channel.image, masked_max, out=channel.image)
+            # np.subtract(channel.image, masked_mean, out=channel.image)
+            # np.add(channel.image, offset, out=channel.image)
+            # channel.image.clip(0., None, out=channel.image)
+            
+            channel.image /= np.nanmax(channel.image[mask])
+            # TODO: This can be refactored into passing the np function.
+            if mode == "median":
+                channel.image -= np.nanmedian(channel.image[mask])
+            elif mode == "mean":
+                channel.image -= np.nanmean(channel.image[mask])
+            means.append(np.nanmean(channel.image[mask]))
+            channel.image += offset
+            channel.image[channel.image < 0.] = 0.
+            
+            
             if norm:
                 channel.normalize()
 
