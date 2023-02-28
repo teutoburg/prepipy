@@ -49,6 +49,30 @@ def _pretty_info_log(msg_key, width=50) -> None:
     logger.info(width * "*")
 
 
+def create_description_file(picture: RGBPicture, filename: Path,
+                            stretchalgo: str = "STIFF") -> None:
+    outstr: str = ""
+    colors: tuple[str, str, str] = ("Red", "Green", "Blue")
+
+    center = picture.coords.pixel_to_world(*picture.center)
+    center = center.to_string("hmsdms", precision=0)
+    outstr += f"<p>Image is centered around ICRS coordinates: {center}.</p>\n"
+    outstr += f"<p>Pixel scale: {picture.pixel_scale!s} per pixel.</p>\n"
+    outstr += f"<p>Image size: {picture.image_scale}.</p>\n"
+
+    outstr += "<p>Colour composite image was created using the following"
+    outstr += " bands as colour channels:</p>\n"
+    outstr += "<ul>\n"
+    for color, channel in zip(colors, picture.rgb_channels):
+        outstr += f"<li>{color:<5s}: {channel.band.verbose_str}</li>\n"
+    outstr += "</ul>\n"
+
+    outstr += f"<p>Images were stretched using {stretchalgo} algorithm.</p>\n"
+    # print(outstr)
+    with open(filename, "w+") as file:
+        file.write(outstr)
+
+
 def _maskparse(mask_dict) -> Iterator[SkyRegion]:
     for name, mask in mask_dict.items():
         sky_points = SkyCoord(mask["coords"], unit="deg")

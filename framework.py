@@ -72,16 +72,19 @@ class Band():
 
     Parameters
     ----------
-    name: str
+    name : str
         Used for internal reference.
-    printname: str, optional
+    printname : str, optional
         Used for output on figures.
-    wavelength: float, optional
+    wavelength : float, optional
         Used for checking order in RGB mode. Must be the same unit for all
         instances used simultanously.
-    instrument: str, optional
+    unit : str, optional
+        Unit of the wavelength, currently only used for display purposes,
+        defaults to 'µm' if omitted.
+    instrument : str, optional
         Currently unused, defaults to 'unknown' if omitted.
-    telescope: str, optional
+    telescope : str, optional
         Currently unused, defaults to 'unknown' if omitted.
 
     Notes
@@ -96,8 +99,21 @@ class Band():
     name: str
     printname: Union[str, None] = None
     wavelength: Union[float, None] = None
+    unit: str = "µm"
     instrument: str = "unknown"
     telescope: str = "unknown"
+
+    def __str__(self) -> str:
+        """str(self)."""
+        return f"{self.printname} ({self.wavelength} {self.unit})"
+
+    @property
+    def verbose_str(self) -> str:
+        """str(self)."""
+        outstr = f"{self.printname} band at {self.wavelength} {self.unit}"
+        outstr += f" taken with {self.instrument} instrument"
+        outstr += f" at {self.telescope} telescope."
+        return outstr
 
     @classmethod
     def from_dict(cls, bands: dict[str, Union[str, float]]):
@@ -599,6 +615,25 @@ class Picture():
         return self.frames[0].image.size
 
     @property
+    def pixel_scale(self) -> float:
+        """Get pixel scale in arcsec. Read-only property."""
+        scales = self.coords.proj_plane_pixel_scales()
+        scale = sum(scales) / len(scales)
+        return scale.to("arcsec").round(3)
+
+    @property
+    def image_scale(self) -> str:
+        """Get size of image along axes as string. Read-only property."""
+        size = self.image.shape * self.pixel_scale
+        size = size.to("deg")
+        if size.max().value < 1.:
+            size = size.to("arcmin")
+        if size.max().value < 1.:
+            size = size.to("arcsec")
+        size = size.round(1)
+        return " by ".join(str(along) for along in size)
+
+    @property
     def cube(self) -> np.ndarray:
         """Stack images from all frames in one 3D cube. Read-only property."""
         return np.stack([frame.image for frame in self.frames])
@@ -785,6 +820,7 @@ class RGBPicture(Picture):
         outstr = (f"RGB Picture \"{self.name}\""
                   f" containing {len(self.frames):d} frames")
         if self.rgb_channels:
+            # TODO: change this to str(channel)
             channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
                         for chnl in self.rgb_channels)
             outstr += (f" currently set up to use {', '.join(channels)}"
@@ -1262,6 +1298,7 @@ class MPLPicture(RGBPicture):
             title = "R: {}, G: {}, B: {}".format(*combo)
             title += "\n{equalized = }"
         elif mode == "pub":
+            # TODO: change this to str(channel)
             channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
                         for chnl in self.rgb_channels)
             title = "Red: {}\nGreen: {}\nBlue: {}".format(*channels)
