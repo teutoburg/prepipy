@@ -1040,9 +1040,11 @@ class RGBPicture(Picture):
                  offset: float = .5,
                  norm: bool = True,
                  supereq: bool = False,
-                 mask=None):
+                 mask=None) -> None:
         """
         Perform a collection of processes to enhance the RGB image.
+
+        This method will modify the data internally.
 
         Parameters
         ----------
@@ -1073,12 +1075,16 @@ class RGBPicture(Picture):
         for channel in self.rgb_channels:
             if mask is None:
                 mask = np.full_like(channel.image, True, dtype=bool)
-            channel.image /= np.nanmax(channel.image[mask])
-            channel.image -= meanfct(channel.image[mask])
-            means.append(np.nanmean(channel.image[mask]))
-            channel.image += offset
+            masked_max = np.nanmax(channel.image[mask])
+            print(masked_max)
+            masked_mean = meanfct(channel.image[mask])
+            print(masked_mean)
+            means.append(masked_mean)
+
+            np.divide(channel.image, masked_max, out=channel.image)
+            np.subtract(channel.image, masked_mean, out=channel.image)
+            np.add(channel.image, offset, out=channel.image)
             channel.image.clip(0., None, out=channel.image)
-            assert channel.image.min() == 0.
             if norm:
                 channel.normalize()
 
