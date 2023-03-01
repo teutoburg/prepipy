@@ -53,20 +53,22 @@ def create_description_file(picture: RGBPicture, filename: Path,
                             stretchalgo: str = "STIFF") -> None:
     outstr: str = ""
     colors: tuple[str, str, str] = ("Red", "Green", "Blue")
+    ul_margin: str = "-20px"
 
     outstr += "<h5>Click on image to view fullsize.</h5>\n"
 
     center = picture.coords.pixel_to_world(*picture.center)
     center = center.to_string("hmsdms", precision=0)
-    outstr += f"<p>Image is centered around ICRS coordinates: {center}.<br>\n"
-    outstr += f"Pixel scale: {picture.pixel_scale!s} per pixel.<br>\n"
-    outstr += f"Image size: {picture.image_scale}.</p>\n"
+    outstr += ("<p>Image is centered around ICRS coordinates: "
+               f"<b>{center}</b>.<br>\n Pixel scale: {picture.pixel_scale!s} "
+               f"per pixel.<br>\n Image size: {picture.image_scale}.</p>\n")
 
-    outstr += "<p>Colour composite image was created using the following"
-    outstr += " bands as colour channels:</p>\n"
-    outstr += "<ul>\n"
+    outstr += ("<p>Colour composite image was created using the following "
+               "bands as colour channels:</p>\n")
+    outstr += f"<ul style=\"margin-top:{ul_margin};\">\n"
     for color, channel in zip(colors, picture.rgb_channels):
-        outstr += f"<li>{color}: {channel.band.verbose_str}</li>\n"
+        outstr += (f"<li><span style=\"color:{color};font-weight:bold;\">"
+                   f"{color}:</span> {channel.band.verbose_str}</li>\n")
     outstr += "</ul>\n"
 
     outstr += f"<p>Images were stretched using {stretchalgo} algorithm.</p>\n"
