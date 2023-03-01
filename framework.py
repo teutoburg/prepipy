@@ -99,7 +99,7 @@ class Band():
     name: str
     printname: Union[str, None] = None
     wavelength: Union[float, None] = None
-    unit: str = "µm"
+    unit: str = "&mu;m"
     instrument: str = "unknown"
     telescope: str = "unknown"
 
