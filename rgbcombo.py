@@ -54,20 +54,32 @@ def create_description_file(picture: RGBPicture, filename: Path,
     outstr: str = ""
     colors: tuple[str, str, str] = ("Red", "Green", "Blue")
 
+    outstr += "<h5>Click on image to view fullsize.</h5>\n"
+
     center = picture.coords.pixel_to_world(*picture.center)
     center = center.to_string("hmsdms", precision=0)
-    outstr += f"<p>Image is centered around ICRS coordinates: {center}.</p>\n"
-    outstr += f"<p>Pixel scale: {picture.pixel_scale!s} per pixel.</p>\n"
-    outstr += f"<p>Image size: {picture.image_scale}.</p>\n"
+    outstr += f"<p>Image is centered around ICRS coordinates: {center}.<br>\n"
+    outstr += f"Pixel scale: {picture.pixel_scale!s} per pixel.<br>\n"
+    outstr += f"Image size: {picture.image_scale}.</p>\n"
 
     outstr += "<p>Colour composite image was created using the following"
     outstr += " bands as colour channels:</p>\n"
     outstr += "<ul>\n"
     for color, channel in zip(colors, picture.rgb_channels):
-        outstr += f"<li>{color:<5s}: {channel.band.verbose_str}</li>\n"
+        outstr += f"<li>{color}: {channel.band.verbose_str}</li>\n"
     outstr += "</ul>\n"
 
     outstr += f"<p>Images were stretched using {stretchalgo} algorithm.</p>\n"
+    outstr += "<hr>\n"
+    outstr += ("<p style=\"font-size:small; font-style:italic\">The fullsize "
+               "version of this image (click on image to view) contains "
+               "machine-readable coordinate (WCS) information. The image can "
+               "be downloaded and viewed in applications such as the "
+               "<a href=\"https://aladin.u-strasbg.fr/AladinDesktop/\" "
+               "style=\"text-decoration:underline; color:#00133f;\" "
+               "target=\"_blank\">Aladin sky atlas</a> via \"drag-and-drop\" "
+               "or by pasting the image's permalink into the command-line."
+               "<p>\n")
     # print(outstr)
     with open(filename, "w+") as file:
         file.write(outstr)
