@@ -317,20 +317,21 @@ def main() -> None:
     group.add_argument("-f", "--fits-dump",
                        action="store_true",
                        help="""Dump stretched single-band FITS files into the
-                       specified output directory. May not be used in
-                       combination with option -p.""")
+                       specified output directory. This option cannot be used
+                       in combination with the optionn -p.""")
     group.add_argument("-p", "--partial",
                        action="store_true",
-                       help="""Perform only pre-processing and color space
-                       equalisation. No stretching is performed, no RGB image
-                       is created, all parameters associated with those
-                       processes will be ignored. May not be used in
-                       combination with option -f.""")
+                       help="""Perform only pre-processing and normalisation.
+                       No stretching is performed, no RGB image is created, all
+                       parameters associated with those processes will be
+                       ignored. This option cannot be used in combination with
+                       the option -f.""")
     parser.add_argument("--create-outfolders",
                         action="store_true",
                         help="""Whether to create a separate folder in the
                         output path for each picture, which may already exist.
                         Can only be used if -m option is set.""")
+    # TODO: possible future additions: masking/regions, ROI, MPL option(s)
     args = parser.parse_args()
 
     if args.output_path is not None:
@@ -339,13 +340,17 @@ def main() -> None:
         logging.warning("No output path specified, dumping into input folder.")
         output_path = args.input_path
 
-    if args.many:
-        setup_rgb_multiple(args.input_path, output_path, args.image_name,
-                           args.config_file, args.bands_file,
-                           args.create_outfolders, args.dump_stretch)
-    else:
-        setup_rgb_single(args.input_path, output_path, args.image_name,
-                         args.config_file, args.bands_file, args.dump_stretch)
+    if args.partial:
+        raise NotImplementedError()
+    if args.multi:
+        raise NotImplementedError()
+
+    picture = setup_rgb_single(args.input_path, output_path, args.image_name,
+                               args.config_file, args.bands_file,
+                               args.fits_dump)
+
+    if args.description:
+        create_description_file(picture, output_path/f"{picture.name}.html")
 
 
 def _logging_configurator():
