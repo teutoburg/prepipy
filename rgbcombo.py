@@ -296,21 +296,41 @@ def main() -> None:
                         help="""The name of the band config file to be used.
                         If omitted, the code will look for a file named
                         "bands.yml" in the main package folder.""")
-    parser.add_argument("-m",
-                        dest="many",
+    parser.add_argument("-m", "--multi",
+                        action="count",
+                        default=0,
+                        help="""Whether to use multiprocessing. Using this
+                        option once will make use of multiprocessing to split
+                        creation of multiple images between processes. Using it
+                        twice will additionally use multiprocessing to pre-
+                        process individual frames. This is only recommended for
+                        very large images (> 10 Mpx). If the program is
+                        executed for a single image, using this option once
+                        will not have any effect.""")
+    parser.add_argument("-d", "--description",
                         action="store_true",
-                        help="""Whether to process multiple images. If set,
-                        image-name is interpreted as a list of names.""")
+                        help="""Whether to include a html description file
+                        about the image. If set, a file with the same name as
+                        each processes image will be saved in the output
+                        directory.""")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-f", "--fits-dump",
+                       action="store_true",
+                       help="""Dump stretched single-band FITS files into the
+                       specified output directory. May not be used in
+                       combination with option -p.""")
+    group.add_argument("-p", "--partial",
+                       action="store_true",
+                       help="""Perform only pre-processing and color space
+                       equalisation. No stretching is performed, no RGB image
+                       is created, all parameters associated with those
+                       processes will be ignored. May not be used in
+                       combination with option -f.""")
     parser.add_argument("--create-outfolders",
                         action="store_true",
                         help="""Whether to create a separate folder in the
                         output path for each picture, which may already exist.
                         Can only be used if -m option is set.""")
-    parser.add_argument("--dump-stretched-fits",
-                        dest="dump_stretch",
-                        action="store_true",
-                        help="""Dump stretched single-band FITS files into the
-                        specified output directory.""")
     args = parser.parse_args()
 
     if args.output_path is not None:
@@ -363,7 +383,7 @@ if __name__ == "__main__":
 
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
-    mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
+    # mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
 
     # root = Path("D:/Nemesis/data/perseus")
     # path = root/"stamps/"
@@ -372,6 +392,6 @@ if __name__ == "__main__":
     #     target = f"IC 348-{i}"
     #     setup_rgb(path, root/"RGBs", target)
 
-    # main()
+    main()
     gc.collect()
     sys.exit(0)
