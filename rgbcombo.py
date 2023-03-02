@@ -156,7 +156,8 @@ def create_rgb_image(input_path: Path,
                      config,
                      bands,
                      channel_combos,
-                     dump_stretch) -> RGBPicture:
+                     dump_stretch: bool,
+                     description: bool) -> RGBPicture:
     fname: Union[Path, str]
     fname_template = Template(config["general"]["filenames"])
     pic = create_picture(image_name, input_path, fname_template,
@@ -203,6 +204,8 @@ def create_rgb_image(input_path: Path,
             logger.info("Used normal grey mode.")
             fname = f"{pic.name}_img_{cols}.JPEG"
         pic.save_pil(output_path/fname)
+        if description:
+            create_description_file(pic, output_path/f"{pic.name}.html")
 
         if dump_stretch:
             logger.info("Dumping stretched FITS files for each channel.")
@@ -223,7 +226,7 @@ def create_rgb_image(input_path: Path,
 
 def setup_rgb_single(input_path, output_path, image_name,
                      config_name=None, bands_name=None,
-                     dump_stretch=False) -> RGBPicture:
+                     dump_stretch=False, description=False) -> RGBPicture:
     _pretty_info_log("single")
 
     config_name = config_name or DEFAULT_CONFIG_FNAME
@@ -235,8 +238,7 @@ def setup_rgb_single(input_path, output_path, image_name,
     channel_combos = config["combinations"]
 
     pic = create_rgb_image(input_path, output_path, image_name, config, bands,
-                           channel_combos, dump_stretch)
-
+                           channel_combos, dump_stretch, description)
     _pretty_info_log("done")
     return pic
 
@@ -333,6 +335,9 @@ def main() -> None:
                         Can only be used if -m option is set.""")
     # TODO: possible future additions: masking/regions, ROI, MPL option(s),
     #       cutout (pixel), rgbcombo (if no config and bands)
+    #       also inlude these in config file and vice verse
+    #       ideally, load config file. overwrite all options set from command
+    #       line, than pass config object, not individual kwargs
     args = parser.parse_args()
 
     if args.output_path is not None:
@@ -348,10 +353,7 @@ def main() -> None:
 
     picture = setup_rgb_single(args.input_path, output_path, args.image_name,
                                args.config_file, args.bands_file,
-                               args.fits_dump)
-
-    if args.description:
-        create_description_file(picture, output_path/f"{picture.name}.html")
+                               args.fits_dump, args.description)
 
 
 def _logging_configurator():
