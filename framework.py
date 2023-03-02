@@ -15,7 +15,7 @@ import struct
 from dataclasses import dataclass
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union
+from typing import Union, Callable
 
 import yaml
 import numpy as np
@@ -696,10 +696,11 @@ class Picture():
             framelist.append(new_frame)
         return new_frame
 
-    def add_fits_frames_mp(self, input_path, bands) -> None:
+    def add_fits_frames_mp(self, input_path, fname_template, bands) -> None:
         """Add frames from fits files for each band, using multiprocessing."""
-        # FIXME: this should be updated to use dynamic file name pattern!
-        args = [(input_path/f"{self.name}_{band.name}.fits", band)
+        args = [(input_path/fname_template.substitute(image_name=self.name,
+                                                      band_name=band.name),
+                 band)
                 for band in bands]
         with Pool(len(args)) as pool:
             framelist = pool.starmap(Frame.from_fits, args)
@@ -1100,6 +1101,7 @@ class RGBPicture(Picture):
         None.
 
         """
+        meanfct: Callable[[np.ndarray], float]
         if mode == "mean":
             meanfct = np.mean
         elif mode == "median":

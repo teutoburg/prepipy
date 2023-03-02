@@ -132,14 +132,14 @@ def _get_mask(fname: str, frame: Frame) -> np.ndarray:
 
 
 def create_picture(image_name: str,
-                   input_path,
-                   fname_template,
-                   bands,
+                   input_path: Path,
+                   fname_template: Template,
+                   bands: Iterator[Band],  # or Iterable??
                    n_bands: int,
                    multi: bool = False) -> JPEGPicture:
     new_pic = JPEGPicture(name=image_name)
     if multi:
-        new_pic.add_fits_frames_mp(input_path, bands)
+        new_pic.add_fits_frames_mp(input_path, fname_template, bands)
     else:
         for band in tqdm(bands, total=n_bands,
                          bar_format=tqdm_fmt):
@@ -153,9 +153,9 @@ def create_picture(image_name: str,
 def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
-                     config,
-                     bands,
-                     channel_combos,
+                     config: dict,
+                     bands: Iterator[Band],
+                     channel_combos: list,
                      dump_stretch: bool,
                      description: bool) -> RGBPicture:
     fname: Union[Path, str]
@@ -243,30 +243,30 @@ def setup_rgb_single(input_path, output_path, image_name,
     return pic
 
 
-def setup_rgb_multiple(input_path, output_path, image_names,
-                       config_name=None, bands_name=None,
-                       create_outfolder=False,
-                       dump_stretch=False) -> Iterator[RGBPicture]:
-    _pretty_info_log("multiple")
+# def setup_rgb_multiple(input_path, output_path, image_names,
+#                        config_name=None, bands_name=None,
+#                        create_outfolder=False,
+#                        dump_stretch=False) -> Iterator[RGBPicture]:
+#     _pretty_info_log("multiple")
 
-    config_name = config_name or DEFAULT_CONFIG_FNAME
-    with open(config_name, "r") as ymlfile:
-        config = yaml.load(ymlfile, yaml.SafeLoader)
+#     config_name = config_name or DEFAULT_CONFIG_FNAME
+#     with open(config_name, "r") as ymlfile:
+#         config = yaml.load(ymlfile, yaml.SafeLoader)
 
-    bands_name = bands_name or DEFAULT_BANDS_FNAME
-    bands = Band.from_yaml_file(bands_name, config["use_bands"])
-    channel_combos = config["combinations"]
+#     bands_name = bands_name or DEFAULT_BANDS_FNAME
+#     bands = Band.from_yaml_file(bands_name, config["use_bands"])
+#     channel_combos = config["combinations"]
 
-    for image_name in image_names:
-        if create_outfolder:
-            imgpath = output_path/image_name
-            imgpath.mkdir(parents=True, exist_ok=True)
-        else:
-            imgpath = output_path
-        pic = create_rgb_image(input_path, imgpath, image_name, config, bands,
-                               channel_combos, dump_stretch)
-        yield pic
-    _pretty_info_log("RGB processing done")
+#     for image_name in image_names:
+#         if create_outfolder:
+#             imgpath = output_path/image_name
+#             imgpath.mkdir(parents=True, exist_ok=True)
+#         else:
+#             imgpath = output_path
+#         pic = create_rgb_image(input_path, imgpath, image_name, config, bands,
+#                                channel_combos, dump_stretch)
+#         yield pic
+#     _pretty_info_log("RGB processing done")
 
 
 def main() -> None:
@@ -391,7 +391,7 @@ if __name__ == "__main__":
 
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
-    # mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
+    mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
 
     # root = Path("D:/Nemesis/data/perseus")
     # path = root/"stamps/"
@@ -400,6 +400,6 @@ if __name__ == "__main__":
     #     target = f"IC 348-{i}"
     #     setup_rgb(path, root/"RGBs", target)
 
-    main()
+    # main()
     gc.collect()
     sys.exit(0)
