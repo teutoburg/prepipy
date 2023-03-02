@@ -331,7 +331,8 @@ def main() -> None:
                         help="""Whether to create a separate folder in the
                         output path for each picture, which may already exist.
                         Can only be used if -m option is set.""")
-    # TODO: possible future additions: masking/regions, ROI, MPL option(s)
+    # TODO: possible future additions: masking/regions, ROI, MPL option(s),
+    #       cutout (pixel), rgbcombo (if no config and bands)
     args = parser.parse_args()
 
     if args.output_path is not None:
