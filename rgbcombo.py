@@ -160,6 +160,13 @@ def _dump_frame(frame: Frame, dump_path: Path) -> None:
                        dump_name)
 
 
+def _dump_rgb_channels(picture: RGBPicture, dump_path: Path) -> None:
+    logger.info("Dumping stretched FITS files for each channel.")
+    for channel in picture.rgb_channels:
+        _dump_frame(channel, dump_path)
+    logger.info("Done dumping all channels for this combination.")
+
+
 def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
@@ -176,7 +183,9 @@ def create_rgb_image(input_path: Path,
 
     for combo in tqdm(channel_combos, total=(n_combos := len(channel_combos)),
                       bar_format=tqdm_fmt):
-        cols = "".join(combo)
+        cols: str = "".join(combo)
+        fname: str = f"{pic.name}_img_{cols}"
+
         logger.info("Processing image %s in %s.", pic.name, cols)
         pic.select_rgb_channels(combo, single=(n_combos == 1))
 
@@ -184,6 +193,13 @@ def create_rgb_image(input_path: Path,
 
         grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
         grey_mode = config["process"]["grey_mode"]
+
+        if grey_mode != "normal":
+            logger.info("Using grey mode \"%s\".", grey_mode)
+            fname += f"_{grey_mode}"
+        else:
+            logger.info("Using normal grey mode.")
+
         pic.stretch_rgb_channels("stiff",
                                  stiff_mode="prepipy2",
                                  grey_level=grey_values[grey_mode],
@@ -207,21 +223,14 @@ def create_rgb_image(input_path: Path,
                             "image %s in %s!"),
                            pic.name, cols)
 
-        if grey_mode != "normal":
-            logger.info("Used grey mode \"%s\".", grey_mode)
-            fname = f"{pic.name}_img_{cols}_{grey_mode}.JPEG"
-        else:
-            logger.info("Used normal grey mode.")
-            fname = f"{pic.name}_img_{cols}.JPEG"
-        pic.save_pil(output_path/fname)
-        if description:
-            create_description_file(pic, output_path/f"{pic.name}.html")
+        savename = (output_path/fname).with_suffix(".jpeg")
+        pic.save_pil(savename)
 
+        if description:
+            create_description_file(pic, savename.with_suffix(".html"))
         if dump_stretch:
-            logger.info("Dumping stretched FITS files for each channel.")
-            for channel in pic.rgb_channels:
-                _dump_frame(channel, output_path)
-            logger.info("Done dumping all channels for this combination.")
+            _dump_rgb_channels(pic, output_path)
+
         logger.info("Image %s in %s done.", pic.name, cols)
     logger.info("Image %s fully completed.", pic.name)
     return pic
