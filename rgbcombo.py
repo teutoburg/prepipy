@@ -150,6 +150,16 @@ def create_picture(image_name: str,
     return new_pic
 
 
+def _dump_frame(frame: Frame, dump_path: Path) -> None:
+    dump_name: str = frame.band.name
+    if not (fname := dump_path/f"{dump_name}_stretched.fits").exists():
+        frame.save_fits(fname)
+        logger.info("Done dumping %s image.", dump_name)
+    else:
+        logger.warning("Stretched FITS file for %s exists, not overwriting.",
+                       dump_name)
+
+
 def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
@@ -164,8 +174,8 @@ def create_rgb_image(input_path: Path,
                          bands, len(config["use_bands"]),
                          config["general"]["multiprocess"])
 
-    n_combos = len(channel_combos)
-    for combo in tqdm(channel_combos, total=n_combos, bar_format=tqdm_fmt):
+    for combo in tqdm(channel_combos, total=(n_combos := len(channel_combos)),
+                      bar_format=tqdm_fmt):
         cols = "".join(combo)
         logger.info("Processing image %s in %s.", pic.name, cols)
         pic.select_rgb_channels(combo, single=(n_combos == 1))
@@ -210,14 +220,7 @@ def create_rgb_image(input_path: Path,
         if dump_stretch:
             logger.info("Dumping stretched FITS files for each channel.")
             for channel in pic.rgb_channels:
-                dump_name = channel.band.name
-                fname = output_path/f"{dump_name}_stretched.fits"
-                if not fname.exists():
-                    channel.save_fits(fname)
-                    logger.info("Done dumping %s image.", dump_name)
-                else:
-                    logger.warning(("Stretched FITS file for %s exists, not"
-                                    " overwriting."), dump_name)
+                _dump_frame(channel, output_path)
             logger.info("Done dumping all channels for this combination.")
         logger.info("Image %s in %s done.", pic.name, cols)
     logger.info("Image %s fully completed.", pic.name)
