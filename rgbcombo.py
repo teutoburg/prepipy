@@ -24,8 +24,9 @@ from regions import SkyRegion, CircleSkyRegion, \
 from framework import RGBPicture, JPEGPicture, Frame, Band
 
 width, _ = get_terminal_size((50, 20))
-width = int(.6 * width)
-tqdm_fmt = f"{{l_bar}}{{bar:{width}}}{{r_bar}}{{bar:-{width}b}}"
+width = int(.8 * width)
+bar_width = int(.75 * width)
+tqdm_fmt = f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}"
 
 DEFAULT_CONFIG_FNAME = "./config_single.yml"
 DEFAULT_BANDS_FNAME = "./bands.yml"
@@ -39,14 +40,14 @@ def _gma(i, g):
     return np.power(i, 1/g)
 
 
-def _pretty_info_log(msg_key, width=50) -> None:
+def _pretty_info_log(msg_key, console_width=50) -> None:
     msg_dir = {"single": "Start RGB processing for single Image...",
                "multiple": "Start RGB processing for multiple Images...",
                "done": "RGB processing done"}
     msg = msg_dir.get(msg_key, "Unknown log message.")
-    logger.info(width * "*")
-    logger.info("{:^{width}}".format(msg, width=width))
-    logger.info(width * "*")
+    logger.info(console_width * "*")
+    logger.info("{:^{width}}".format(msg, width=console_width))
+    logger.info(console_width * "*")
 
 
 def create_description_file(picture: RGBPicture, filename: Path,
@@ -150,20 +151,21 @@ def create_picture(image_name: str,
     return new_pic
 
 
-def _dump_frame(frame: Frame, dump_path: Path) -> None:
+def _dump_frame(frame: Frame, dump_path: Path,
+                extension: str = "dump") -> None:
     dump_name: str = frame.band.name
-    if not (fname := dump_path/f"{dump_name}_stretched.fits").exists():
+    if not (fname := dump_path/f"{dump_name}_{extension}.fits").exists():
         frame.save_fits(fname)
         logger.info("Done dumping %s image.", dump_name)
     else:
-        logger.warning("Stretched FITS file for %s exists, not overwriting.",
-                       dump_name)
+        logger.warning("%s FITS file for %s exists, not overwriting.",
+                       extension.title(), dump_name)
 
 
 def _dump_rgb_channels(picture: RGBPicture, dump_path: Path) -> None:
     logger.info("Dumping stretched FITS files for each channel.")
     for channel in picture.rgb_channels:
-        _dump_frame(channel, dump_path)
+        _dump_frame(channel, dump_path, "stretched")
     logger.info("Done dumping all channels for this combination.")
 
 
@@ -174,12 +176,21 @@ def create_rgb_image(input_path: Path,
                      bands: Iterator[Band],
                      channel_combos: list,
                      dump_stretch: bool,
-                     description: bool) -> RGBPicture:
+                     description: bool,
+                     partial: bool) -> RGBPicture:
     fname: Union[Path, str]
     fname_template = Template(config["general"]["filenames"])
     pic = create_picture(image_name, input_path, fname_template,
                          bands, len(config["use_bands"]),
                          config["general"]["multiprocess"])
+
+    if partial:
+        logger.info("Partial processing selected, normalizing and dumping...")
+        for frame in pic.frames:
+            frame.normalize()
+            _dump_frame(frame, output_path, "partial")
+        logger.info("Dumping of partial frames complete, aborting process.")
+        return
 
     for combo in tqdm(channel_combos, total=(n_combos := len(channel_combos)),
                       bar_format=tqdm_fmt):
@@ -238,8 +249,9 @@ def create_rgb_image(input_path: Path,
 
 def setup_rgb_single(input_path, output_path, image_name,
                      config_name=None, bands_name=None,
-                     dump_stretch=False, description=False) -> RGBPicture:
-    _pretty_info_log("single")
+                     dump_stretch=False, description=False,
+                     partial=False) -> RGBPicture:
+    _pretty_info_log("single", width)
 
     config_name = config_name or DEFAULT_CONFIG_FNAME
     with open(config_name, "r") as ymlfile:
@@ -250,8 +262,8 @@ def setup_rgb_single(input_path, output_path, image_name,
     channel_combos = config["combinations"]
 
     pic = create_rgb_image(input_path, output_path, image_name, config, bands,
-                           channel_combos, dump_stretch, description)
-    _pretty_info_log("done")
+                           channel_combos, dump_stretch, description, partial)
+    _pretty_info_log("done", width)
     return pic
 
 
@@ -259,7 +271,7 @@ def setup_rgb_single(input_path, output_path, image_name,
 #                        config_name=None, bands_name=None,
 #                        create_outfolder=False,
 #                        dump_stretch=False) -> Iterator[RGBPicture]:
-#     _pretty_info_log("multiple")
+#     _pretty_info_log("multiple", width)
 
 #     config_name = config_name or DEFAULT_CONFIG_FNAME
 #     with open(config_name, "r") as ymlfile:
@@ -278,7 +290,7 @@ def setup_rgb_single(input_path, output_path, image_name,
 #         pic = create_rgb_image(input_path, imgpath, image_name, config, bands,
 #                                channel_combos, dump_stretch)
 #         yield pic
-#     _pretty_info_log("RGB processing done")
+#     _pretty_info_log("RGB processing done", width)
 
 
 def main() -> None:
@@ -354,23 +366,20 @@ def main() -> None:
     #       should work out of the box (shell), on Windows need to glob
     #       manually, see also: https://stackoverflow.com/a/71353522/8467078
     args = parser.parse_args()
-    print(args)
-    exit(2)
 
     if args.output_path is not None:
         output_path = Path(args.output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
     else:
         logging.warning("No output path specified, dumping into input folder.")
         output_path = args.input_path
 
-    if args.partial:
-        raise NotImplementedError()
     if args.multi:
         raise NotImplementedError()
 
     picture = setup_rgb_single(args.input_path, output_path, args.image_name,
                                args.config_file, args.bands_file,
-                               args.fits_dump, args.description)
+                               args.fits_dump, args.description, args.partial)
 
 
 def _logging_configurator():
