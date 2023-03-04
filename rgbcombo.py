@@ -350,7 +350,12 @@ def main() -> None:
     #       also inlude these in config file and vice verse
     #       ideally, load config file. overwrite all options set from command
     #       line, than pass config object, not individual kwargs
+    #       image_name should be glob-able, aka nargs="?" and on Linux it
+    #       should work out of the box (shell), on Windows need to glob
+    #       manually, see also: https://stackoverflow.com/a/71353522/8467078
     args = parser.parse_args()
+    print(args)
+    exit(2)
 
     if args.output_path is not None:
         output_path = Path(args.output_path)
@@ -403,7 +408,7 @@ if __name__ == "__main__":
 
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
-    mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
+    # mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
 
     # root = Path("D:/Nemesis/data/perseus")
     # path = root/"stamps/"
@@ -412,6 +417,6 @@ if __name__ == "__main__":
     #     target = f"IC 348-{i}"
     #     setup_rgb(path, root/"RGBs", target)
 
-    # main()
+    main()
     gc.collect()
     sys.exit(0)
