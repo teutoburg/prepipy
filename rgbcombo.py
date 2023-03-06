@@ -233,14 +233,14 @@ def create_rgb_image(input_path: Path,
                             "image %s in %s!"),
                            pic.name, cols)
 
+        if dump_stretch:
+            _dump_rgb_channels(pic, output_path)
+
         savename = (output_path/fname).with_suffix(".jpeg")
         pic.save_pil(savename)
 
         if description:
             create_description_file(pic, savename.with_suffix(".html"))
-        if dump_stretch:
-            # FIXME: dump before saveing jpeg
-            _dump_rgb_channels(pic, output_path)
 
         logger.info("Image %s in %s done.", pic.name, cols)
     logger.info("Image %s fully completed.", pic.name)
