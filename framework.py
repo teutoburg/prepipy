@@ -997,7 +997,7 @@ class RGBPicture(Picture):
 
         return gamma, gamma_lum, alpha, grey_level
 
-    def luminance(self):
+    def luminance(self) -> np.ndarray:
         """Calculate the luminance of the RGB image.
 
         The luminance is defined as the (pixel-wise) sum of all colour channels
@@ -1007,21 +1007,31 @@ class RGBPicture(Picture):
         sum_image /= len(self.rgb_channels)
         return sum_image
 
-    def stretch_luminance(self, stretch_fkt_lum, gamma_lum: float, lum,
-                          **kwargs):
+    def stretch_luminance(self,
+                          stretch_fkt_lum: Callable[[np.ndarray, float],
+                                                    np.ndarray],
+                          gamma_lum: float,
+                          lum: np.ndarray,
+                          **kwargs) -> None:
         """Perform luminance stretching.
 
         The luminance stretch function `stretch_fkt_lum` is expected to take
         positional arguments `lum` (image luminance) and `gamma_lum` (gamma
         factor used for stretching). Any additional kwargs will be passed to
         `stretch_fkt_lum`.
+
+        This method will modify the image data in the frames defined to be used
+        as RGB channels.
         """
         lum_stretched = stretch_fkt_lum(lum, gamma_lum, **kwargs)
         for channel in self.rgb_channels:
             channel.image /= lum
             channel.image *= lum_stretched
 
-    def adjust_rgb(self, alpha: float, stretch_fkt_lum, gamma_lum: float,
+    def adjust_rgb(self,
+                   alpha: float,
+                   stretch_fkt_lum: Callable[[np.ndarray, float], np.ndarray],
+                   gamma_lum: float,
                    **kwargs):
         """
         Adjust colour saturation of 3-channel (R, G, B) image.
@@ -1109,7 +1119,7 @@ class RGBPicture(Picture):
         else:
             raise ValueError("Mode not understood.")
 
-        means = []
+        means: list[float] = []
         for channel in self.rgb_channels:
             if mask is None:
                 mask = np.full_like(channel.image, True, dtype=bool)
@@ -1130,7 +1140,8 @@ class RGBPicture(Picture):
                 channel.image *= equal
 
     @staticmethod
-    def cmyk_to_rgb(cmyk, cmyk_scale: float, rgb_scale: int = 255):
+    def cmyk_to_rgb(cmyk: np.ndarray, cmyk_scale: float,
+                    rgb_scale: int = 255) -> np.ndarray:
         """Convert CMYK to RGB."""
         cmyk_scale = float(cmyk_scale)
         scale_factor = rgb_scale * (1. - cmyk[3] / cmyk_scale)
