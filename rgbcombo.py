@@ -25,7 +25,7 @@ from framework import RGBPicture, JPEGPicture, Frame, Band
 
 width, _ = get_terminal_size((50, 20))
 width = int(.8 * width)
-bar_width = int(.75 * width)
+bar_width = max(width - 40, 10)
 tqdm_fmt = f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}"
 
 absolute_path = Path(__file__).resolve(strict=True).parent
