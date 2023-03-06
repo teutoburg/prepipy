@@ -200,7 +200,7 @@ def create_rgb_image(input_path: Path,
         logger.info("Processing image %s in %s.", pic.name, cols)
         pic.select_rgb_channels(combo, single=(n_combos == 1))
 
-        mask = _get_mask("masking.yml", pic.primary_frame)
+        # mask = _get_mask("masking.yml", pic.primary_frame)
 
         grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
         grey_mode = config["process"]["grey_mode"]
@@ -215,7 +215,7 @@ def create_rgb_image(input_path: Path,
                                  stiff_mode="prepipy2",
                                  grey_level=grey_values[grey_mode],
                                  skymode=config["process"]["skymode"],
-                                 mask=mask)
+                                 mask=None)
 
         if config["process"]["rgb_adjust"]:
             pic.adjust_rgb(config["process"]["alpha"], _gma,
@@ -228,7 +228,7 @@ def create_rgb_image(input_path: Path,
             pic.equalize("mean",
                          offset=config["process"].get("equal_offset", .1),
                          norm=config["process"].get("equal_norm", True),
-                         mask=mask)
+                         mask=None)
         else:
             logger.warning(("No equalisation or normalisation performed on "
                             "image %s in %s!"),
