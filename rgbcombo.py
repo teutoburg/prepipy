@@ -185,6 +185,7 @@ def create_rgb_image(input_path: Path,
     if partial:
         logger.info("Partial processing selected, normalizing and dumping...")
         for frame in pic.frames:
+            # TODO: multiprocess this if possible
             frame.normalize()
             _dump_frame(frame, output_path, "partial")
         logger.info("Dumping of partial frames complete, aborting process.")
@@ -238,6 +239,7 @@ def create_rgb_image(input_path: Path,
         if description:
             create_description_file(pic, savename.with_suffix(".html"))
         if dump_stretch:
+            # FIXME: dump before saveing jpeg
             _dump_rgb_channels(pic, output_path)
 
         logger.info("Image %s in %s done.", pic.name, cols)
@@ -379,7 +381,7 @@ def _logging_configurator():
     except FileNotFoundError as err:
         logging.error(err)
         logging.basicConfig()
-        logger.setLevel(logging.INFO)
+        main_logger.setLevel(logging.INFO)
     return main_logger
 
 
@@ -388,6 +390,7 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     logger = _logging_configurator()
+    assert logger.level == 20
 
     # root = Path("D:/Nemesis/data/HOPS")
     # path = root/"HOPS_99"
