@@ -37,3 +37,8 @@ Also inlude the command line arguments in the config file and vice verse.
 3. Pass config object, not individual kwargs.
 
 Additionally: If bands.yml not found &rarr; try to use those specified in config, if not &rarr; glob
+
+## Multiprocessing
+
+Bring back progress bar for MP loading. See [this](https://stackoverflow.com/questions/57354700/starmap-combined-with-tqdm), [this](https://stackoverflow.com/questions/41920124/multiprocessing-use-tqdm-to-display-a-progress-bar) and maybe [this](https://tqdm.github.io/docs/contrib.concurrent/)
+Make MP a bit config-able, no of workers and chunksize...
