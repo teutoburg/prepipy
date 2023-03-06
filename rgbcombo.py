@@ -28,12 +28,9 @@ width = int(.8 * width)
 bar_width = int(.75 * width)
 tqdm_fmt = f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}"
 
-DEFAULT_CONFIG_FNAME = "./config_single.yml"
-DEFAULT_BANDS_FNAME = "./bands.yml"
-
-print(Path.cwd())
-print(Path(".").resolve())
-print(Path("/").resolve())
+absolute_path = Path(__file__).resolve(strict=True).parent
+DEFAULT_CONFIG_FNAME = absolute_path/"config_single.yml"
+DEFAULT_BANDS_FNAME = absolute_path/"bands.yml"
 
 
 def _gma(i, g):
@@ -177,12 +174,13 @@ def create_rgb_image(input_path: Path,
                      channel_combos: list,
                      dump_stretch: bool,
                      description: bool,
-                     partial: bool) -> RGBPicture:
+                     partial: bool,
+                     multi: bool) -> RGBPicture:
     fname: Union[Path, str]
     fname_template = Template(config["general"]["filenames"])
     pic = create_picture(image_name, input_path, fname_template,
                          bands, len(config["use_bands"]),
-                         config["general"]["multiprocess"])
+                         multi)
 
     if partial:
         logger.info("Partial processing selected, normalizing and dumping...")
@@ -250,7 +248,7 @@ def create_rgb_image(input_path: Path,
 def setup_rgb_single(input_path, output_path, image_name,
                      config_name=None, bands_name=None,
                      dump_stretch=False, description=False,
-                     partial=False) -> RGBPicture:
+                     partial=False, multi=False) -> RGBPicture:
     _pretty_info_log("single", width)
 
     config_name = config_name or DEFAULT_CONFIG_FNAME
@@ -262,7 +260,8 @@ def setup_rgb_single(input_path, output_path, image_name,
     channel_combos = config["combinations"]
 
     pic = create_rgb_image(input_path, output_path, image_name, config, bands,
-                           channel_combos, dump_stretch, description, partial)
+                           channel_combos, dump_stretch, description, partial,
+                           multi)
     _pretty_info_log("done", width)
     return pic
 
@@ -366,12 +365,10 @@ def main() -> None:
         logging.warning("No output path specified, dumping into input folder.")
         output_path = args.input_path
 
-    if args.multi:
-        raise NotImplementedError()
-
     picture = setup_rgb_single(args.input_path, output_path, args.image_name,
                                args.config_file, args.bands_file,
-                               args.fits_dump, args.description, args.partial)
+                               args.fits_dump, args.description, args.partial,
+                               args.multi)
 
 
 def _logging_configurator():
