@@ -374,7 +374,7 @@ def main() -> None:
 def _logging_configurator():
     main_logger = logging.getLogger("main")
     try:
-        with open("./log/logging_config.yml", "r") as ymlfile:
+        with open(absolute_path/"log/logging_config.yml", "r") as ymlfile:
             dictConfig(yaml.load(ymlfile, yaml.SafeLoader))
     except FileNotFoundError as err:
         logging.error(err)
