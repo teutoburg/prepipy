@@ -759,22 +759,22 @@ class Picture():
         return new_picture
 
     @classmethod
-    def from_tesseract(cls, tesseract, bands=None):
+    def from_tesseract(cls, tesseract: np.ndarray, bands=None):
         """Generate individual pictures from 4D cube."""
         for cube in tesseract:
             yield cls.from_cube(cube, bands)
 
     @staticmethod
-    def merge_tesseracts(tesseracts):
+    def merge_tesseracts(tesseracts) -> np.ndarray:
         """Merge multiple 4D image cubes into a single one."""
         return np.hstack(list(tesseracts))
 
     @staticmethod
-    def combine_into_tesseract(pictures):
+    def combine_into_tesseract(pictures: list[object]) -> np.ndarray:
         """Combine multiple 3D picture cubes into one 4D cube."""
         return np.stack([picture.cube for picture in pictures])
 
-    def stretch_frames(self, mode: str = "stiff", **kwargs):
+    def stretch_frames(self, mode: str = "stiff", **kwargs) -> None:
         """Perform stretching on frames."""
         for frame in self.frames:
             if mode == "auto-light":
