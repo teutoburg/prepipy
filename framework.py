@@ -1193,7 +1193,7 @@ class JPEGPicture(RGBPicture):
         with open(fname, mode="wb") as file:
             file.write(bout)
 
-    def save_pil(self, fname: Union[Path, str]) -> None:
+    def save_pil(self, fname: Union[Path, str], quality: int = 75) -> None:
         """
         Save RGB image to specified file name using pillow.
 
@@ -1208,6 +1208,7 @@ class JPEGPicture(RGBPicture):
 
         """
         logger.info("Saving image as JPEG to %s", fname)
+        logger.debug("Quality keyword set to %d", quality)
         rgb = self.get_rgb_cube(mode="0-255", order="xyc")
         # HACK: does this always produce correct orientation??
         rgb = np.flip(rgb, 0)
@@ -1216,11 +1217,11 @@ class JPEGPicture(RGBPicture):
         Image.MAX_IMAGE_PIXELS = self.image_size + 1
         with Image.fromarray(rgb) as img:
             try:
-                img.save(fname)
+                img.save(fname, quality=quality)
             except (KeyError, OSError):
                 logger.warning("Cannot save RGBA as JPEG, converting to RGB.")
                 img = img.convert("RGB")
-                img.save(fname)
+                img.save(fname, quality=quality)
 
         # HACK: update this as soon as pillow 9.4 is available
         self.save_hdr(fname, hdr)

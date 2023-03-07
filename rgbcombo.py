@@ -264,7 +264,7 @@ def create_rgb_image(input_path: Path,
             _dump_rgb_channels(pic, output_path)
 
         savename = (output_path/fname).with_suffix(".jpeg")
-        pic.save_pil(savename)
+        pic.save_pil(savename, config["general"].get("jpeg_quality", 75))
 
         if description:
             create_description_file(pic, savename.with_suffix(".html"))
