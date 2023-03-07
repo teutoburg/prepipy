@@ -195,7 +195,7 @@ def create_rgb_image(input_path: Path,
                          bands, len(config["use_bands"]),
                          multi)
 
-    if (n_shapes := len(set(frame.image.shape for frame in pic.frames))) >= 1:
+    if (n_shapes := len(set(frame.image.shape for frame in pic.frames))) > 1:
         if partial:
             logger.warning(("Found %d distinct shapes for %d frames. "
                             "Some frames are likely misaligned. Proceed "
