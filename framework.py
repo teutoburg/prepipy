@@ -15,7 +15,7 @@ import struct
 from dataclasses import dataclass
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union
+from typing import Union, Callable
 
 import yaml
 import numpy as np
@@ -46,7 +46,7 @@ TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 logger = logging.getLogger(__name__)
 
 absolute_path = Path(__file__).resolve(strict=True).parent
-with open(absolute_path/"stiff_params.yml", "r") as ymlfile:
+with (absolute_path/"stiff_params.yml").open("r") as ymlfile:
     STIFF_PARAMS = yaml.load(ymlfile, yaml.SafeLoader)
 
 
@@ -72,16 +72,19 @@ class Band():
 
     Parameters
     ----------
-    name: str
+    name : str
         Used for internal reference.
-    printname: str, optional
+    printname : str, optional
         Used for output on figures.
-    wavelength: float, optional
+    wavelength : float, optional
         Used for checking order in RGB mode. Must be the same unit for all
         instances used simultanously.
-    instrument: str, optional
+    unit : str, optional
+        Unit of the wavelength, currently only used for display purposes,
+        defaults to 'µm' if omitted.
+    instrument : str, optional
         Currently unused, defaults to 'unknown' if omitted.
-    telescope: str, optional
+    telescope : str, optional
         Currently unused, defaults to 'unknown' if omitted.
 
     Notes
@@ -96,8 +99,21 @@ class Band():
     name: str
     printname: Union[str, None] = None
     wavelength: Union[float, None] = None
+    unit: str = "&mu;m"
     instrument: str = "unknown"
     telescope: str = "unknown"
+
+    def __str__(self) -> str:
+        """str(self)."""
+        return f"{self.printname} ({self.wavelength} {self.unit})"
+
+    @property
+    def verbose_str(self) -> str:
+        """str(self)."""
+        outstr = f"{self.printname} band at {self.wavelength} {self.unit}"
+        outstr += f" taken with {self.instrument} instrument"
+        outstr += f" at {self.telescope} telescope."
+        return outstr
 
     @classmethod
     def from_dict(cls, bands: dict[str, Union[str, float]]):
@@ -126,15 +142,15 @@ class Band():
         return yaml_dict.values()
 
     @classmethod
-    def from_yaml_file(cls, filename: str,
+    def from_yaml_file(cls, filepath: Path,
                        use_bands: Union[list[str], None] = None):
         """
         Yield newly created instances from YAML config file entries.
 
         Parameters
         ----------
-        filename : str
-            Location of the YAML config file containing the band definitions.
+        filepath : Path
+            Path object to YAML config file containing the band definitions.
         use_bands : list-like of str, optional
             Can be used to filter the bands before any instances are created.
             If supplied, this should be a list (or any iterable) containing
@@ -148,7 +164,7 @@ class Band():
             Generator object containing the new Band instances.
 
         """
-        with open(filename, "r") as ymlfile:
+        with filepath.open("r") as ymlfile:
             yaml_dict = yaml.load(ymlfile, yaml.SafeLoader)
         yaml_dict = cls.parse_yaml_dict(yaml_dict)
         bands = cls.filter_used_bands(yaml_dict, use_bands)
@@ -209,6 +225,8 @@ class Frame():
         Set everything outside a defined radius around a defined center to
         zero.
 
+        This method will modify the data internally.
+
         Parameters
         ----------
         center : 2-tuple of ints
@@ -246,7 +264,7 @@ class Frame():
 
         """
         upper_limit = self.background + n_sigma * np.nanstd(self.image)
-        self.image = np.clip(self.image, None, upper_limit)
+        self.image.clip(None, upper_limit, out=self.image)
 
     def clip_and_nan(self,
                      clip: float = 10,
@@ -254,6 +272,8 @@ class Frame():
                      **kwargs) -> None:
         """
         Perform upper sigma clipping and replace NANs.
+
+        This method will modify the data internally.
 
         Parameters
         ----------
@@ -276,23 +296,27 @@ class Frame():
 
         """
         med = np.nanmean(self.image)
+        upper_limit = np.nanmax(self.image)
+
         if clip:
             if clip < 0:
                 raise ValueError("clip must be positive integer or 0.")
-            logger.debug("Clipping to %s sigma.", clip)
-            v_max = med + clip * np.nanstd(self.image)
-            self.image = np.clip(self.image, None, v_max)
-        else:
-            v_max = np.nanmax(self.image)
+            upper_limit = med + clip * np.nanstd(self.image)
+            logger.debug("Clipping to %s sigma: %.5f.", clip, upper_limit)
+            self.image.clip(None, upper_limit, out=self.image)
 
         if nanmode == "max":
-            logger.debug("Replacing NANs with clipped max value.")
-            self.image = np.nan_to_num(self.image, False, nan=v_max)
+            nan = upper_limit
+            logmsg = "clipped max"
         elif nanmode == "median":
-            logger.debug("Replacing NANs with median value.")
-            self.image = np.nan_to_num(self.image, False, nan=med)
+            nan = med
+            logmsg = "median"
         else:
             raise ValueError("nanmode not understood")
+
+        logger.debug("Replacing NANs with %s value: %.5f.", logmsg, nan)
+        np.nan_to_num(self.image, copy=False, nan=nan)
+        assert np.isnan(self.image).sum() == 0
 
     def display_3d(self) -> None:
         """Show frame as 3D plot (z=intensity)."""
@@ -307,7 +331,28 @@ class Frame():
     def normalize(self,
                   new_range: float = 1.,
                   new_offset: float = 0.) -> tuple[float, float]:
-        """Subtract minimum and devide by maximum."""
+        """
+        Normalize the image data array to the given range.
+
+        Data is normalized to a range of 0.0 to `new_range`, with the default
+        being 1.0, meaning a 0-1 normalisation is performed. Additionally,
+        a constant value `new_offset` can be added, the default for this is 0.
+
+        This method will modify the data internally.
+
+        Parameters
+        ----------
+        new_range : float, optional
+            New maximum value. The default is 1.0.
+        new_offset : float, optional
+            Constant value added to data. The default is 0.0.
+
+        Returns
+        -------
+        data_range, data_max
+            Previous range and maximum value before normalisation.
+
+        """
         data_max = np.nanmax(self.image)
         data_min = np.nanmin(self.image)
         data_range = data_max - data_min
@@ -316,8 +361,8 @@ class Frame():
         if np.isclose((data_min, data_max), (0., 1.), atol=1e-5).all():
             return data_range, data_max
 
-        self.image -= data_min
-        self.image /= data_range
+        np.subtract(self.image, data_min, out=self.image)
+        np.divide(self.image, data_range, out=self.image)
 
         try:
             assert np.nanmin(self.image) == 0.0
@@ -325,7 +370,8 @@ class Frame():
         except AssertionError:
             logger.error("Normalisation error: %f, %f", data_max, data_min)
 
-        self.image = self.image * new_range + new_offset
+        np.multiply(self.image, new_range, out=self.image)
+        np.add(self.image, new_offset, out=self.image)
 
         return data_range, data_max
 
@@ -408,7 +454,7 @@ class Frame():
         data_range, _ = self.normalize()
 
         i_min, i_max = self._min_inten(gamma_lum, grey_level, **kwargs)
-        self.image = self.image.clip(i_min, i_max)
+        self.image.clip(i_min, i_max, out=self.image)
 
         legacy = kwargs.get("legacy", False)
         if legacy:
@@ -569,6 +615,25 @@ class Picture():
         return self.frames[0].image.size
 
     @property
+    def pixel_scale(self) -> float:
+        """Get pixel scale in arcsec. Read-only property."""
+        scales = self.coords.proj_plane_pixel_scales()
+        scale = sum(scales) / len(scales)
+        return scale.to("arcsec").round(3)
+
+    @property
+    def image_scale(self) -> str:
+        """Get size of image along axes as string. Read-only property."""
+        size = self.image.shape * self.pixel_scale
+        size = size.to("deg")
+        if size.max().value < 1.:
+            size = size.to("arcmin")
+        if size.max().value < 1.:
+            size = size.to("arcsec")
+        size = size.round(1)
+        return " by ".join(str(along) for along in size)
+
+    @property
     def cube(self) -> np.ndarray:
         """Stack images from all frames in one 3D cube. Read-only property."""
         return np.stack([frame.image for frame in self.frames])
@@ -631,10 +696,11 @@ class Picture():
             framelist.append(new_frame)
         return new_frame
 
-    def add_fits_frames_mp(self, input_path, bands) -> None:
+    def add_fits_frames_mp(self, input_path, fname_template, bands) -> None:
         """Add frames from fits files for each band, using multiprocessing."""
-        # FIXME: this should be updated to use dynamic file name pattern!
-        args = [(input_path/f"{self.name}_{band.name}.fits", band)
+        args = [(input_path/fname_template.substitute(image_name=self.name,
+                                                      band_name=band.name),
+                 band)
                 for band in bands]
         with Pool(len(args)) as pool:
             framelist = pool.starmap(Frame.from_fits, args)
@@ -693,22 +759,22 @@ class Picture():
         return new_picture
 
     @classmethod
-    def from_tesseract(cls, tesseract, bands=None):
+    def from_tesseract(cls, tesseract: np.ndarray, bands=None):
         """Generate individual pictures from 4D cube."""
         for cube in tesseract:
             yield cls.from_cube(cube, bands)
 
     @staticmethod
-    def merge_tesseracts(tesseracts):
+    def merge_tesseracts(tesseracts) -> np.ndarray:
         """Merge multiple 4D image cubes into a single one."""
         return np.hstack(list(tesseracts))
 
     @staticmethod
-    def combine_into_tesseract(pictures):
+    def combine_into_tesseract(pictures: list[object]) -> np.ndarray:
         """Combine multiple 3D picture cubes into one 4D cube."""
         return np.stack([picture.cube for picture in pictures])
 
-    def stretch_frames(self, mode: str = "stiff", **kwargs):
+    def stretch_frames(self, mode: str = "stiff", **kwargs) -> None:
         """Perform stretching on frames."""
         for frame in self.frames:
             if mode == "auto-light":
@@ -755,6 +821,7 @@ class RGBPicture(Picture):
         outstr = (f"RGB Picture \"{self.name}\""
                   f" containing {len(self.frames):d} frames")
         if self.rgb_channels:
+            # TODO: change this to str(channel)
             channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
                         for chnl in self.rgb_channels)
             outstr += (f" currently set up to use {', '.join(channels)}"
@@ -930,7 +997,7 @@ class RGBPicture(Picture):
 
         return gamma, gamma_lum, alpha, grey_level
 
-    def luminance(self):
+    def luminance(self) -> np.ndarray:
         """Calculate the luminance of the RGB image.
 
         The luminance is defined as the (pixel-wise) sum of all colour channels
@@ -940,21 +1007,31 @@ class RGBPicture(Picture):
         sum_image /= len(self.rgb_channels)
         return sum_image
 
-    def stretch_luminance(self, stretch_fkt_lum, gamma_lum: float, lum,
-                          **kwargs):
+    def stretch_luminance(self,
+                          stretch_fkt_lum: Callable[[np.ndarray, float],
+                                                    np.ndarray],
+                          gamma_lum: float,
+                          lum: np.ndarray,
+                          **kwargs) -> None:
         """Perform luminance stretching.
 
         The luminance stretch function `stretch_fkt_lum` is expected to take
         positional arguments `lum` (image luminance) and `gamma_lum` (gamma
         factor used for stretching). Any additional kwargs will be passed to
         `stretch_fkt_lum`.
+
+        This method will modify the image data in the frames defined to be used
+        as RGB channels.
         """
         lum_stretched = stretch_fkt_lum(lum, gamma_lum, **kwargs)
         for channel in self.rgb_channels:
             channel.image /= lum
             channel.image *= lum_stretched
 
-    def adjust_rgb(self, alpha: float, stretch_fkt_lum, gamma_lum: float,
+    def adjust_rgb(self,
+                   alpha: float,
+                   stretch_fkt_lum: Callable[[np.ndarray, float], np.ndarray],
+                   gamma_lum: float,
                    **kwargs):
         """
         Adjust colour saturation of 3-channel (R, G, B) image.
@@ -1010,9 +1087,11 @@ class RGBPicture(Picture):
                  offset: float = .5,
                  norm: bool = True,
                  supereq: bool = False,
-                 mask=None):
+                 mask=None) -> None:
         """
         Perform a collection of processes to enhance the RGB image.
+
+        This method will modify the data internally.
 
         Parameters
         ----------
@@ -1032,21 +1111,28 @@ class RGBPicture(Picture):
         None.
 
         """
-        means = []
+        meanfct: Callable[[np.ndarray], float]
+        if mode == "mean":
+            meanfct = np.mean
+        elif mode == "median":
+            meanfct = np.median
+        else:
+            raise ValueError("Mode not understood.")
+
+        means: list[float] = []
         for channel in self.rgb_channels:
             if mask is None:
                 mask = np.full_like(channel.image, True, dtype=bool)
-            channel.image /= np.nanmax(channel.image[mask])
-            # TODO: This can be refactored into passing the np function.
-            if mode == "median":
-                channel.image -= np.nanmedian(channel.image[mask])
-            elif mode == "mean":
-                channel.image -= np.nanmean(channel.image[mask])
-            means.append(np.nanmean(channel.image[mask]))
-            channel.image += offset
-            channel.image[channel.image < 0.] = 0.
+            masked_max = np.nanmax(channel.image[mask])
+            np.divide(channel.image, masked_max, out=channel.image)
+            masked_mean = meanfct(channel.image[mask])
+            np.subtract(channel.image, masked_mean, out=channel.image)
+            np.add(channel.image, offset, out=channel.image)
+            channel.image.clip(0., None, out=channel.image)
+            means.append(meanfct(channel.image[mask]))
             if norm:
                 channel.normalize()
+
         if supereq:
             maxmean = max(means)
             for channel, mean in zip(self.rgb_channels, means):
@@ -1054,7 +1140,8 @@ class RGBPicture(Picture):
                 channel.image *= equal
 
     @staticmethod
-    def cmyk_to_rgb(cmyk, cmyk_scale: float, rgb_scale: int = 255):
+    def cmyk_to_rgb(cmyk: np.ndarray, cmyk_scale: float,
+                    rgb_scale: int = 255) -> np.ndarray:
         """Convert CMYK to RGB."""
         cmyk_scale = float(cmyk_scale)
         scale_factor = rgb_scale * (1. - cmyk[3] / cmyk_scale)
@@ -1224,6 +1311,7 @@ class MPLPicture(RGBPicture):
             title = "R: {}, G: {}, B: {}".format(*combo)
             title += "\n{equalized = }"
         elif mode == "pub":
+            # TODO: change this to str(channel)
             channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
                         for chnl in self.rgb_channels)
             title = "Red: {}\nGreen: {}\nBlue: {}".format(*channels)
