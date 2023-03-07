@@ -253,7 +253,7 @@ def create_rgb_image(input_path: Path,
 
 
 def setup_rgb_single(input_path, output_path, image_name,
-                     config_name=None, bands_name=None,
+                     config_path=None, bands_path=None,
                      dump_stretch=False, description=False,
                      partial=False, multi=False) -> RGBPicture:
     _pretty_info_log("single", width)
@@ -262,15 +262,15 @@ def setup_rgb_single(input_path, output_path, image_name,
     fallback_config_path = cwd/DEFAULT_CONFIG_NAME
     if not fallback_config_path.exists():
         fallback_config_path = absolute_path/DEFAULT_CONFIG_NAME
-    config_name = config_name or fallback_config_path
-    with config_name.open("r") as ymlfile:
+    config_path = config_path or fallback_config_path
+    with config_path.open("r") as ymlfile:
         config = yaml.load(ymlfile, yaml.SafeLoader)
 
     fallback_bands_path = Path.cwd()/DEFAULT_BANDS_NAME
     if not fallback_bands_path.exists():
         fallback_bands_path = absolute_path/DEFAULT_BANDS_NAME
-    bands_name = bands_name or fallback_bands_path
-    bands = Band.from_yaml_file(bands_name, config["use_bands"])
+    bands_path = bands_path or fallback_bands_path
+    bands = Band.from_yaml_file(bands_path, config["use_bands"])
     channel_combos = config["combinations"]
 
     pic = create_rgb_image(input_path, output_path, image_name, config, bands,
@@ -328,10 +328,12 @@ def main() -> None:
                         be saved to. If omitted, images are dumped back into
                         the input folder.""")
     parser.add_argument("-c", "--config-file",
+                        type=Path,
                         help="""The name of the main config file to be used.
                         If omitted, the code will look for a file named
                         "config.yml" in the main package folder.""")
     parser.add_argument("-b", "--bands-file",
+                        type=Path,
                         help="""The name of the band config file to be used.
                         If omitted, the code will look for a file named
                         "bands.yml" in the main package folder.""")
