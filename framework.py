@@ -1163,36 +1163,6 @@ class RGBPicture(Picture):
 class JPEGPicture(RGBPicture):
     """RGBPicture subclass for single image in JPEG format using Pillow."""
 
-    @staticmethod
-    def _make_jpeg_variable_segment(marker: int, payload: bytes) -> bytes:
-        """Make a JPEG segment from the given payload."""
-        return struct.pack('>HH', marker, 2 + len(payload)) + payload
-
-    @staticmethod
-    def _make_jpeg_comment_segment(comment: bytes) -> bytes:
-        """Make a JPEG comment/COM segment."""
-        return JPEGPicture._make_jpeg_variable_segment(0xFFFE, comment)
-
-    @staticmethod
-    def save_hdr(fname: Union[Path, str], hdr: fits.Header) -> None:
-        """Save header as JPEG comment. Redundant with pillow 9.4.x."""
-        # TODO: add proper logging
-        logger.debug("saving header:")
-        logger.debug(hdr.tostring(sep="\n"))
-        with Image.open(fname) as img:
-            app = img.app["APP0"]
-
-        with open(fname, mode="rb") as file:
-            binary = file.read()
-
-        pos = binary.find(app) + len(app)
-        bout = binary[:pos]
-        bout += JPEGPicture._make_jpeg_comment_segment(hdr.tostring().encode())
-        bout += binary[pos:]
-
-        with open(fname, mode="wb") as file:
-            file.write(bout)
-
     def save_pil(self, fname: Union[Path, str], quality: int = 75) -> None:
         """
         Save RGB image to specified file name using pillow.
@@ -1213,6 +1183,9 @@ class JPEGPicture(RGBPicture):
         # HACK: does this always produce correct orientation??
         rgb = np.flip(rgb, 0)
         hdr = self._update_header()
+        # TODO: add proper logging
+        logger.debug("saving header:")
+        logger.debug(hdr.tostring(sep="\n"))
 
         Image.MAX_IMAGE_PIXELS = self.image_size + 1
         with Image.fromarray(rgb) as img:
@@ -1222,9 +1195,6 @@ class JPEGPicture(RGBPicture):
                 logger.warning("Cannot save RGBA as JPEG, converting to RGB.")
                 img = img.convert("RGB")
                 img.save(fname, quality=quality, comment=hdr.tostring())
-
-        # HACK: update this as soon as pillow 9.4 is available
-        # self.save_hdr(fname, hdr)
 
 
 class MPLPicture(RGBPicture):
