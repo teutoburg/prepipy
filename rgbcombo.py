@@ -29,8 +29,8 @@ bar_width = max(width - 40, 10)
 tqdm_fmt = f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}"
 
 absolute_path = Path(__file__).resolve(strict=True).parent
-DEFAULT_CONFIG_FNAME = absolute_path/"config_single.yml"
-DEFAULT_BANDS_FNAME = absolute_path/"bands.yml"
+DEFAULT_CONFIG_NAME = "config_single.yml"
+DEFAULT_BANDS_NAME = "bands.yml"
 
 
 def _gma(i, g):
@@ -256,12 +256,19 @@ def setup_rgb_single(input_path, output_path, image_name,
                      dump_stretch=False, description=False,
                      partial=False, multi=False) -> RGBPicture:
     _pretty_info_log("single", width)
+    cwd = Path.cwd()
 
-    config_name = config_name or DEFAULT_CONFIG_FNAME
+    fallback_config_path = cwd/DEFAULT_CONFIG_NAME
+    if not fallback_config_path.exists():
+        fallback_config_path = absolute_path/DEFAULT_CONFIG_NAME
+    config_name = config_name or fallback_config_path
     with open(config_name, "r") as ymlfile:
         config = yaml.load(ymlfile, yaml.SafeLoader)
 
-    bands_name = bands_name or DEFAULT_BANDS_FNAME
+    fallback_bands_path = Path.cwd()/DEFAULT_BANDS_NAME
+    if not fallback_bands_path.exists():
+        fallback_bands_path = absolute_path/DEFAULT_BANDS_NAME
+    bands_name = bands_name or fallback_bands_path
     bands = Band.from_yaml_file(bands_name, config["use_bands"])
     channel_combos = config["combinations"]
 
