@@ -39,8 +39,8 @@ def _gma(i, g):
 
 
 def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
-    msg_dir = {"single": "Start RGB processing for single Image...",
-               "multiple": "Start RGB processing for multiple Images...",
+    msg_dir = {"single": "Start RGB processing for single image...",
+               "multiple": "Start RGB processing for multiple images...",
                "done": "RGB processing done"}
     msg = msg_dir.get(msg_key, "Unknown log message.")
     logger.info(console_width * "*")
