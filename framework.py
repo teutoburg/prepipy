@@ -46,7 +46,7 @@ TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 logger = logging.getLogger(__name__)
 
 absolute_path = Path(__file__).resolve(strict=True).parent
-with open(absolute_path/"stiff_params.yml", "r") as ymlfile:
+with (absolute_path/"stiff_params.yml").open("r") as ymlfile:
     STIFF_PARAMS = yaml.load(ymlfile, yaml.SafeLoader)
 
 
@@ -142,15 +142,15 @@ class Band():
         return yaml_dict.values()
 
     @classmethod
-    def from_yaml_file(cls, filename: str,
+    def from_yaml_file(cls, filepath: Path,
                        use_bands: Union[list[str], None] = None):
         """
         Yield newly created instances from YAML config file entries.
 
         Parameters
         ----------
-        filename : str
-            Location of the YAML config file containing the band definitions.
+        filepath : Path
+            Path object to YAML config file containing the band definitions.
         use_bands : list-like of str, optional
             Can be used to filter the bands before any instances are created.
             If supplied, this should be a list (or any iterable) containing
@@ -164,7 +164,7 @@ class Band():
             Generator object containing the new Band instances.
 
         """
-        with open(filename, "r") as ymlfile:
+        with filepath.open("r") as ymlfile:
             yaml_dict = yaml.load(ymlfile, yaml.SafeLoader)
         yaml_dict = cls.parse_yaml_dict(yaml_dict)
         bands = cls.filter_used_bands(yaml_dict, use_bands)

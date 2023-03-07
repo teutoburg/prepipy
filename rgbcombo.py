@@ -81,7 +81,7 @@ def create_description_file(picture: RGBPicture, filename: Path,
                "or by pasting the image's permalink into the command-line."
                "<p>\n")
     # print(outstr)
-    with open(filename, "w+") as file:
+    with filename.open("w+") as file:
         file.write(outstr)
 
 
@@ -262,7 +262,7 @@ def setup_rgb_single(input_path, output_path, image_name,
     if not fallback_config_path.exists():
         fallback_config_path = absolute_path/DEFAULT_CONFIG_NAME
     config_name = config_name or fallback_config_path
-    with open(config_name, "r") as ymlfile:
+    with config_name.open("r") as ymlfile:
         config = yaml.load(ymlfile, yaml.SafeLoader)
 
     fallback_bands_path = Path.cwd()/DEFAULT_BANDS_NAME
@@ -387,7 +387,7 @@ def main() -> None:
 def _logging_configurator():
     main_logger = logging.getLogger("main")
     try:
-        with open(absolute_path/"log/logging_config.yml", "r") as ymlfile:
+        with (absolute_path/"log/logging_config.yml").open("r") as ymlfile:
             dictConfig(yaml.load(ymlfile, yaml.SafeLoader))
     except FileNotFoundError as err:
         logging.error(err)
