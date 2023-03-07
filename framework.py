@@ -1217,14 +1217,14 @@ class JPEGPicture(RGBPicture):
         Image.MAX_IMAGE_PIXELS = self.image_size + 1
         with Image.fromarray(rgb) as img:
             try:
-                img.save(fname, quality=quality)
+                img.save(fname, quality=quality, comment=hdr.tostring())
             except (KeyError, OSError):
                 logger.warning("Cannot save RGBA as JPEG, converting to RGB.")
                 img = img.convert("RGB")
-                img.save(fname, quality=quality)
+                img.save(fname, quality=quality, comment=hdr.tostring())
 
         # HACK: update this as soon as pillow 9.4 is available
-        self.save_hdr(fname, hdr)
+        # self.save_hdr(fname, hdr)
 
 
 class MPLPicture(RGBPicture):
