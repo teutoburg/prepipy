@@ -245,7 +245,7 @@ class Frame():
         out = np.where(dst > radius)
         self.image[out] = 0.
 
-    def clip(self, n_sigma: float = 3.) -> None:
+    def clip(self, n_sigma: float = 3., lower: bool = False) -> None:
         """
         Perform n sigma clipping on the image (only affects max values).
 
@@ -264,7 +264,11 @@ class Frame():
 
         """
         upper_limit = self.background + n_sigma * np.nanstd(self.image)
-        self.image.clip(None, upper_limit, out=self.image)
+        if lower:
+            lower_limit = self.background - n_sigma * np.nanstd(self.image)
+        else:
+            lower_limit = None
+        self.image.clip(lower_limit, upper_limit, out=self.image)
 
     def clip_and_nan(self,
                      clip: float = 10,

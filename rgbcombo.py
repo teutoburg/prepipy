@@ -186,6 +186,7 @@ def create_rgb_image(input_path: Path,
         logger.info("Partial processing selected, normalizing and dumping...")
         for frame in pic.frames:
             # TODO: multiprocess this if possible
+            frame.clip(5, True)
             frame.normalize()
             _dump_frame(frame, output_path, "partial")
         logger.info("Dumping of partial frames complete, aborting process.")
