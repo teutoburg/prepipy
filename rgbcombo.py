@@ -11,6 +11,7 @@ from string import Template
 from pathlib import Path
 from shutil import get_terminal_size
 from typing import Iterator, Union
+from time import perf_counter
 
 import yaml
 import numpy as np
@@ -37,13 +38,16 @@ def _gma(i, g):
     return np.power(i, 1/g)
 
 
-def _pretty_info_log(msg_key, console_width=50) -> None:
+def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
     msg_dir = {"single": "Start RGB processing for single Image...",
                "multiple": "Start RGB processing for multiple Images...",
                "done": "RGB processing done"}
     msg = msg_dir.get(msg_key, "Unknown log message.")
     logger.info(console_width * "*")
     logger.info("{:^{width}}".format(msg, width=console_width))
+    if time is not None:
+        msg = f"Elapsed time: {time:.2f} s"
+        logger.info("{:^{width}}".format(msg, width=console_width))
     logger.info(console_width * "*")
 
 
@@ -256,7 +260,8 @@ def setup_rgb_single(input_path, output_path, image_name,
                      config_path=None, bands_path=None,
                      dump_stretch=False, description=False,
                      partial=False, multi=False) -> RGBPicture:
-    _pretty_info_log("single", width)
+    start_time = perf_counter()
+    _pretty_info_log("single", console_width=width)
     cwd = Path.cwd()
 
     fallback_config_path = cwd/DEFAULT_CONFIG_NAME
@@ -276,7 +281,8 @@ def setup_rgb_single(input_path, output_path, image_name,
     pic = create_rgb_image(input_path, output_path, image_name, config, bands,
                            channel_combos, dump_stretch, description, partial,
                            multi)
-    _pretty_info_log("done", width)
+    elapsed_time = perf_counter() - start_time
+    _pretty_info_log("done", time=elapsed_time, console_width=width)
     return pic
 
 
