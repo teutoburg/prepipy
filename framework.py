@@ -1169,7 +1169,7 @@ class JPEGPicture(RGBPicture):
 
         Parameters
         ----------
-        fname : str
+        fname : Path or str
             Full file path and name.
 
         Returns
