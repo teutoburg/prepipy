@@ -1189,12 +1189,10 @@ class JPEGPicture(RGBPicture):
 
         Image.MAX_IMAGE_PIXELS = self.image_size + 1
         with Image.fromarray(rgb) as img:
-            try:
-                img.save(fname, quality=quality, comment=hdr.tostring())
-            except (KeyError, OSError):
-                logger.warning("Cannot save RGBA as JPEG, converting to RGB.")
+            if img.mode != "RGB":
+                logger.debug("Image is not in RGB mode, trynig to convert...")
                 img = img.convert("RGB")
-                img.save(fname, quality=quality, comment=hdr.tostring())
+            img.save(fname, quality=quality, comment=hdr.tostring())
 
 
 class MPLPicture(RGBPicture):
