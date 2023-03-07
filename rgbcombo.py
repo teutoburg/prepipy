@@ -11,6 +11,7 @@ from string import Template
 from pathlib import Path
 from shutil import get_terminal_size
 from typing import Iterator, Union
+from time import perf_counter
 
 import yaml
 import numpy as np
@@ -37,13 +38,17 @@ def _gma(i, g):
     return np.power(i, 1/g)
 
 
-def _pretty_info_log(msg_key, console_width=50) -> None:
-    msg_dir = {"single": "Start RGB processing for single Image...",
-               "multiple": "Start RGB processing for multiple Images...",
-               "done": "RGB processing done"}
+def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
+    msg_dir = {"single": "Start RGB processing for single image...",
+               "multiple": "Start RGB processing for multiple images...",
+               "partial": "Start partial image processing...",
+               "done": "Processing done"}
     msg = msg_dir.get(msg_key, "Unknown log message.")
     logger.info(console_width * "*")
     logger.info("{:^{width}}".format(msg, width=console_width))
+    if time is not None:
+        msg = f"Elapsed time: {time:.2f} s"
+        logger.info("{:^{width}}".format(msg, width=console_width))
     logger.info(console_width * "*")
 
 
@@ -256,7 +261,11 @@ def setup_rgb_single(input_path, output_path, image_name,
                      config_path=None, bands_path=None,
                      dump_stretch=False, description=False,
                      partial=False, multi=False) -> RGBPicture:
-    _pretty_info_log("single", width)
+    start_time = perf_counter()
+    if not partial:
+        _pretty_info_log("single", console_width=width)
+    else:
+        _pretty_info_log("partial", console_width=width)
     cwd = Path.cwd()
 
     fallback_config_path = cwd/DEFAULT_CONFIG_NAME
@@ -276,7 +285,8 @@ def setup_rgb_single(input_path, output_path, image_name,
     pic = create_rgb_image(input_path, output_path, image_name, config, bands,
                            channel_combos, dump_stretch, description, partial,
                            multi)
-    _pretty_info_log("done", width)
+    elapsed_time = perf_counter() - start_time
+    _pretty_info_log("done", time=elapsed_time, console_width=width)
     return pic
 
 
@@ -390,12 +400,18 @@ def main() -> None:
 def _logging_configurator():
     main_logger = logging.getLogger("main")
     try:
-        with (absolute_path/"log/logging_config.yml").open("r") as ymlfile:
+        with (absolute_path/"log/logging_configö.yml").open("r") as ymlfile:
             dictConfig(yaml.load(ymlfile, yaml.SafeLoader))
     except FileNotFoundError as err:
-        logging.error(err)
-        logging.basicConfig()
+        formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s",
+                                      "%H:%M:%S")
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(formatter)
+        main_logger = logging.getLogger("main")
         main_logger.setLevel(logging.INFO)
+        main_logger.addHandler(handler)
+        main_logger.error(err)
     return main_logger
 
 
