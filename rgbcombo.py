@@ -396,12 +396,18 @@ def main() -> None:
 def _logging_configurator():
     main_logger = logging.getLogger("main")
     try:
-        with (absolute_path/"log/logging_config.yml").open("r") as ymlfile:
+        with (absolute_path/"log/logging_configö.yml").open("r") as ymlfile:
             dictConfig(yaml.load(ymlfile, yaml.SafeLoader))
     except FileNotFoundError as err:
-        logging.error(err)
-        logging.basicConfig()
+        formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s",
+                                      "%H:%M:%S")
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(formatter)
+        main_logger = logging.getLogger("main")
         main_logger.setLevel(logging.INFO)
+        main_logger.addHandler(handler)
+        main_logger.error(err)
     return main_logger
 
 

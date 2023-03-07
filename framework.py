@@ -12,6 +12,7 @@ import logging
 from operator import itemgetter
 import copy
 import struct
+import warnings
 from dataclasses import dataclass
 from multiprocessing import Pool
 from pathlib import Path
@@ -205,8 +206,10 @@ class Frame():
     def from_fits(cls, filename: Union[Path, str],
                   band: Band, **kwargs):
         """Create instance from fits file."""
-        with fits.open(filename) as file:
-            return cls(file[0].data, band, file[0].header, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*datfix.*")
+            with fits.open(filename) as file:
+                return cls(file[0].data, band, file[0].header, **kwargs)
 
     @property
     def band(self) -> Band:
