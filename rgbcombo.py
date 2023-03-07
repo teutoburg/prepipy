@@ -41,7 +41,8 @@ def _gma(i, g):
 def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
     msg_dir = {"single": "Start RGB processing for single image...",
                "multiple": "Start RGB processing for multiple images...",
-               "done": "RGB processing done"}
+               "partial": "Start partial image processing...",
+               "done": "Processing done"}
     msg = msg_dir.get(msg_key, "Unknown log message.")
     logger.info(console_width * "*")
     logger.info("{:^{width}}".format(msg, width=console_width))
@@ -261,7 +262,10 @@ def setup_rgb_single(input_path, output_path, image_name,
                      dump_stretch=False, description=False,
                      partial=False, multi=False) -> RGBPicture:
     start_time = perf_counter()
-    _pretty_info_log("single", console_width=width)
+    if not partial:
+        _pretty_info_log("single", console_width=width)
+    else:
+        _pretty_info_log("partial", console_width=width)
     cwd = Path.cwd()
 
     fallback_config_path = cwd/DEFAULT_CONFIG_NAME
