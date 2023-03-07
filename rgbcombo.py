@@ -34,6 +34,14 @@ DEFAULT_CONFIG_NAME = "config_single.yml"
 DEFAULT_BANDS_NAME = "bands.yml"
 
 
+class Error(Exception):
+    """Base class for exeptions in this module."""
+
+
+class FramesMisalignedError(Error):
+    """Different shapes found in some frames of the same picture."""
+
+
 def _gma(i, g):
     return np.power(i, 1/g)
 
@@ -187,6 +195,15 @@ def create_rgb_image(input_path: Path,
                          bands, len(config["use_bands"]),
                          multi)
 
+    if (n_shapes := len(set(frame.image.shape for frame in pic.frames))) >= 1:
+        if partial:
+            logger.warning(("Found %d distinct shapes for %d frames. "
+                            "Some frames are likely misaligned. Proceed "
+                            "with caution!"), n_shapes, len(pic.frames))
+        else:
+            raise FramesMisalignedError((f"Found {n_shapes} distinct shapes "
+                                         f"for {len(pic.frames)} frames."))
+
     if partial:
         logger.info("Partial processing selected, normalizing and dumping...")
         for frame in pic.frames:
@@ -285,6 +302,7 @@ def setup_rgb_single(input_path, output_path, image_name,
     pic = create_rgb_image(input_path, output_path, image_name, config, bands,
                            channel_combos, dump_stretch, description, partial,
                            multi)
+
     elapsed_time = perf_counter() - start_time
     _pretty_info_log("done", time=elapsed_time, console_width=width)
     return pic
@@ -391,10 +409,12 @@ def main() -> None:
         logging.warning("No output path specified, dumping into input folder.")
         output_path = args.input_path
 
-    picture = setup_rgb_single(args.input_path, output_path, args.image_name,
-                               args.config_file, args.bands_file,
-                               args.fits_dump, args.description, args.partial,
-                               args.multi)
+    try:
+        setup_rgb_single(args.input_path, output_path, args.image_name,
+                         args.config_file, args.bands_file, args.fits_dump,
+                         args.description, args.partial, args.multi)
+    except Error as err:
+        logger.critical("ABORTING PROCESS", exc_info=err)
 
 
 def _logging_configurator():
