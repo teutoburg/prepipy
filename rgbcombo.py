@@ -24,29 +24,65 @@ from regions import SkyRegion, CircleSkyRegion, \
 from framework import RGBPicture, JPEGPicture, Frame, Band
 
 width, _ = get_terminal_size((50, 20))
-width = int(.6 * width)
-tqdm_fmt = f"{{l_bar}}{{bar:{width}}}{{r_bar}}{{bar:-{width}b}}"
+width = int(.8 * width)
+bar_width = max(width - 40, 10)
+tqdm_fmt = f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}"
 
-DEFAULT_CONFIG_FNAME = "./config_single.yml"
-DEFAULT_BANDS_FNAME = "./bands.yml"
-
-print(Path.cwd())
-print(Path(".").resolve())
-print(Path("/").resolve())
+absolute_path = Path(__file__).resolve(strict=True).parent
+DEFAULT_CONFIG_NAME = "config_single.yml"
+DEFAULT_BANDS_NAME = "bands.yml"
 
 
 def _gma(i, g):
     return np.power(i, 1/g)
 
 
-def _pretty_info_log(msg_key, width=50) -> None:
+def _pretty_info_log(msg_key, console_width=50) -> None:
     msg_dir = {"single": "Start RGB processing for single Image...",
                "multiple": "Start RGB processing for multiple Images...",
                "done": "RGB processing done"}
     msg = msg_dir.get(msg_key, "Unknown log message.")
-    logger.info(width * "*")
-    logger.info("{:^{width}}".format(msg, width=width))
-    logger.info(width * "*")
+    logger.info(console_width * "*")
+    logger.info("{:^{width}}".format(msg, width=console_width))
+    logger.info(console_width * "*")
+
+
+def create_description_file(picture: RGBPicture, filename: Path,
+                            stretchalgo: str = "STIFF") -> None:
+    outstr: str = ""
+    colors: tuple[str, str, str] = ("Red", "Green", "Blue")
+    ul_margin: str = "-20px"
+
+    outstr += "<h5>Click on image to view fullsize.</h5>\n"
+
+    center = picture.coords.pixel_to_world(*picture.center)
+    center = center.to_string("hmsdms", precision=0)
+    outstr += ("<p>Image is centered around ICRS coordinates: "
+               f"<b>{center}</b>.<br>\n Pixel scale: {picture.pixel_scale!s} "
+               f"per pixel.<br>\n Image size: {picture.image_scale}.</p>\n")
+
+    outstr += ("<p>Colour composite image was created using the following "
+               "bands as colour channels:</p>\n")
+    outstr += f"<ul style=\"margin-top:{ul_margin};\">\n"
+    for color, channel in zip(colors, picture.rgb_channels):
+        outstr += (f"<li><span style=\"color:{color};font-weight:bold;\">"
+                   f"{color}:</span> {channel.band.verbose_str}</li>\n")
+    outstr += "</ul>\n"
+
+    outstr += f"<p>Images were stretched using {stretchalgo} algorithm.</p>\n"
+    outstr += "<hr>\n"
+    outstr += ("<p style=\"font-size:small; font-style:italic\">The fullsize "
+               "version of this image (click on image to view) contains "
+               "machine-readable coordinate (WCS) information. The image can "
+               "be downloaded and viewed in applications such as the "
+               "<a href=\"https://aladin.u-strasbg.fr/AladinDesktop/\" "
+               "style=\"text-decoration:underline; color:#00133f;\" "
+               "target=\"_blank\">Aladin sky atlas</a> via \"drag-and-drop\" "
+               "or by pasting the image's permalink into the command-line."
+               "<p>\n")
+    # print(outstr)
+    with filename.open("w+") as file:
+        file.write(outstr)
 
 
 def _maskparse(mask_dict) -> Iterator[SkyRegion]:
@@ -94,14 +130,14 @@ def _get_mask(fname: str, frame: Frame) -> np.ndarray:
 
 
 def create_picture(image_name: str,
-                   input_path,
-                   fname_template,
-                   bands,
+                   input_path: Path,
+                   fname_template: Template,
+                   bands: Iterator[Band],  # or Iterable??
                    n_bands: int,
                    multi: bool = False) -> JPEGPicture:
     new_pic = JPEGPicture(name=image_name)
     if multi:
-        new_pic.add_fits_frames_mp(input_path, bands)
+        new_pic.add_fits_frames_mp(input_path, fname_template, bands)
     else:
         for band in tqdm(bands, total=n_bands,
                          bar_format=tqdm_fmt):
@@ -112,29 +148,72 @@ def create_picture(image_name: str,
     return new_pic
 
 
+def _dump_frame(frame: Frame, dump_path: Path,
+                extension: str = "dump") -> None:
+    dump_name: str = frame.band.name
+    if not (fname := dump_path/f"{dump_name}_{extension}.fits").exists():
+        frame.save_fits(fname)
+        logger.info("Done dumping %s image.", dump_name)
+    else:
+        logger.warning("%s FITS file for %s exists, not overwriting.",
+                       extension.title(), dump_name)
+
+
+def _dump_rgb_channels(picture: RGBPicture, dump_path: Path) -> None:
+    logger.info("Dumping stretched FITS files for each channel.")
+    for channel in picture.rgb_channels:
+        _dump_frame(channel, dump_path, "stretched")
+    logger.info("Done dumping all channels for this combination.")
+
+
 def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
-                     config,
-                     bands,
-                     channel_combos,
-                     dump_stretch) -> RGBPicture:
+                     config: dict,
+                     bands: Iterator[Band],
+                     channel_combos: list,
+                     dump_stretch: bool,
+                     description: bool,
+                     partial: bool,
+                     multi: bool) -> RGBPicture:
     fname: Union[Path, str]
     fname_template = Template(config["general"]["filenames"])
     pic = create_picture(image_name, input_path, fname_template,
                          bands, len(config["use_bands"]),
-                         config["general"]["multiprocess"])
+                         multi)
 
-    n_combos = len(channel_combos)
-    for combo in tqdm(channel_combos, total=n_combos, bar_format=tqdm_fmt):
-        cols = "".join(combo)
+    if partial:
+        logger.info("Partial processing selected, normalizing and dumping...")
+        for frame in pic.frames:
+            # TODO: multiprocess this if possible
+            frame.normalize()
+            _dump_frame(frame, output_path, "partial")
+        logger.info("Dumping of partial frames complete, aborting process.")
+        return
+
+    for combo in tqdm(channel_combos, total=(n_combos := len(channel_combos)),
+                      bar_format=tqdm_fmt):
+        cols: str = "".join(combo)
+        fname: str = f"{pic.name}_img_{cols}"
+
         logger.info("Processing image %s in %s.", pic.name, cols)
         pic.select_rgb_channels(combo, single=(n_combos == 1))
 
-        mask = _get_mask("masking.yml", pic.primary_frame)
+        try:
+            mask = _get_mask("masking.yml", pic.primary_frame)
+        except FileNotFoundError:
+            logger.warning("No masking file found in cwd, using no mask.")
+            mask = None
 
         grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
         grey_mode = config["process"]["grey_mode"]
+
+        if grey_mode != "normal":
+            logger.info("Using grey mode \"%s\".", grey_mode)
+            fname += f"_{grey_mode}"
+        else:
+            logger.info("Using normal grey mode.")
+
         pic.stretch_rgb_channels("stiff",
                                  stiff_mode="prepipy2",
                                  grey_level=grey_values[grey_mode],
@@ -158,26 +237,15 @@ def create_rgb_image(input_path: Path,
                             "image %s in %s!"),
                            pic.name, cols)
 
-        if grey_mode != "normal":
-            logger.info("Used grey mode \"%s\".", grey_mode)
-            fname = f"{pic.name}_img_{cols}_{grey_mode}.JPEG"
-        else:
-            logger.info("Used normal grey mode.")
-            fname = f"{pic.name}_img_{cols}.JPEG"
-        pic.save_pil(output_path/fname)
-
         if dump_stretch:
-            logger.info("Dumping stretched FITS files for each channel.")
-            for channel in pic.rgb_channels:
-                dump_name = channel.band.name
-                fname = output_path/f"{dump_name}_stretched.fits"
-                if not fname.exists():
-                    channel.save_fits(fname)
-                    logger.info("Done dumping %s image.", dump_name)
-                else:
-                    logger.warning(("Stretched FITS file for %s exists, not"
-                                    " overwriting."), dump_name)
-            logger.info("Done dumping all channels for this combination.")
+            _dump_rgb_channels(pic, output_path)
+
+        savename = (output_path/fname).with_suffix(".jpeg")
+        pic.save_pil(savename)
+
+        if description:
+            create_description_file(pic, savename.with_suffix(".html"))
+
         logger.info("Image %s in %s done.", pic.name, cols)
     logger.info("Image %s fully completed.", pic.name)
     return pic
@@ -185,48 +253,56 @@ def create_rgb_image(input_path: Path,
 
 def setup_rgb_single(input_path, output_path, image_name,
                      config_name=None, bands_name=None,
-                     dump_stretch=False) -> RGBPicture:
-    _pretty_info_log("single")
+                     dump_stretch=False, description=False,
+                     partial=False, multi=False) -> RGBPicture:
+    _pretty_info_log("single", width)
+    cwd = Path.cwd()
 
-    config_name = config_name or DEFAULT_CONFIG_FNAME
-    with open(config_name, "r") as ymlfile:
+    fallback_config_path = cwd/DEFAULT_CONFIG_NAME
+    if not fallback_config_path.exists():
+        fallback_config_path = absolute_path/DEFAULT_CONFIG_NAME
+    config_name = config_name or fallback_config_path
+    with config_name.open("r") as ymlfile:
         config = yaml.load(ymlfile, yaml.SafeLoader)
 
-    bands_name = bands_name or DEFAULT_BANDS_FNAME
+    fallback_bands_path = Path.cwd()/DEFAULT_BANDS_NAME
+    if not fallback_bands_path.exists():
+        fallback_bands_path = absolute_path/DEFAULT_BANDS_NAME
+    bands_name = bands_name or fallback_bands_path
     bands = Band.from_yaml_file(bands_name, config["use_bands"])
     channel_combos = config["combinations"]
 
     pic = create_rgb_image(input_path, output_path, image_name, config, bands,
-                           channel_combos, dump_stretch)
-
-    _pretty_info_log("done")
+                           channel_combos, dump_stretch, description, partial,
+                           multi)
+    _pretty_info_log("done", width)
     return pic
 
 
-def setup_rgb_multiple(input_path, output_path, image_names,
-                       config_name=None, bands_name=None,
-                       create_outfolder=False,
-                       dump_stretch=False) -> Iterator[RGBPicture]:
-    _pretty_info_log("multiple")
+# def setup_rgb_multiple(input_path, output_path, image_names,
+#                        config_name=None, bands_name=None,
+#                        create_outfolder=False,
+#                        dump_stretch=False) -> Iterator[RGBPicture]:
+#     _pretty_info_log("multiple", width)
 
-    config_name = config_name or DEFAULT_CONFIG_FNAME
-    with open(config_name, "r") as ymlfile:
-        config = yaml.load(ymlfile, yaml.SafeLoader)
+#     config_name = config_name or DEFAULT_CONFIG_FNAME
+#     with open(config_name, "r") as ymlfile:
+#         config = yaml.load(ymlfile, yaml.SafeLoader)
 
-    bands_name = bands_name or DEFAULT_BANDS_FNAME
-    bands = Band.from_yaml_file(bands_name, config["use_bands"])
-    channel_combos = config["combinations"]
+#     bands_name = bands_name or DEFAULT_BANDS_FNAME
+#     bands = Band.from_yaml_file(bands_name, config["use_bands"])
+#     channel_combos = config["combinations"]
 
-    for image_name in image_names:
-        if create_outfolder:
-            imgpath = output_path/image_name
-            imgpath.mkdir(parents=True, exist_ok=True)
-        else:
-            imgpath = output_path
-        pic = create_rgb_image(input_path, imgpath, image_name, config, bands,
-                               channel_combos, dump_stretch)
-        yield pic
-    _pretty_info_log("RGB processing done")
+#     for image_name in image_names:
+#         if create_outfolder:
+#             imgpath = output_path/image_name
+#             imgpath.mkdir(parents=True, exist_ok=True)
+#         else:
+#             imgpath = output_path
+#         pic = create_rgb_image(input_path, imgpath, image_name, config, bands,
+#                                channel_combos, dump_stretch)
+#         yield pic
+#     _pretty_info_log("RGB processing done", width)
 
 
 def main() -> None:
@@ -258,47 +334,65 @@ def main() -> None:
                         help="""The name of the band config file to be used.
                         If omitted, the code will look for a file named
                         "bands.yml" in the main package folder.""")
-    parser.add_argument("-m",
-                        dest="many",
+    parser.add_argument("-m", "--multi",
+                        action="count",
+                        default=0,
+                        help="""Whether to use multiprocessing. Using this
+                        option once will make use of multiprocessing to split
+                        creation of multiple images between processes. Using it
+                        twice will additionally use multiprocessing to pre-
+                        process individual frames. This is only recommended for
+                        very large images (> 10 Mpx). If the program is
+                        executed for a single image, using this option once
+                        will not have any effect.""")
+    parser.add_argument("-d", "--description",
                         action="store_true",
-                        help="""Whether to process multiple images. If set,
-                        image-name is interpreted as a list of names.""")
+                        help="""Whether to include a html description file
+                        about the image. If set, a file with the same name as
+                        each processes image will be saved in the output
+                        directory.""")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-f", "--fits-dump",
+                       action="store_true",
+                       help="""Dump stretched single-band FITS files into the
+                       specified output directory. This option cannot be used
+                       in combination with the optionn -p.""")
+    group.add_argument("-p", "--partial",
+                       action="store_true",
+                       help="""Perform only pre-processing and normalisation.
+                       No stretching is performed, no RGB image is created, all
+                       parameters associated with those processes will be
+                       ignored. This option cannot be used in combination with
+                       the option -f.""")
     parser.add_argument("--create-outfolders",
                         action="store_true",
                         help="""Whether to create a separate folder in the
                         output path for each picture, which may already exist.
                         Can only be used if -m option is set.""")
-    parser.add_argument("--dump-stretched-fits",
-                        dest="dump_stretch",
-                        action="store_true",
-                        help="""Dump stretched single-band FITS files into the
-                        specified output directory.""")
     args = parser.parse_args()
 
     if args.output_path is not None:
         output_path = Path(args.output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
     else:
         logging.warning("No output path specified, dumping into input folder.")
         output_path = args.input_path
 
-    if args.many:
-        setup_rgb_multiple(args.input_path, output_path, args.image_name,
-                           args.config_file, args.bands_file,
-                           args.create_outfolders, args.dump_stretch)
-    else:
-        setup_rgb_single(args.input_path, output_path, args.image_name,
-                         args.config_file, args.bands_file, args.dump_stretch)
+    picture = setup_rgb_single(args.input_path, output_path, args.image_name,
+                               args.config_file, args.bands_file,
+                               args.fits_dump, args.description, args.partial,
+                               args.multi)
 
 
 def _logging_configurator():
     main_logger = logging.getLogger("main")
     try:
-        with open("./log/logging_config.yml", "r") as ymlfile:
+        with (absolute_path/"log/logging_config.yml").open("r") as ymlfile:
             dictConfig(yaml.load(ymlfile, yaml.SafeLoader))
     except FileNotFoundError as err:
         logging.error(err)
         logging.basicConfig()
-        logger.setLevel(logging.INFO)
+        main_logger.setLevel(logging.INFO)
     return main_logger
 
 
@@ -307,6 +401,7 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     logger = _logging_configurator()
+    assert logger.level == 20
 
     # root = Path("D:/Nemesis/data/HOPS")
     # path = root/"HOPS_99"
@@ -325,7 +420,7 @@ if __name__ == "__main__":
 
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
-    mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
+    # mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
 
     # root = Path("D:/Nemesis/data/perseus")
     # path = root/"stamps/"
@@ -334,6 +429,6 @@ if __name__ == "__main__":
     #     target = f"IC 348-{i}"
     #     setup_rgb(path, root/"RGBs", target)
 
-    # main()
+    main()
     gc.collect()
     sys.exit(0)
