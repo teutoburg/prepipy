@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Union, Callable
+from packaging import version
 
 import yaml
 import numpy as np
@@ -29,6 +30,7 @@ from astropy.stats import sigma_clipped_stats as scs
 from astropy.nddata import Cutout2D
 
 from PIL import Image
+from PIL import __version__ as pillow_version
 from tqdm import tqdm
 
 __author__ = "Fabian Haberhauer"
@@ -40,6 +42,9 @@ __email__ = "fabian.haberhauer@univie.ac.at"
 __status__ = "Prototype"
 
 # FIXME: Replace Union everywhere as soon as Python 3.10 is available!
+
+if not version.parse(pillow_version) >= version.Version("9.4"):
+    raise Exception("Requires pillow 9.4+")
 
 mpl.rcParams["font.family"] = ["Computer Modern", "serif"]
 
