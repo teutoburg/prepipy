@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Union, Callable
+from packaging import version
 
 import yaml
 import numpy as np
@@ -29,6 +30,7 @@ from astropy.stats import sigma_clipped_stats as scs
 from astropy.nddata import Cutout2D
 
 from PIL import Image
+from PIL import __version__ as pillow_version
 from tqdm import tqdm
 
 __author__ = "Fabian Haberhauer"
@@ -40,6 +42,9 @@ __email__ = "fabian.haberhauer@univie.ac.at"
 __status__ = "Prototype"
 
 # FIXME: Replace Union everywhere as soon as Python 3.10 is available!
+
+if not version.parse(pillow_version) >= version.Version("9.4"):
+    raise Exception("Requires pillow 9.4+")
 
 mpl.rcParams["font.family"] = ["Computer Modern", "serif"]
 
@@ -1163,43 +1168,13 @@ class RGBPicture(Picture):
 class JPEGPicture(RGBPicture):
     """RGBPicture subclass for single image in JPEG format using Pillow."""
 
-    @staticmethod
-    def _make_jpeg_variable_segment(marker: int, payload: bytes) -> bytes:
-        """Make a JPEG segment from the given payload."""
-        return struct.pack('>HH', marker, 2 + len(payload)) + payload
-
-    @staticmethod
-    def _make_jpeg_comment_segment(comment: bytes) -> bytes:
-        """Make a JPEG comment/COM segment."""
-        return JPEGPicture._make_jpeg_variable_segment(0xFFFE, comment)
-
-    @staticmethod
-    def save_hdr(fname: Union[Path, str], hdr: fits.Header) -> None:
-        """Save header as JPEG comment. Redundant with pillow 9.4.x."""
-        # TODO: add proper logging
-        logger.debug("saving header:")
-        logger.debug(hdr.tostring(sep="\n"))
-        with Image.open(fname) as img:
-            app = img.app["APP0"]
-
-        with open(fname, mode="rb") as file:
-            binary = file.read()
-
-        pos = binary.find(app) + len(app)
-        bout = binary[:pos]
-        bout += JPEGPicture._make_jpeg_comment_segment(hdr.tostring().encode())
-        bout += binary[pos:]
-
-        with open(fname, mode="wb") as file:
-            file.write(bout)
-
-    def save_pil(self, fname: Union[Path, str]) -> None:
+    def save_pil(self, fname: Union[Path, str], quality: int = 75) -> None:
         """
         Save RGB image to specified file name using pillow.
 
         Parameters
         ----------
-        fname : str
+        fname : Path or str
             Full file path and name.
 
         Returns
@@ -1208,22 +1183,21 @@ class JPEGPicture(RGBPicture):
 
         """
         logger.info("Saving image as JPEG to %s", fname)
+        logger.debug("Quality keyword set to %d", quality)
         rgb = self.get_rgb_cube(mode="0-255", order="xyc")
         # HACK: does this always produce correct orientation??
         rgb = np.flip(rgb, 0)
         hdr = self._update_header()
+        # TODO: add proper logging
+        logger.debug("saving header:")
+        logger.debug(hdr.tostring(sep="\n"))
 
         Image.MAX_IMAGE_PIXELS = self.image_size + 1
         with Image.fromarray(rgb) as img:
-            try:
-                img.save(fname)
-            except (KeyError, OSError):
-                logger.warning("Cannot save RGBA as JPEG, converting to RGB.")
+            if img.mode != "RGB":
+                logger.debug("Image is not in RGB mode, trynig to convert...")
                 img = img.convert("RGB")
-                img.save(fname)
-
-        # HACK: update this as soon as pillow 9.4 is available
-        self.save_hdr(fname, hdr)
+            img.save(fname, quality=quality, comment=hdr.tostring())
 
 
 class MPLPicture(RGBPicture):
