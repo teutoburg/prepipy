@@ -1,0 +1,8 @@
+---
+title: "<h5>Click on image to view fullsize.</h5>\n"
+coord: "<p>Image is centered around ICRS coordinates: <b>${center}</b>.<br>\n Pixel scale: ${pixel_scale} per pixel.<br>\n Image size: ${image_scale}.</p>\n"
+bands: "<p>Colour composite image was created using the following bands as colour channels:</p>\n<ul style=\"margin-top:${ul_margin};\">\n${channels}</ul>\n"
+chnls: "<li><span style=\"color:${color};font-weight:bold;\">${color}:</span> ${band_str}</li>\n"
+salgo: "<p>Images were stretched using the <em>${stretchalgo}</em> algorithm.</p>\n"
+footr: "<hr>\n<p style=\"font-size:small; font-style:italic\">The fullsize version of this image (click on image to view) contains machine-readable coordinate (WCS) information. The image can be downloaded and viewed in applications such as the <a href=\"https://aladin.u-strasbg.fr/AladinDesktop/\" style=\"text-decoration:underline; color:#00133f;\" target=\"_blank\">Aladin sky atlas</a> via \"drag-and-drop\" or by pasting the image's permalink into the command-line.<p>\n"
+...

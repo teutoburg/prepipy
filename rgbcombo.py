@@ -60,42 +60,39 @@ def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
     logger.info(console_width * "*")
 
 
-def create_description_file(picture: RGBPicture, filename: Path,
-                            stretchalgo: str = "STIFF") -> None:
+def create_description_file(picture: RGBPicture,
+                            filename: Path,
+                            template_path: Path,
+                            stretchalgo: str = "prepipy") -> None:
     outstr: str = ""
     colors: tuple[str, str, str] = ("Red", "Green", "Blue")
     ul_margin: str = "-20px"
 
-    outstr += "<h5>Click on image to view fullsize.</h5>\n"
+    with template_path.open("r") as ymlfile:
+        templates = yaml.load(ymlfile, yaml.SafeLoader)
+
+    coord = Template(templates["coord"])
+    bands = Template(templates["bands"])
+    chnls = Template(templates["chnls"])
+    salgo = Template(templates["salgo"])
 
     center = picture.coords.pixel_to_world(*picture.center)
     center = center.to_string("hmsdms", precision=0)
-    outstr += ("<p>Image is centered around ICRS coordinates: "
-               f"<b>{center}</b>.<br>\n Pixel scale: {picture.pixel_scale!s} "
-               f"per pixel.<br>\n Image size: {picture.image_scale}.</p>\n")
+    coord = coord.substitute(center=center,
+                             pixel_scale=str(picture.pixel_scale),
+                             image_scale=str(picture.image_scale))
 
-    outstr += ("<p>Colour composite image was created using the following "
-               "bands as colour channels:</p>\n")
-    outstr += f"<ul style=\"margin-top:{ul_margin};\">\n"
-    for color, channel in zip(colors, picture.rgb_channels):
-        outstr += (f"<li><span style=\"color:{color};font-weight:bold;\">"
-                   f"{color}:</span> {channel.band.verbose_str}</li>\n")
-    outstr += "</ul>\n"
+    channels = "".join(chnls.substitute(color=color,
+                                        band_str=channel.band.verbose_str)
+                       for color, channel in zip(colors, picture.rgb_channels))
+    bands = bands.substitute(channels=channels, ul_margin=ul_margin)
 
-    outstr += f"<p>Images were stretched using {stretchalgo} algorithm.</p>\n"
-    outstr += "<hr>\n"
-    outstr += ("<p style=\"font-size:small; font-style:italic\">The fullsize "
-               "version of this image (click on image to view) contains "
-               "machine-readable coordinate (WCS) information. The image can "
-               "be downloaded and viewed in applications such as the "
-               "<a href=\"https://aladin.u-strasbg.fr/AladinDesktop/\" "
-               "style=\"text-decoration:underline; color:#00133f;\" "
-               "target=\"_blank\">Aladin sky atlas</a> via \"drag-and-drop\" "
-               "or by pasting the image's permalink into the command-line."
-               "<p>\n")
-    # print(outstr)
+    salgo = salgo.substitute(stretchalgo=stretchalgo)
+
+    outstr = templates["title"] + coord + bands + salgo + templates["footr"]
     with filename.open("w+") as file:
         file.write(outstr)
+
 
 
 def _maskparse(mask_dict) -> Iterator[SkyRegion]:
@@ -267,7 +264,9 @@ def create_rgb_image(input_path: Path,
         pic.save_pil(savename, config["general"].get("jpeg_quality", 75))
 
         if description:
-            create_description_file(pic, savename.with_suffix(".html"))
+            logger.info("Creating html description file.")
+            create_description_file(pic, savename.with_suffix(".html"),
+                                    absolute_path/"html_templates.yml")
 
         logger.info("Image %s in %s done.", pic.name, cols)
     logger.info("Image %s fully completed.", pic.name)
