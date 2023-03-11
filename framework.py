@@ -52,7 +52,7 @@ TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 logger = logging.getLogger(__name__)
 
 absolute_path = Path(__file__).resolve(strict=True).parent
-with (absolute_path/"stiff_params.yml").open("r") as ymlfile:
+with (absolute_path/"resources/stiff_params.yml").open("r") as ymlfile:
     STIFF_PARAMS = yaml.load(ymlfile, yaml.SafeLoader)
 
 

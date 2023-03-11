@@ -265,8 +265,9 @@ def create_rgb_image(input_path: Path,
 
         if description:
             logger.info("Creating html description file.")
+            html_template_path = absolute_path/"resources/html_templates.yml"
             create_description_file(pic, savename.with_suffix(".html"),
-                                    absolute_path/"html_templates.yml")
+                                    html_template_path)
 
         logger.info("Image %s in %s done.", pic.name, cols)
     logger.info("Image %s fully completed.", pic.name)
