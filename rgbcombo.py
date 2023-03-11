@@ -391,7 +391,7 @@ def main() -> None:
 def _logging_configurator():
     main_logger = logging.getLogger("main")
     try:
-        with (absolute_path/"log/logging_configö.yml").open("r") as ymlfile:
+        with (absolute_path/"log/logging_config.yml").open("r") as ymlfile:
             dictConfig(yaml.load(ymlfile, yaml.SafeLoader))
     except FileNotFoundError as err:
         formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s",
@@ -425,12 +425,12 @@ if __name__ == "__main__":
 
     root = Path("C:/Users/ghost/Desktop/nemesis/outreach/regions")
     path = root/"input"
-    imgpath = root/"JPEGS/new2"
-    target = "outreach_1"
+    imgpath = root/"JPEGS/new3"
+    target = "outreach_4"
 
     # https://note.nkmk.me/en/python-pillow-concat-images/
 
-    # mypic = setup_rgb_single(path, imgpath, target, dump_stretch=False)
+    # mypic = setup_rgb_single(path, imgpath, target, description=True)
 
     # root = Path("D:/Nemesis/data/perseus")
     # path = root/"stamps/"
