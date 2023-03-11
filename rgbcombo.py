@@ -17,12 +17,9 @@ import yaml
 import numpy as np
 from tqdm import tqdm
 
-from astropy.coordinates import Angle, SkyCoord
-from regions import PixCoord
-from regions import SkyRegion, CircleSkyRegion, \
-                    RectangleSkyRegion, PolygonSkyRegion
-
-from framework import RGBPicture, JPEGPicture, Frame, Band
+from framework import RGBPicture, JPEGPicture, Band
+from masking import get_mask
+from auxiliaries import _dump_frame, _dump_rgb_channels
 
 width, _ = get_terminal_size((50, 20))
 width = int(.8 * width)
@@ -94,51 +91,6 @@ def create_description_file(picture: RGBPicture,
         file.write(outstr)
 
 
-
-def _maskparse(mask_dict) -> Iterator[SkyRegion]:
-    for name, mask in mask_dict.items():
-        sky_points = SkyCoord(mask["coords"], unit="deg")
-        size = Angle(**mask["size"])
-
-        if mask["type"] == "circ":
-            region = CircleSkyRegion(sky_points[0], size)
-        elif mask["type"] == "rect":
-            region = RectangleSkyRegion(sky_points[0], *size)
-        elif mask["type"] == "poly":
-            region = PolygonSkyRegion(sky_points)
-        else:
-            region = None
-
-        if region is not None:
-            region.meta["name"] = name
-            region.meta["comment"] = mask["mode"]
-
-        yield region
-
-
-def _region_mask(region: SkyRegion, frame: Frame) -> np.ndarray:
-    pixels = PixCoord(*np.indices(frame.image.shape))
-    pixel_region = region.to_pixel(frame.coords)
-    cont = pixel_region.contains(pixels).T
-    return cont
-
-
-def _merge_masks(regions: list[SkyRegion], frame: Frame) -> np.ndarray:
-    fill = all(region.meta["comment"] == "exclude" for region in regions)
-    mask = np.full_like(frame.image, fill_value=fill, dtype=bool)
-    for region in regions:
-        cont = _region_mask(region, frame)
-        mask = mask & ~cont | cont * (region.meta["comment"] == "limit")
-    return mask
-
-
-def _get_mask(fname: str, frame: Frame) -> np.ndarray:
-    with open(fname, "r") as ymlfile:
-        mask_dict = yaml.load(ymlfile, yaml.SafeLoader)
-    mask_regions = list(_maskparse(mask_dict))
-    return _merge_masks(mask_regions, frame)
-
-
 def create_picture(image_name: str,
                    input_path: Path,
                    fname_template: Template,
@@ -156,24 +108,6 @@ def create_picture(image_name: str,
             new_pic.add_frame_from_file(input_path/fname, band)
     logger.info("Picture %s fully loaded.", new_pic.name)
     return new_pic
-
-
-def _dump_frame(frame: Frame, dump_path: Path,
-                extension: str = "dump") -> None:
-    dump_name: str = frame.band.name
-    if not (fname := dump_path/f"{dump_name}_{extension}.fits").exists():
-        frame.save_fits(fname)
-        logger.info("Done dumping %s image.", dump_name)
-    else:
-        logger.warning("%s FITS file for %s exists, not overwriting.",
-                       extension.title(), dump_name)
-
-
-def _dump_rgb_channels(picture: RGBPicture, dump_path: Path) -> None:
-    logger.info("Dumping stretched FITS files for each channel.")
-    for channel in picture.rgb_channels:
-        _dump_frame(channel, dump_path, "stretched")
-    logger.info("Done dumping all channels for this combination.")
 
 
 def create_rgb_image(input_path: Path,
@@ -220,7 +154,7 @@ def create_rgb_image(input_path: Path,
         pic.select_rgb_channels(combo, single=(n_combos == 1))
 
         try:
-            mask = _get_mask("masking.yml", pic.primary_frame)
+            mask = get_mask("masking.yml", pic.primary_frame)
         except FileNotFoundError:
             logger.warning("No masking file found in cwd, using no mask.")
             mask = None
