@@ -429,16 +429,7 @@ if __name__ == "__main__":
     imgpath = root/"JPEGS/new3"
     target = "outreach_4"
 
-    # https://note.nkmk.me/en/python-pillow-concat-images/
-
     # mypic = setup_rgb_single(path, imgpath, target, description=True)
-
-    # root = Path("D:/Nemesis/data/perseus")
-    # path = root/"stamps/"
-
-    # for i in range(1, 4):
-    #     target = f"IC 348-{i}"
-    #     setup_rgb(path, root/"RGBs", target)
 
     main()
     gc.collect()
