@@ -143,7 +143,7 @@ def create_rgb_image(input_path: Path,
             frame.normalize()
             _dump_frame(frame, output_path, "partial")
         logger.info("Dumping of partial frames complete, aborting process.")
-        return
+        return pic
 
     for combo in tqdm(channel_combos, total=(n_combos := len(channel_combos)),
                       bar_format=tqdm_fmt):
