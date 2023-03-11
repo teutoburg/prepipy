@@ -308,39 +308,11 @@ def setup_rgb_single(input_path, output_path, image_name,
     return pic
 
 
-# def setup_rgb_multiple(input_path, output_path, image_names,
-#                        config_name=None, bands_name=None,
-#                        create_outfolder=False,
-#                        dump_stretch=False) -> Iterator[RGBPicture]:
-#     _pretty_info_log("multiple", width)
-
-#     config_name = config_name or DEFAULT_CONFIG_FNAME
-#     with open(config_name, "r") as ymlfile:
-#         config = yaml.load(ymlfile, yaml.SafeLoader)
-
-#     bands_name = bands_name or DEFAULT_BANDS_FNAME
-#     bands = Band.from_yaml_file(bands_name, config["use_bands"])
-#     channel_combos = config["combinations"]
-
-#     for image_name in image_names:
-#         if create_outfolder:
-#             imgpath = output_path/image_name
-#             imgpath.mkdir(parents=True, exist_ok=True)
-#         else:
-#             imgpath = output_path
-#         pic = create_rgb_image(input_path, imgpath, image_name, config, bands,
-#                                channel_combos, dump_stretch)
-#         yield pic
-#     _pretty_info_log("RGB processing done", width)
-
-
 def main() -> None:
     """Execute in script mode."""
     parser = argparse.ArgumentParser(prog="rgbcombo",
                                      description="""Combines RGB channels to
                                      color image including stretching.""")
-
-    # https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument
 
     parser.add_argument("input_path",
                         type=Path,
