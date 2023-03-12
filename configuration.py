@@ -38,7 +38,7 @@ class ProcessConfigurator:
 class FiguresConfigurator:
     titlemode: str = "debug"       # debug or pub
     include_suptitle: bool = True  # yes (default) or no
-    figsize: list[int] = field(default_factory=lambda: [3, 5.6])
+    figsize: list[float] = field(default_factory=lambda: [3, 5.6])
     # [col, row]
     max_cols: int = 4              # int (default=4)
     centermark: bool = False       # no (default) or yes
@@ -49,8 +49,8 @@ class FiguresConfigurator:
 
 @dataclass
 class Configurator:
-    general: GeneralConfigurator
-    process: ProcessConfigurator
-    figures: FiguresConfigurator
+    general: GeneralConfigurator = field(default_factory=lambda: GeneralConfigurator())
+    process: ProcessConfigurator = field(default_factory=lambda: ProcessConfigurator())
+    figures: FiguresConfigurator = field(default_factory=lambda: FiguresConfigurator())
     use_bands: list[str] = field(default_factory=list)
     combinations: list[list[str]] = field(default_factory=list)
