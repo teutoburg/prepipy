@@ -55,7 +55,8 @@ def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
     msg_dir = {"single": "Start RGB processing for single image...",
                "multiple": "Start RGB processing for multiple images...",
                "partial": "Start partial image processing...",
-               "done": "Processing done"}
+               "done": "Processing done",
+               "aborted": "Critical error occured, process could not finish."}
     msg = msg_dir.get(msg_key, "Unknown log message.")
     logger.info(console_width * "*")
     logger.info("{:^{width}}".format(msg, width=console_width))
@@ -326,6 +327,7 @@ def main() -> None:
                          args.description, args.partial, args.multi)
     except Error as err:
         logger.critical("ABORTING PROCESS", exc_info=err)
+        _pretty_info_log("aborted", console_width=width)
 
 
 def _logging_configurator():
