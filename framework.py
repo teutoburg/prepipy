@@ -35,6 +35,8 @@ from PIL import Image
 from PIL import __version__ as pillow_version
 from tqdm import tqdm
 
+from configuration import FiguresConfigurator
+
 __author__ = "Fabian Haberhauer"
 __copyright__ = "Copyright 2023"
 __credits__ = []  # add Stiff, mostly
@@ -1211,11 +1213,7 @@ class MPLPicture(RGBPicture):
 
     # padding = {1: 5, 2: 5, 4: 4}
     padding: dict[int, float] = {2: 3.5}
-    default_figurekwargs = {"titlemode": "debug",
-                            "include_suptitle": True,
-                            "figsize": (3, 5.6),
-                            "centermark": False,
-                            "gridlines": False}
+    default_figuresconfig = FiguresConfigurator()
 
     @property
     def title(self) -> str:
@@ -1317,18 +1315,15 @@ class MPLPicture(RGBPicture):
         return nrows, ncols
 
     def stuff(self, channel_combos, imgpath, grey_mode="normal",
-              figurekwargs=None, **kwargs) -> None:
+              figuresconfig=None, **kwargs) -> None:
         """DEBUG ONLY."""
-        if figurekwargs is not None:
-            figurekwargs = self.default_figurekwargs | figurekwargs
-        else:
-            figurekwargs = self.default_figurekwargs
+        figuresconfig = figuresconfig or self.default_figuresconfig
         grey_values = {"normal": .3, "lessback": .08, "moreback": .7}
 
         nrows, ncols = self._get_nrows_ncols(len(channel_combos),
-                                             figurekwargs.get("max_cols", 4))
+                                             figuresconfig.max_cols)
 
-        fig, axes = self._get_axes(nrows, ncols, figurekwargs["figsize"])
+        fig, axes = self._get_axes(nrows, ncols, figuresconfig.figsize)
         for combo, column in zip(tqdm(channel_combos), axes.flatten()):
             self.select_rgb_channels(combo)
             self.stretch_rgb_channels("stiff",
@@ -1344,13 +1339,13 @@ class MPLPicture(RGBPicture):
             else:
                 equal = False
 
-            self._create_title(column, combo, figurekwargs["titlemode"], equal)
+            self._create_title(column, combo, figuresconfig.titlemode, equal)
             self._display_cube(column,
-                               center=figurekwargs["centermark"],
-                               grid=figurekwargs["gridlines"],
-                               rois=figurekwargs.get("additional_roi", None))
+                               center=figuresconfig.centermark,
+                               grid=figuresconfig.gridlines,
+                               rois=figuresconfig.additional_roi)
 
-        if figurekwargs["include_suptitle"]:
+        if figuresconfig.include_suptitle:
             suptitle = self.title + "\n" + self.center_coords_str
             fig.suptitle(suptitle, fontsize="xx-large")
 
