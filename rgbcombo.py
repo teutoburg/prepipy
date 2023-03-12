@@ -13,13 +13,15 @@ from shutil import get_terminal_size
 from typing import Iterator, Union
 from time import perf_counter
 
-import yaml
+
+from ruamel.yaml import YAML
 import numpy as np
 from tqdm import tqdm
 
 from framework import RGBPicture, JPEGPicture, Band
 from masking import get_mask
 from auxiliaries import _dump_frame, _dump_rgb_channels
+from configuration import Configurator
 
 width, _ = get_terminal_size((50, 20))
 width = int(.8 * width)
@@ -30,6 +32,7 @@ absolute_path = Path(__file__).resolve(strict=True).parent
 DEFAULT_CONFIG_NAME = "config_single.yml"
 DEFAULT_BANDS_NAME = "bands.yml"
 
+yaml = YAML()
 
 class Error(Exception):
     """Base class for exeptions in this module."""
@@ -65,8 +68,7 @@ def create_description_file(picture: RGBPicture,
     colors: tuple[str, str, str] = ("Red", "Green", "Blue")
     ul_margin: str = "-20px"
 
-    with template_path.open("r") as ymlfile:
-        templates = yaml.load(ymlfile, yaml.SafeLoader)
+    templates = yaml.load(template_path)
 
     coord = Template(templates["coord"])
     bands = Template(templates["bands"])
@@ -113,7 +115,7 @@ def create_picture(image_name: str,
 def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
-                     config: dict,
+                     config: Configurator,
                      bands: Iterator[Band],
                      channel_combos: list,
                      dump_stretch: bool,
@@ -121,9 +123,9 @@ def create_rgb_image(input_path: Path,
                      partial: bool,
                      multi: bool) -> RGBPicture:
     fname: Union[Path, str]
-    fname_template = Template(config["general"]["filenames"])
+    fname_template = Template(config.general.filenames)
     pic = create_picture(image_name, input_path, fname_template,
-                         bands, len(config["use_bands"]),
+                         bands, len(config.use_bands),
                          multi)
 
     if (n_shapes := len(set(frame.image.shape for frame in pic.frames))) > 1:
@@ -160,7 +162,7 @@ def create_rgb_image(input_path: Path,
             mask = None
 
         grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
-        grey_mode = config["process"]["grey_mode"]
+        grey_mode = config.process.grey_mode
 
         if grey_mode != "normal":
             logger.info("Using grey mode \"%s\".", grey_mode)
@@ -171,20 +173,20 @@ def create_rgb_image(input_path: Path,
         pic.stretch_rgb_channels("stiff",
                                  stiff_mode="prepipy2",
                                  grey_level=grey_values[grey_mode],
-                                 skymode=config["process"]["skymode"],
+                                 skymode=config.process.skymode,
                                  mask=mask)
 
-        if config["process"]["rgb_adjust"]:
-            pic.adjust_rgb(config["process"]["alpha"], _gma,
-                           config["process"]["gamma_lum"])
+        if config.process.rgb_adjust:
+            pic.adjust_rgb(config.process.alpha, _gma,
+                           config.process.gamma_lum)
             logger.info("RGB sat. adjusting after contrast and stretch.")
 
         if pic.is_bright:
             logger.info(("Image is bright, performing additional color space "
                          "stretching to equalize colors."))
             pic.equalize("mean",
-                         offset=config["process"].get("equal_offset", .1),
-                         norm=config["process"].get("equal_norm", True),
+                         offset=config.process.equal_offset,
+                         norm=config.process.equal_norm,
                          mask=mask)
         else:
             logger.warning(("No equalisation or normalisation performed on "
@@ -195,7 +197,7 @@ def create_rgb_image(input_path: Path,
             _dump_rgb_channels(pic, output_path)
 
         savename = (output_path/fname).with_suffix(".jpeg")
-        pic.save_pil(savename, config["general"].get("jpeg_quality", 75))
+        pic.save_pil(savename, config.general.jpeg_quality)
 
         if description:
             logger.info("Creating html description file.")
@@ -221,21 +223,19 @@ def setup_rgb_single(input_path, output_path, image_name,
 
     fallback_config_path = cwd/DEFAULT_CONFIG_NAME
     if not fallback_config_path.exists():
-        fallback_config_path = absolute_path/DEFAULT_CONFIG_NAME
+        fallback_config_path = absolute_path/"config"/DEFAULT_CONFIG_NAME
     config_path = config_path or fallback_config_path
-    with config_path.open("r") as ymlfile:
-        config = yaml.load(ymlfile, yaml.SafeLoader)
+    config = yaml.load(config_path)
 
     fallback_bands_path = Path.cwd()/DEFAULT_BANDS_NAME
     if not fallback_bands_path.exists():
-        fallback_bands_path = absolute_path/DEFAULT_BANDS_NAME
+        fallback_bands_path = absolute_path/"config"/DEFAULT_BANDS_NAME
     bands_path = bands_path or fallback_bands_path
-    bands = Band.from_yaml_file(bands_path, config["use_bands"])
-    channel_combos = config["combinations"]
+    bands = Band.from_yaml_file(bands_path, config.use_bands)
 
     pic = create_rgb_image(input_path, output_path, image_name, config, bands,
-                           channel_combos, dump_stretch, description, partial,
-                           multi)
+                           config.combinations, dump_stretch, description,
+                           partial, multi)
 
     elapsed_time = perf_counter() - start_time
     _pretty_info_log("done", time=elapsed_time, console_width=width)
@@ -327,7 +327,7 @@ def _logging_configurator():
     main_logger = logging.getLogger("main")
     try:
         with (absolute_path/"log/logging_config.yml").open("r") as ymlfile:
-            dictConfig(yaml.load(ymlfile, yaml.SafeLoader))
+            dictConfig(yaml.load(ymlfile))
     except FileNotFoundError as err:
         formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s",
                                       "%H:%M:%S")
