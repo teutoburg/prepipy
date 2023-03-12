@@ -3,6 +3,7 @@ general:
   filenames: ${image_name}_${band_name}.fits
   # e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
   multiprocess: no      # no (default) or yes
+  jpeg_quality: 95      # see pillow documentation for details
 process:
   grey_mode: normal     # normal, lessback or moreback
   rgb_adjust: no        # no (default) or yes
