@@ -11,7 +11,12 @@ Created on Sun Mar 12 17:48:17 2023
 from dataclasses import dataclass, field
 from typing import Union
 
+from ruamel.yaml import YAML, yaml_object
 
+yaml = YAML()
+
+
+@yaml_object(yaml)
 @dataclass
 class GeneralConfigurator:
     filenames: str = "${band_name}_${image_name}.fits"
@@ -20,6 +25,7 @@ class GeneralConfigurator:
     jpeg_quality: int = 95      # see pillow documentation for details
 
 
+@yaml_object(yaml)
 @dataclass
 class ProcessConfigurator:
     grey_mode: str = "normal"  # normal, lessback or moreback
@@ -34,6 +40,8 @@ class ProcessConfigurator:
     equal_offset: float = .1   # float (default=.1)
     equal_norm: bool = True    # yes (default) or no
 
+
+@yaml_object(yaml)
 @dataclass
 class FiguresConfigurator:
     titlemode: str = "debug"       # debug or pub
@@ -47,6 +55,7 @@ class FiguresConfigurator:
     # each as [ra, dec] in decimal deg format
 
 
+@yaml_object(yaml)
 @dataclass
 class Configurator:
     general: GeneralConfigurator = field(default_factory=lambda: GeneralConfigurator())
