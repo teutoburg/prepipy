@@ -1,0 +1,26 @@
+---
+general:
+  filenames: e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
+  multiprocess: False (default) or True
+  jpeg_quality: see pillow documentation for details
+process:
+  grey_mode: normal, lessback or moreback
+  rgb_adjust: False (default) or True
+  alpha: float (default=1.0), typically 1.0-2.0
+  gamma_lum: float (default=1.), typically 1.0-3.0
+  clip: float (default=10.)
+  nanmode: max (default) or median
+  skymode: median (default), clipmedian, quantile or debug
+  maxmode: quantile (default), max or debug
+  slice:  NULL (default) or 2-list of pixel widths [wx, wy]
+  equal_offset: float (default=0.1)
+  equal_norm: True (default) or False
+figures:
+  titlemode: debug or pub
+  include_suptitle: True (default) or False
+  figsize: list of [col, row] in inches
+  max_cols: int (default=4)
+  centermark: False (default) or True
+  gridlines: False (default) or True
+  additional_roi: each as [ra, dec] in decimal deg format, default none (leave empty)
+...

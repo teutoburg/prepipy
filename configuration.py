@@ -8,10 +8,12 @@ Created on Sun Mar 12 17:48:17 2023
 @author: teuto
 """
 
-from dataclasses import dataclass, field
+# TODO: somehow add comment dumping, maybe check ruyaml on GitHub?
+
+from dataclasses import dataclass, field, asdict
 from typing import Union
 
-from ruamel.yaml import YAML, yaml_object
+from ruamel.yaml import YAML, yaml_object, comments
 
 yaml = YAML()
 
@@ -63,3 +65,21 @@ class Configurator:
     figures: FiguresConfigurator = field(default_factory=lambda: FiguresConfigurator())
     use_bands: list[str] = field(default_factory=list)
     combinations: list[list[str]] = field(default_factory=list)
+
+
+# BUG: this will swallow the !class tags
+def add_comments(instance, commentfile):
+    codict = yaml.load(commentfile)
+    comap = comments.CommentedMap()
+    indict = asdict(instance)
+    for key in indict:
+        ncomap = comments.CommentedMap()
+        ncomap.update(indict[key])
+        comap[key] = ncomap
+        if not key in codict:
+            continue
+        for comkey in comap[key]:
+            if comkey in codict[key]:
+                comap[key].yaml_add_eol_comment(codict[key][comkey], comkey,
+                                                column=26)
+    return comap
