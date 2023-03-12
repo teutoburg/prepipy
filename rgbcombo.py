@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """Debug module to run main functions from command line."""
 
+__version__ = "0.1"
+
 import sys
 import gc
 import argparse
@@ -22,6 +24,9 @@ from framework import RGBPicture, JPEGPicture, Band
 from masking import get_mask
 from auxiliaries import _dump_frame, _dump_rgb_channels
 from configuration import Configurator
+
+__author__ = "Fabian Haberhauer"
+__copyright__ = "Copyright 2023"
 
 width, _ = get_terminal_size((50, 20))
 width = int(.8 * width)

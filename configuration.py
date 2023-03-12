@@ -8,6 +8,8 @@ Created on Sun Mar 12 17:48:17 2023
 @author: teuto
 """
 
+__version__ = "0.1"
+
 # TODO: somehow add comment dumping, maybe check ruyaml on GitHub?
 
 from dataclasses import dataclass, field, asdict
@@ -15,8 +17,10 @@ from typing import Union
 
 from ruamel.yaml import YAML, yaml_object, comments
 
-yaml = YAML()
+__author__ = "Fabian Haberhauer"
+__copyright__ = "Copyright 2023"
 
+yaml = YAML()
 
 @yaml_object(yaml)
 @dataclass
