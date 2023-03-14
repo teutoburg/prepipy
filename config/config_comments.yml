@@ -3,6 +3,10 @@ general:
   filenames: e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
   multiprocess: int (default=0), details see cmd args
   jpeg_quality: see pillow documentation for details
+  description: False (default) or True
+  fits_dump: False (default) or True
+  partial: False (default) or True
+  create_outfolders: False (default) or True
 process:
   grey_mode: normal, lessback or moreback
   rgb_adjust: False (default) or True

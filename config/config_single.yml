@@ -5,6 +5,10 @@ general: !GeneralConfigurator
   # e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
   multiprocess: 0        # int (default=0), details see cmd args
   jpeg_quality: 95       # see pillow documentation for details
+  description: False     # False (default) or True
+  fits_dump: False       # False (default) or True
+  partial: False         # False (default) or True
+  create_outfolders: False  # False (default) or True
 process: !ProcessConfigurator
   grey_mode: normal      # normal, lessback or moreback
   rgb_adjust: False      # False (default) or True

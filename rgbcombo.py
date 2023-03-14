@@ -122,10 +122,7 @@ def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
                      config: Configurator,
-                     bands: Iterator[Band],
-                     dump_stretch: bool,
-                     description: bool,
-                     partial: bool) -> RGBPicture:
+                     bands: Iterator[Band]) -> RGBPicture:
     fname: Union[Path, str]
     fname_template = Template(config.general.filenames)
     pic = create_picture(image_name, input_path, fname_template,
@@ -141,7 +138,7 @@ def create_rgb_image(input_path: Path,
             raise FramesMisalignedError((f"Found {n_shapes} distinct shapes "
                                          f"for {len(pic.frames)} frames."))
 
-    if partial:
+    if config.general.partial:
         logger.info("Partial processing selected, normalizing and dumping...")
         for frame in pic.frames:
             # TODO: multiprocess this if possible
@@ -198,13 +195,13 @@ def create_rgb_image(input_path: Path,
                             "image %s in %s!"),
                            pic.name, cols)
 
-        if dump_stretch:
+        if config.general.fits_dump:
             _dump_rgb_channels(pic, output_path)
 
         savename = (output_path/fname).with_suffix(".jpeg")
         pic.save_pil(savename, config.general.jpeg_quality)
 
-        if description:
+        if config.general.description:
             logger.info("Creating html description file.")
             html_template_path = absolute_path/"resources/html_templates.yml"
             create_description_file(pic, savename.with_suffix(".html"),
@@ -216,11 +213,9 @@ def create_rgb_image(input_path: Path,
 
 
 def setup_rgb_single(input_path, output_path, image_name, config,
-                     bands_path=None,
-                     dump_stretch=False, description=False,
-                     partial=False) -> RGBPicture:
+                     bands_path=None) -> RGBPicture:
     start_time = perf_counter()
-    if not partial:
+    if not config.general.partial:
         _pretty_info_log("single", console_width=width)
     else:
         _pretty_info_log("partial", console_width=width)
@@ -231,8 +226,7 @@ def setup_rgb_single(input_path, output_path, image_name, config,
     bands_path = bands_path or fallback_bands_path
     bands = Band.from_yaml_file(bands_path, config.use_bands)
 
-    pic = create_rgb_image(input_path, output_path, image_name, config, bands,
-                           dump_stretch, description, partial)
+    pic = create_rgb_image(input_path, output_path, image_name, config, bands)
 
     elapsed_time = perf_counter() - start_time
     _pretty_info_log("done", time=elapsed_time, console_width=width)
@@ -317,8 +311,7 @@ def main() -> None:
 
     try:
         setup_rgb_single(args.input_path, output_path, args.image_name, config,
-                         args.bands_file, args.fits_dump, args.description,
-                         args.partial)
+                         args.bands_file)
     except Error as err:
         logger.critical("ABORTING PROCESS", exc_info=err)
         _pretty_info_log("aborted", console_width=width)

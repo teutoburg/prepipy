@@ -29,6 +29,10 @@ class GeneralConfigurator:
     # e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
     multiprocess: int = 0      # int (default=0), details see cmd args
     jpeg_quality: int = 95     # see pillow documentation for details
+    description: bool = False  # False (default) or True
+    fits_dump: bool = False    # False (default) or True
+    partial: bool = False      # False (default) or True
+    create_outfolders: bool = False  # False (default) or True
 
 
 @yaml_object(yaml)
