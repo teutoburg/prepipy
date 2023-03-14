@@ -14,7 +14,7 @@ from pathlib import Path
 from shutil import get_terminal_size
 from typing import Iterator, Union
 from time import perf_counter
-
+from dataclasses import replace, asdict, is_dataclass, fields
 
 from ruamel.yaml import YAML
 import numpy as np
@@ -216,8 +216,8 @@ def create_rgb_image(input_path: Path,
     return pic
 
 
-def setup_rgb_single(input_path, output_path, image_name,
-                     config_path=None, bands_path=None,
+def setup_rgb_single(input_path, output_path, image_name, config,
+                     bands_path=None,
                      dump_stretch=False, description=False,
                      partial=False, multi=False) -> RGBPicture:
     start_time = perf_counter()
@@ -225,13 +225,6 @@ def setup_rgb_single(input_path, output_path, image_name,
         _pretty_info_log("single", console_width=width)
     else:
         _pretty_info_log("partial", console_width=width)
-    cwd = Path.cwd()
-
-    fallback_config_path = cwd/DEFAULT_CONFIG_NAME
-    if not fallback_config_path.exists():
-        fallback_config_path = absolute_path/"config"/DEFAULT_CONFIG_NAME
-    config_path = config_path or fallback_config_path
-    config = yaml.load(config_path)
 
     fallback_bands_path = Path.cwd()/DEFAULT_BANDS_NAME
     if not fallback_bands_path.exists():
@@ -246,6 +239,40 @@ def setup_rgb_single(input_path, output_path, image_name,
     elapsed_time = perf_counter() - start_time
     _pretty_info_log("done", time=elapsed_time, console_width=width)
     return pic
+
+
+def _recursive_replace(instance, **kwargs):
+    for field in fields(instance):
+        new_val = None
+        if is_dataclass(field.type):
+            new_val = replace(getattr(instance, field.name),
+                              **{key: value for key, value in kwargs.items()
+                                 if key in [subfield.name for subfield in
+                                            fields(getattr(instance,
+                                                           field.name))]})
+        elif field.name in kwargs:
+            new_val = kwargs[field.name]
+        else:
+            continue
+        logger.debug("Replacing field %s with value %s.", field.name, new_val)
+        setattr(instance, field.name, new_val)
+    return instance
+
+
+def _config_parser(config_path=None, cmd_args=None):
+    if not (fallback_config_path := Path.cwd()/DEFAULT_CONFIG_NAME).exists():
+        fallback_config_path = absolute_path/"config"/DEFAULT_CONFIG_NAME
+    config_path = config_path or fallback_config_path
+    logger.debug("Config path = %s", config_path)
+    logger.debug(("Attempting to replace default config settings with values "
+                  "from config file."))
+    config_fromfile = _recursive_replace(Configurator(),
+                                         **asdict(yaml.load(config_path)))
+    logger.debug(("Attempting to replace default config settings with values "
+                  "from command line arguments."))
+    config = _recursive_replace(config_fromfile, **cmd_args)
+    logger.debug("Final config file is: %s", config)
+    return config
 
 
 def main() -> None:
@@ -277,7 +304,7 @@ def main() -> None:
                         help="""The name of the band config file to be used.
                         If omitted, the code will look for a file named
                         "bands.yml" in the main package folder.""")
-    parser.add_argument("-m", "--multi",
+    parser.add_argument("-m", "--multiprocess",
                         action="count",
                         default=0,
                         help="""Whether to use multiprocessing. Using this
@@ -321,13 +348,16 @@ def main() -> None:
         logging.warning("No output path specified, dumping into input folder.")
         output_path = args.input_path
 
+    config = _config_parser(cmd_args=vars(args))
+
     try:
-        setup_rgb_single(args.input_path, output_path, args.image_name,
-                         args.config_file, args.bands_file, args.fits_dump,
-                         args.description, args.partial, args.multi)
+        setup_rgb_single(args.input_path, output_path, args.image_name, config,
+                         args.bands_file, args.fits_dump, args.description,
+                         args.partial, args.multiprocess)
     except Error as err:
         logger.critical("ABORTING PROCESS", exc_info=err)
         _pretty_info_log("aborted", console_width=width)
+    # FIXME: add catching unexpected errors, eg simulate via config=None...
 
 
 def _logging_configurator():
