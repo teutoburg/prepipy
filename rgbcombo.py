@@ -104,9 +104,10 @@ def create_picture(image_name: str,
                    fname_template: Template,
                    bands: Iterator[Band],  # or Iterable??
                    n_bands: int,
-                   multi: bool = False) -> JPEGPicture:
+                   multi: int = 0) -> JPEGPicture:
     new_pic = JPEGPicture(name=image_name)
-    if multi:
+    if multi >= 2:
+        logger.info("Using multiprocessing for preprocessing of frames...")
         new_pic.add_fits_frames_mp(input_path, fname_template, bands)
     else:
         for band in tqdm(bands, total=n_bands,
@@ -123,16 +124,14 @@ def create_rgb_image(input_path: Path,
                      image_name: str,
                      config: Configurator,
                      bands: Iterator[Band],
-                     channel_combos: list,
                      dump_stretch: bool,
                      description: bool,
-                     partial: bool,
-                     multi: bool) -> RGBPicture:
+                     partial: bool) -> RGBPicture:
     fname: Union[Path, str]
     fname_template = Template(config.general.filenames)
     pic = create_picture(image_name, input_path, fname_template,
                          bands, len(config.use_bands),
-                         multi)
+                         config.general.multiprocess)
 
     if (n_shapes := len(set(frame.image.shape for frame in pic.frames))) > 1:
         if partial:
@@ -153,7 +152,8 @@ def create_rgb_image(input_path: Path,
         logger.info("Dumping of partial frames complete, aborting process.")
         return pic
 
-    for combo in tqdm(channel_combos, total=(n_combos := len(channel_combos)),
+    for combo in tqdm(config.combinations,
+                      total=(n_combos := len(config.combinations)),
                       bar_format=tqdm_fmt):
         cols: str = "".join(combo)
         fname: str = f"{pic.name}_img_{cols}"
@@ -219,7 +219,7 @@ def create_rgb_image(input_path: Path,
 def setup_rgb_single(input_path, output_path, image_name, config,
                      bands_path=None,
                      dump_stretch=False, description=False,
-                     partial=False, multi=False) -> RGBPicture:
+                     partial=False) -> RGBPicture:
     start_time = perf_counter()
     if not partial:
         _pretty_info_log("single", console_width=width)
@@ -233,8 +233,7 @@ def setup_rgb_single(input_path, output_path, image_name, config,
     bands = Band.from_yaml_file(bands_path, config.use_bands)
 
     pic = create_rgb_image(input_path, output_path, image_name, config, bands,
-                           config.combinations, dump_stretch, description,
-                           partial, multi)
+                           dump_stretch, description, partial)
 
     elapsed_time = perf_counter() - start_time
     _pretty_info_log("done", time=elapsed_time, console_width=width)
@@ -353,7 +352,7 @@ def main() -> None:
     try:
         setup_rgb_single(args.input_path, output_path, args.image_name, config,
                          args.bands_file, args.fits_dump, args.description,
-                         args.partial, args.multiprocess)
+                         args.partial)
     except Error as err:
         logger.critical("ABORTING PROCESS", exc_info=err)
         _pretty_info_log("aborted", console_width=width)

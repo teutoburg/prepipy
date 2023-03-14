@@ -8,7 +8,7 @@ Created on Sun Mar 12 17:48:17 2023
 @author: teuto
 """
 
-__version__ = "0.1"
+__version__ = "0.2"
 
 # TODO: somehow add comment dumping, maybe check ruyaml on GitHub?
 
@@ -27,8 +27,8 @@ yaml = YAML()
 class GeneralConfigurator:
     filenames: str = "${band_name}_${image_name}.fits"
     # e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
-    multiprocess: bool = False  # no (default) or yes
-    jpeg_quality: int = 95      # see pillow documentation for details
+    multiprocess: int = 0      # int (default=0), details see cmd args
+    jpeg_quality: int = 95     # see pillow documentation for details
 
 
 @yaml_object(yaml)

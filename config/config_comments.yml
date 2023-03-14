@@ -1,7 +1,7 @@
 ---
 general:
   filenames: e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
-  multiprocess: False (default) or True
+  multiprocess: int (default=0), details see cmd args
   jpeg_quality: see pillow documentation for details
 process:
   grey_mode: normal, lessback or moreback
