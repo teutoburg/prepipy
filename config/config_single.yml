@@ -17,7 +17,7 @@ process: !ProcessConfigurator
   slice: NULL            # NULL (default) or [wx, wy]
   equal_offset: .1       # float (default=.1)
   equal_norm: True       # True (default) or False
-figure: !FiguresConfigurator
+figures: !FiguresConfigurator
   titlemode: debug       # debug or pub
   include_suptitle: True # True (default) or False
   figsize: [3, 5.6]      # [col, row]
