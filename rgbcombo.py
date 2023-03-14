@@ -14,7 +14,6 @@ from pathlib import Path
 from shutil import get_terminal_size
 from typing import Iterator, Union
 from time import perf_counter
-from dataclasses import replace, asdict, is_dataclass, fields
 
 from ruamel.yaml import YAML
 import numpy as np
@@ -22,7 +21,7 @@ from tqdm import tqdm
 
 from framework import RGBPicture, JPEGPicture, Band
 from masking import get_mask
-from auxiliaries import _dump_frame, _dump_rgb_channels
+from auxiliaries import _dump_frame, _dump_rgb_channels, _config_parser
 from configuration import Configurator
 
 __author__ = "Fabian Haberhauer"
@@ -34,7 +33,7 @@ bar_width = max(width - 40, 10)
 tqdm_fmt = f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}"
 
 absolute_path = Path(__file__).resolve(strict=True).parent
-DEFAULT_CONFIG_NAME = "config_single.yml"
+# DEFAULT_CONFIG_NAME = "config_single.yml"
 DEFAULT_BANDS_NAME = "bands.yml"
 
 yaml = YAML()
@@ -240,40 +239,6 @@ def setup_rgb_single(input_path, output_path, image_name, config,
     return pic
 
 
-def _recursive_replace(instance, **kwargs):
-    for field in fields(instance):
-        new_val = None
-        if is_dataclass(field.type):
-            new_val = replace(getattr(instance, field.name),
-                              **{key: value for key, value in kwargs.items()
-                                 if key in [subfield.name for subfield in
-                                            fields(getattr(instance,
-                                                           field.name))]})
-        elif field.name in kwargs:
-            new_val = kwargs[field.name]
-        else:
-            continue
-        logger.debug("Replacing field %s with value %s.", field.name, new_val)
-        setattr(instance, field.name, new_val)
-    return instance
-
-
-def _config_parser(config_path=None, cmd_args=None):
-    if not (fallback_config_path := Path.cwd()/DEFAULT_CONFIG_NAME).exists():
-        fallback_config_path = absolute_path/"config"/DEFAULT_CONFIG_NAME
-    config_path = config_path or fallback_config_path
-    logger.debug("Config path = %s", config_path)
-    logger.debug(("Attempting to replace default config settings with values "
-                  "from config file."))
-    config_fromfile = _recursive_replace(Configurator(),
-                                         **asdict(yaml.load(config_path)))
-    logger.debug(("Attempting to replace default config settings with values "
-                  "from command line arguments."))
-    config = _recursive_replace(config_fromfile, **cmd_args)
-    logger.debug("Final config file is: %s", config)
-    return config
-
-
 def main() -> None:
     """Execute in script mode."""
     parser = argparse.ArgumentParser(prog="rgbcombo",
@@ -347,7 +312,8 @@ def main() -> None:
         logging.warning("No output path specified, dumping into input folder.")
         output_path = args.input_path
 
-    config = _config_parser(cmd_args=vars(args))
+    config = _config_parser(Configurator(), config_path=args.config_file,
+                            cmd_args=vars(args))
 
     try:
         setup_rgb_single(args.input_path, output_path, args.image_name, config,
