@@ -13,7 +13,6 @@ __version__ = "0.1"
 import logging
 from operator import itemgetter
 import copy
-import struct
 import warnings
 from dataclasses import dataclass
 from multiprocessing import Pool
@@ -1284,7 +1283,7 @@ class MPLPicture(RGBPicture):
         # axes = list(map(list, zip(*axes)))
         return fig, axes.T
 
-    def _create_title(self, 
+    def _create_title(self,
                       axis: plt.Axes,
                       combo: list[str],
                       mode: str = "debug",
