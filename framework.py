@@ -1314,7 +1314,8 @@ class MPLPicture(RGBPicture):
         assert nrows * ncols >= n_combos
         return nrows, ncols
 
-    def stuff(self, channel_combos, imgpath, grey_mode="normal",
+    def stuff(self, channel_combos, imgpath,
+              processconfig=None,
               figuresconfig=None, **kwargs) -> None:
         """DEBUG ONLY."""
         figuresconfig = figuresconfig or self.default_figuresconfig
@@ -1328,16 +1329,13 @@ class MPLPicture(RGBPicture):
             self.select_rgb_channels(combo)
             self.stretch_rgb_channels("stiff",
                                       stiff_mode="prepipy",
-                                      grey_level=grey_values[grey_mode],
+                                      grey_level=grey_values[processconfig.grey_mode],
                                       **kwargs)
 
-            if self.is_bright:
+            if (equal := self.is_bright):
                 self.equalize("median",
-                              offset=kwargs.get("equal_offset", .1),
-                              norm=kwargs.get("equal_norm", True))
-                equal = True
-            else:
-                equal = False
+                              offset=processconfig.equal_offset,
+                              norm=processconfig.equal_norm)
 
             self._create_title(column, combo, figuresconfig.titlemode, equal)
             self._display_cube(column,
@@ -1346,7 +1344,7 @@ class MPLPicture(RGBPicture):
                                rois=figuresconfig.additional_roi)
 
         if figuresconfig.include_suptitle:
-            suptitle = self.title + "\n" + self.center_coords_str
+            suptitle = f"{self.title}\n{self.center_coords_str}"
             fig.suptitle(suptitle, fontsize="xx-large")
 
         fig.tight_layout(pad=self.padding[ncols])
