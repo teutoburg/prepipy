@@ -262,6 +262,12 @@ def main() -> None:
                         help="""The name of the band config file to be used.
                         If omitted, the code will look for a file named
                         "bands.yml" in the main package folder.""")
+    parser.add_argument("-g", "--grey_mode",
+                        default="normal",
+                        choices=["normal", "lessback", "moreback"],
+                        help="""Background grey level mode, default is
+                        'normal'. If you see a monochromatic 'fog' in normal
+                        mode, setting to 'lessback' may help.""")
     parser.add_argument("-m", "--multiprocess",
                         action="count",
                         default=0,
