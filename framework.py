@@ -1246,21 +1246,19 @@ class MPLPicture(RGBPicture):
 
     def _display_cube(self,
                       axis: plt.Axes,
-                      center: bool = False,
-                      grid: bool = False,
-                      rois: Union[list, None] = None) -> None:
+                      figuresconfig: FiguresConfigurator) -> None:
         axis.imshow(self.get_rgb_cube(order="xyc"),
                     aspect="equal", origin="lower")
         axis.set_xlabel("right ascension")
         axis.set_ylabel("declination", labelpad=0)
         axis.coords[0].set_ticklabel(exclude_overlapping=True)
         axis.coords[1].set_ticklabel(exclude_overlapping=True)
-        if center:
+        if figuresconfig.center:
             self._plot_center_marker(axis)
-        if grid:
+        if figuresconfig.grid:
             self._plot_coord_grid(axis)
-        if rois is not None:
-            for radec in rois:
+        if figuresconfig.rois is not None:
+            for radec in figuresconfig.rois:
                 self._plot_roi(axis, radec)
 
     def _display_cube_histo(self, axes, cube) -> None:
@@ -1286,16 +1284,17 @@ class MPLPicture(RGBPicture):
         # axes = list(map(list, zip(*axes)))
         return fig, axes.T
 
-    def _create_title(self, axis, combo,
-                      mode: str = "debug", equalized: bool = False) -> None:
+    def _create_title(self, 
+                      axis: plt.Axes,
+                      combo: list[str],
+                      mode: str = "debug",
+                      equalized: bool = False) -> None:
+        title: str = ""
         if mode == "debug":
-            title = "R: {}, G: {}, B: {}".format(*combo)
-            title += "\n{equalized = }"
+            title = "R: {}, G: {}, B: {}".format(*combo) + f"\n{equalized = }"
         elif mode == "pub":
-            # TODO: change this to str(channel)
-            channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
-                        for chnl in self.rgb_channels)
-            title = "Red: {}\nGreen: {}\nBlue: {}".format(*channels)
+            bands = (str(chnl.band) for chnl in self.rgb_channels)
+            title = "Red: {}\nGreen: {}\nBlue: {}".format(*bands)
         else:
             raise ValueError("Title mode not understood.")
         axis.set_title(title, pad=7, fontdict={"multialignment": "left"})
@@ -1338,10 +1337,7 @@ class MPLPicture(RGBPicture):
                               norm=processconfig.equal_norm)
 
             self._create_title(column, combo, figuresconfig.titlemode, equal)
-            self._display_cube(column,
-                               center=figuresconfig.centermark,
-                               grid=figuresconfig.gridlines,
-                               rois=figuresconfig.additional_roi)
+            self._display_cube(column, figuresconfig)
 
         if figuresconfig.include_suptitle:
             suptitle = f"{self.title}\n{self.center_coords_str}"
