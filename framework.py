@@ -8,7 +8,7 @@ Experimental, may be changed at any point.
 Detailed documentation currently work in prgress.
 """
 
-__version__ = "0.1"
+__version__ = "0.2"
 
 import logging
 from operator import itemgetter
