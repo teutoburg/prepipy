@@ -332,9 +332,11 @@ def main() -> None:
         setup_rgb_single(args.input_path, output_path, args.image_name, config,
                          args.bands_file)
     except Error as err:
-        logger.critical("ABORTING PROCESS", exc_info=err)
+        logger.critical("INTERNAL ERROR, ABORTING PROCESS", exc_info=err)
         _pretty_info_log("aborted", console_width=width)
-    # FIXME: add catching unexpected errors, eg simulate via config=None...
+    except Exception as err:
+        logger.critical("UNEXPECTED ERROR, ABORTING PROCESS", exc_info=err)
+        _pretty_info_log("aborted", console_width=width)
 
 
 def _logging_configurator():
