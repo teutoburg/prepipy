@@ -8,16 +8,23 @@ Created on Sat Mar 11 21:52:05 2023
 @author: teuto
 """
 
+__version__ = "0.2"
+
 from typing import Iterator
 
-import yaml
 import numpy as np
+from ruamel.yaml import YAML
 
 from astropy.coordinates import Angle, SkyCoord
 from regions import PixCoord, SkyRegion, CircleSkyRegion, \
                     RectangleSkyRegion, PolygonSkyRegion
 
 from framework import Frame
+
+__author__ = "Fabian Haberhauer"
+__copyright__ = "Copyright 2023"
+
+yaml = YAML()
 
 def _maskparse(mask_dict) -> Iterator[SkyRegion]:
     for name, mask in mask_dict.items():
@@ -58,6 +65,6 @@ def _merge_masks(regions: list[SkyRegion], frame: Frame) -> np.ndarray:
 
 def get_mask(fname: str, frame: Frame) -> np.ndarray:
     with open(fname, "r", encoding="utf-8") as ymlfile:
-        mask_dict = yaml.load(ymlfile, yaml.SafeLoader)
+        mask_dict = None#yaml.load(ymlfile)
     mask_regions = list(_maskparse(mask_dict))
     return _merge_masks(mask_regions, frame)
