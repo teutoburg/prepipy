@@ -21,6 +21,7 @@ process: !ProcessConfigurator
   slice: NULL            # NULL (default) or [wx, wy]
   equal_offset: .1       # float (default=.1)
   equal_norm: True       # True (default) or False
+  mask_path:             # path (relative or absolute) to mask file
 figures: !FiguresConfigurator
   titlemode: debug       # debug or pub
   include_suptitle: True # True (default) or False

@@ -19,6 +19,7 @@ process:
   slice:  NULL (default) or 2-list of pixel widths [wx, wy]
   equal_offset: float (default=0.1)
   equal_norm: True (default) or False
+  mask_path: path (relative or absolute) to mask file
 figures:
   titlemode: debug or pub
   include_suptitle: True (default) or False

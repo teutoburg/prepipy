@@ -49,6 +49,7 @@ class ProcessConfigurator:
     slice: Union[list[int], None] = None  # NULL (default) or [wx, wy]
     equal_offset: float = .1   # float (default=.1)
     equal_norm: bool = True    # yes (default) or no
+    mask_path: Union[str, None] = None  # path (relative or absolute) to mask file
 
 
 @yaml_object(yaml)
