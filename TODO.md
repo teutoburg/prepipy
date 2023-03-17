@@ -18,25 +18,17 @@ Maybe change stiff algo to ufunc casting, aka:
 
 but chech if this makes any difference in execution time and memory and if it produces the same result
 
+## Changes to configuration
 
-## Possible future additions to command line args
+* If bands.yml not found &rarr; try to use those specified in config, if not &rarr; glob
 
-* Masking/regions, maybe in command line additionally to config file if that makes sense, otherwise just an option to specify the masking YAML file.
+### Possible future additions to command line args
+
 * ROI coordinate list...
 * MPL option(s), like in config file, maybe some kind of sub-parser?
 * Image cutouts, in pixel coordinates for now.
 * Specify RGB combination, if no config and bands files are given.
-* Check relative paths for config files using ./ when running from command-line, especially in Linux.
 * Command-line mode with \* in image name for multiple. image_name should be glob-able, aka nargs="?" and on Linux it should work out of the box (shell), on Windows need to glob manually, see also [this post](https://stackoverflow.com/a/71353522/8467078).
-
-## Changes to configuration
-
-Also inlude the command line arguments in the config file and vice verse.
-1. Load config file
-2. Overwrite all options from the config file which were set from the command line.
-3. Pass config object, not individual kwargs.
-
-Additionally: If bands.yml not found &rarr; try to use those specified in config, if not &rarr; glob
 
 ## Multiprocessing
 
