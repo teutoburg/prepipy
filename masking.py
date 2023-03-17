@@ -65,6 +65,6 @@ def _merge_masks(regions: list[SkyRegion], frame: Frame) -> np.ndarray:
 
 def get_mask(fname: str, frame: Frame) -> np.ndarray:
     with open(fname, "r", encoding="utf-8") as ymlfile:
-        mask_dict = None#yaml.load(ymlfile)
+        mask_dict = yaml.load(ymlfile)
     mask_regions = list(_maskparse(mask_dict))
     return _merge_masks(mask_regions, frame)
