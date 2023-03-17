@@ -157,12 +157,18 @@ def create_rgb_image(input_path: Path,
         logger.info("Processing image %s in %s.", pic.name, cols)
         pic.select_rgb_channels(combo, single=(n_combos == 1))
 
-        try:
-            mask = get_mask("masking.yml", pic.primary_frame)
-        except FileNotFoundError:
-            logger.warning("No masking file found in cwd, using no mask.")
+        if config.process.mask_path is not None:
+            try:
+                mask = get_mask(config.process.mask_path, pic.primary_frame)
+                logger.info("Mask successfully loaded.")
+            except FileNotFoundError:
+                logger.error("Masking file not found, proceed using no mask.")
+                mask = None
+        else:
+            logger.info("No masking file specified, using no mask.")
             mask = None
 
+        # TODO: put these values in a separate config file in resources
         grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
         grey_mode = config.process.grey_mode
 
@@ -298,6 +304,12 @@ def main() -> None:
                        parameters associated with those processes will be
                        ignored. This option cannot be used in combination with
                        the option -f.""")
+    parser.add_argument("--masking",
+                        # type=Path,
+                        dest="mask_path",
+                        help="""The path to the YAML file containing masking
+                        configuration, if any. May be absolute path or relative
+                        to current working directory.""")
     parser.add_argument("--create-outfolders",
                         action="store_true",
                         help="""Whether to create a separate folder in the
