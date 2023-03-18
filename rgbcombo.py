@@ -86,6 +86,9 @@ def create_description_file(picture: RGBPicture,
                              pixel_scale=str(picture.pixel_scale),
                              image_scale=str(picture.image_scale))
 
+    if not all(channel.band.meta_set for channel in picture.rgb_channels):
+        logger.warning(("Some metadata is missing for some bands. Description "
+                        "file will likely contain placeholders."))
     channels = "".join(chnls.substitute(color=color,
                                         band_str=channel.band.verbose_str)
                        for color, channel in zip(colors, picture.rgb_channels))
@@ -94,8 +97,7 @@ def create_description_file(picture: RGBPicture,
     salgo = salgo.substitute(stretchalgo=stretchalgo)
 
     outstr = templates["title"] + coord + bands + salgo + templates["footr"]
-    with filename.open("w+") as file:
-        file.write(outstr)
+    filename.write_text(outstr, "utf-8")
 
 
 def create_picture(image_name: str,

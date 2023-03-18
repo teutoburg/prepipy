@@ -14,7 +14,7 @@ import logging
 from operator import itemgetter
 import copy
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Union, Callable
@@ -119,10 +119,17 @@ class Band():
     @property
     def verbose_str(self) -> str:
         """str(self)."""
-        outstr = f"{self.printname} band at {self.wavelength} {self.unit}"
+        _printname = self.printname or self.name
+        _wavelength = self.wavelength or "?"
+        outstr = f"{_printname} band at {_wavelength} {self.unit}"
         outstr += f" taken with {self.instrument} instrument"
         outstr += f" at {self.telescope} telescope."
         return outstr
+
+    @property
+    def meta_set(self) -> bool:
+        return all((val := getattr(self, field.name)) is not None and
+                   val != "unknown" for field in fields(self))
 
     @classmethod
     def from_dict(cls, bands: dict[str, Union[str, float]]):
