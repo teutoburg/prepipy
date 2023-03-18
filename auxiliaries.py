@@ -22,6 +22,15 @@ absolute_path = Path(__file__).resolve(strict=True).parent
 DEFAULT_CONFIG_NAME = "config_single.yml"
 DEFAULT_BANDS_NAME = "bands.yml"
 
+
+class Error(Exception):
+    """Base class for exeptions in this module."""
+
+
+class EmptyUseBandsError(Error):
+    """The supplied list of use_bands is empty."""
+
+
 def _dump_frame(frame: Frame, dump_path: Path,
                 extension: str = "dump") -> None:
     dump_name: str = frame.band.name
@@ -65,20 +74,30 @@ def _config_parser(default, config_path=None, cmd_args=None):
     logger.debug("Config path = %s", config_path)
     logger.debug(("Attempting to replace default config settings with values "
                   "from config file."))
-    config_fromfile = _recursive_replace(default,
-                                         **asdict(yaml.load(config_path)))
+    try:
+        config_fromfile = yaml.load(config_path)
+        config = _recursive_replace(default, **asdict(config_fromfile))
+    except FileNotFoundError:
+        # BUG: this does not print under some logging options...
+        logger.error("Config file not found: %s", config_path)
+        logger.warning("Proceeding with default config options...")
+        config = default
     logger.debug(("Attempting to replace default config settings with values "
                   "from command line arguments."))
-    config = _recursive_replace(config_fromfile, **cmd_args)
+    config = _recursive_replace(config, **cmd_args)
+    if not config.combinations:
+        config.combinations = [cmd_args["rgb"]]
     logger.debug("Final config file is: %s", config)
     return config
 
 
-def _bands_parser(config, bands_path=None):
+def _bands_parser(use_bands, bands_path=None):
+    if not use_bands:
+        raise EmptyUseBandsError
     if not (fallback_bands_path := Path.cwd()/DEFAULT_BANDS_NAME).exists():
         fallback_bands_path = absolute_path/"config"/DEFAULT_BANDS_NAME
     bands_path = bands_path or fallback_bands_path
-    return Band.from_yaml_file(bands_path, config.use_bands)
-
+    return Band.from_yaml_file(bands_path, use_bands)
+        
 
 logger = logging.getLogger(__name__)

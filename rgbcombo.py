@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Debug module to run main functions from command line."""
 
-__version__ = "0.2"
+__version__ = "0.3"
 
 import sys
 import gc
@@ -22,7 +22,7 @@ from tqdm import tqdm
 from framework import RGBPicture, JPEGPicture, Band
 from masking import get_mask
 from auxiliaries import _dump_frame, _dump_rgb_channels, _config_parser, \
-                        _bands_parser
+                        _bands_parser, EmptyUseBandsError
 from configuration import Configurator
 
 __author__ = "Fabian Haberhauer"
@@ -226,6 +226,15 @@ def create_rgb_image(input_path: Path,
     return pic
 
 
+def _fallback_bands(combos):
+    all_combos = {band for combo in combos for band in combo}
+    bands = (Band(band) for band in all_combos)
+    logger.warning(("Bands reconstructed from main config file do not "
+                    "contain metadata. RGB combinations cannot be checked "
+                    "for correct physical order."))
+    return bands
+
+
 def setup_rgb_single(input_path, output_path, image_name, config,
                      bands_path=None) -> RGBPicture:
     start_time = perf_counter()
@@ -235,15 +244,16 @@ def setup_rgb_single(input_path, output_path, image_name, config,
         _pretty_info_log("partial", console_width=width)
 
     try:
-        bands = _bands_parser(config, bands_path)
+        bands = _bands_parser(config.use_bands, bands_path)
+    except EmptyUseBandsError:
+        logger.error(("No valid list of use_bands found in config options. "
+                      "Proceeding like bands config file does not exist..."))
+        bands = _fallback_bands(config.combinations)
     except FileNotFoundError:
         logger.error(("No bands config file found! Attempting to reconstruct "
                       "bands from main config file..."))
-        all_combos = {band for combo in config.combinations for band in combo}
-        bands = (Band(band) for band in all_combos)
-        logger.warning(("Bands reconstructed from main config file do not "
-                        "contain metadata. RGB combinations cannot be checked "
-                        "for correct physical order."))
+        bands = _fallback_bands(config.combinations)
+        
     pic = create_rgb_image(input_path, output_path, image_name, config, bands)
 
     elapsed_time = perf_counter() - start_time
@@ -322,6 +332,15 @@ def main() -> None:
                         help="""The path to the YAML file containing masking
                         configuration, if any. May be absolute path or relative
                         to current working directory.""")
+    parser.add_argument("--rgb",
+                        action="append",
+                        help="""A single RGB combination can be set by using
+                        this option multiple times (usually 3), each with the
+                        name of the band to be used (must match file name
+                        parts). This option is only meant for 'bare-bone' use
+                        if no full config file is used. If a valid config file
+                        containing band information is found, this option will
+                        be entirely ignored!""")
     parser.add_argument("--create-outfolders",
                         action="store_true",
                         help="""Whether to create a separate folder in the
