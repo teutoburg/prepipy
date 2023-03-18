@@ -20,8 +20,6 @@ but chech if this makes any difference in execution time and memory and if it pr
 
 ## Changes to configuration
 
-* If bands.yml not found &rarr; try to use those specified in config, if not &rarr; glob
-
 ### Possible future additions to command line args
 
 * ROI coordinate list...
