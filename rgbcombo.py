@@ -253,7 +253,7 @@ def setup_rgb_single(input_path, output_path, image_name, config,
         logger.error(("No bands config file found! Attempting to reconstruct "
                       "bands from main config file..."))
         bands = _fallback_bands(config.combinations)
-        
+
     pic = create_rgb_image(input_path, output_path, image_name, config, bands)
 
     elapsed_time = perf_counter() - start_time

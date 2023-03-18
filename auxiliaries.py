@@ -98,6 +98,6 @@ def _bands_parser(use_bands, bands_path=None):
         fallback_bands_path = absolute_path/"config"/DEFAULT_BANDS_NAME
     bands_path = bands_path or fallback_bands_path
     return Band.from_yaml_file(bands_path, use_bands)
-        
+
 
 logger = logging.getLogger(__name__)
