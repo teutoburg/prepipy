@@ -25,7 +25,6 @@ but chech if this makes any difference in execution time and memory and if it pr
 * ROI coordinate list...
 * MPL option(s), like in config file, maybe some kind of sub-parser?
 * Image cutouts, in pixel coordinates for now.
-* Specify RGB combination, if no config and bands files are given.
 * Command-line mode with \* in image name for multiple. image_name should be glob-able, aka nargs="?" and on Linux it should work out of the box (shell), on Windows need to glob manually, see also [this post](https://stackoverflow.com/a/71353522/8467078).
 * An option to create a template config, bands and masking file containing defaults in the CWD (and abort afterwards).
 
