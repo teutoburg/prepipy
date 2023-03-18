@@ -14,12 +14,13 @@ from dataclasses import replace, asdict, is_dataclass, fields
 
 from ruamel.yaml import YAML
 
-from framework import RGBPicture, Frame
+from framework import RGBPicture, Frame, Band
 
 yaml = YAML()
 
 absolute_path = Path(__file__).resolve(strict=True).parent
 DEFAULT_CONFIG_NAME = "config_single.yml"
+DEFAULT_BANDS_NAME = "bands.yml"
 
 def _dump_frame(frame: Frame, dump_path: Path,
                 extension: str = "dump") -> None:
@@ -71,6 +72,13 @@ def _config_parser(default, config_path=None, cmd_args=None):
     config = _recursive_replace(config_fromfile, **cmd_args)
     logger.debug("Final config file is: %s", config)
     return config
+
+
+def _bands_parser(config, bands_path=None):
+    if not (fallback_bands_path := Path.cwd()/DEFAULT_BANDS_NAME).exists():
+        fallback_bands_path = absolute_path/"config"/DEFAULT_BANDS_NAME
+    bands_path = bands_path or fallback_bands_path
+    return Band.from_yaml_file(bands_path, config.use_bands)
 
 
 logger = logging.getLogger(__name__)

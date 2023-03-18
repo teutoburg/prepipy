@@ -12,7 +12,7 @@ from logging.config import dictConfig
 from string import Template
 from pathlib import Path
 from shutil import get_terminal_size
-from typing import Iterator, Union
+from typing import Iterator
 from time import perf_counter
 
 from ruamel.yaml import YAML
@@ -21,7 +21,8 @@ from tqdm import tqdm
 
 from framework import RGBPicture, JPEGPicture, Band
 from masking import get_mask
-from auxiliaries import _dump_frame, _dump_rgb_channels, _config_parser
+from auxiliaries import _dump_frame, _dump_rgb_channels, _config_parser, \
+                        _bands_parser
 from configuration import Configurator
 
 __author__ = "Fabian Haberhauer"
@@ -33,7 +34,6 @@ bar_width = max(width - 40, 10)
 tqdm_fmt = f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}"
 
 absolute_path = Path(__file__).resolve(strict=True).parent
-# DEFAULT_CONFIG_NAME = "config_single.yml"
 DEFAULT_BANDS_NAME = "bands.yml"
 
 yaml = YAML()
@@ -118,19 +118,86 @@ def create_picture(image_name: str,
     return new_pic
 
 
+def process_combination(pic,
+                        combination, n_combos,
+                        output_path,
+                        generalconfig, processconfig):
+    cols: str = "".join(combination)
+    fname: str = f"{pic.name}_img_{cols}"
+
+    logger.info("Processing image %s in %s.", pic.name, cols)
+    pic.select_rgb_channels(combination, single=(n_combos == 1))
+
+    if processconfig.mask_path is not None:
+        try:
+            mask = get_mask(processconfig.mask_path, pic.primary_frame)
+            logger.info("Mask successfully loaded.")
+        except FileNotFoundError:
+            logger.error("Masking file not found, proceed using no mask.")
+            mask = None
+    else:
+        logger.info("No masking file specified, using no mask.")
+        mask = None
+
+    # TODO: put these values in a separate config file in resources
+    grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
+    grey_mode = processconfig.grey_mode
+
+    if grey_mode != "normal":
+        logger.info("Using grey mode \"%s\".", grey_mode)
+        fname += f"_{grey_mode}"
+    else:
+        logger.info("Using normal grey mode.")
+
+    pic.stretch_rgb_channels("stiff",
+                             stiff_mode="prepipy2",
+                             grey_level=grey_values[grey_mode],
+                             skymode=processconfig.skymode,
+                             mask=mask)
+
+    if processconfig.rgb_adjust:
+        pic.adjust_rgb(processconfig.alpha, _gma, processconfig.gamma_lum)
+        logger.info("RGB sat. adjusting after contrast and stretch.")
+
+    if pic.is_bright:
+        logger.info(("Image is bright, performing additional color space "
+                     "stretching to equalize colors."))
+        pic.equalize("mean",
+                     offset=processconfig.equal_offset,
+                     norm=processconfig.equal_norm,
+                     mask=mask)
+    else:
+        logger.warning(("No equalisation or normalisation performed on image "
+                        "%s in %s!"), pic.name, cols)
+
+    if generalconfig.fits_dump:
+        _dump_rgb_channels(pic, output_path)
+
+    savename = (output_path/fname).with_suffix(".jpeg")
+    pic.save_pil(savename, generalconfig.jpeg_quality)
+
+    if generalconfig.description:
+        logger.info("Creating html description file.")
+        html_template_path = absolute_path/"resources/html_templates.yml"
+        create_description_file(pic, savename.with_suffix(".html"),
+                                html_template_path)
+
+    logger.info("Image %s in %s done.", pic.name, cols)
+    return pic
+
+
 def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
                      config: Configurator,
                      bands: Iterator[Band]) -> RGBPicture:
-    fname: Union[Path, str]
     fname_template = Template(config.general.filenames)
     pic = create_picture(image_name, input_path, fname_template,
                          bands, len(config.use_bands),
                          config.general.multiprocess)
 
     if (n_shapes := len(set(frame.image.shape for frame in pic.frames))) > 1:
-        if partial:
+        if config.general.partial:
             logger.warning(("Found %d distinct shapes for %d frames. "
                             "Some frames are likely misaligned. Proceed "
                             "with caution!"), n_shapes, len(pic.frames))
@@ -151,69 +218,8 @@ def create_rgb_image(input_path: Path,
     for combo in tqdm(config.combinations,
                       total=(n_combos := len(config.combinations)),
                       bar_format=tqdm_fmt):
-        cols: str = "".join(combo)
-        fname: str = f"{pic.name}_img_{cols}"
-
-        logger.info("Processing image %s in %s.", pic.name, cols)
-        pic.select_rgb_channels(combo, single=(n_combos == 1))
-
-        if config.process.mask_path is not None:
-            try:
-                mask = get_mask(config.process.mask_path, pic.primary_frame)
-                logger.info("Mask successfully loaded.")
-            except FileNotFoundError:
-                logger.error("Masking file not found, proceed using no mask.")
-                mask = None
-        else:
-            logger.info("No masking file specified, using no mask.")
-            mask = None
-
-        # TODO: put these values in a separate config file in resources
-        grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
-        grey_mode = config.process.grey_mode
-
-        if grey_mode != "normal":
-            logger.info("Using grey mode \"%s\".", grey_mode)
-            fname += f"_{grey_mode}"
-        else:
-            logger.info("Using normal grey mode.")
-
-        pic.stretch_rgb_channels("stiff",
-                                 stiff_mode="prepipy2",
-                                 grey_level=grey_values[grey_mode],
-                                 skymode=config.process.skymode,
-                                 mask=mask)
-
-        if config.process.rgb_adjust:
-            pic.adjust_rgb(config.process.alpha, _gma,
-                           config.process.gamma_lum)
-            logger.info("RGB sat. adjusting after contrast and stretch.")
-
-        if pic.is_bright:
-            logger.info(("Image is bright, performing additional color space "
-                         "stretching to equalize colors."))
-            pic.equalize("mean",
-                         offset=config.process.equal_offset,
-                         norm=config.process.equal_norm,
-                         mask=mask)
-        else:
-            logger.warning(("No equalisation or normalisation performed on "
-                            "image %s in %s!"),
-                           pic.name, cols)
-
-        if config.general.fits_dump:
-            _dump_rgb_channels(pic, output_path)
-
-        savename = (output_path/fname).with_suffix(".jpeg")
-        pic.save_pil(savename, config.general.jpeg_quality)
-
-        if config.general.description:
-            logger.info("Creating html description file.")
-            html_template_path = absolute_path/"resources/html_templates.yml"
-            create_description_file(pic, savename.with_suffix(".html"),
-                                    html_template_path)
-
-        logger.info("Image %s in %s done.", pic.name, cols)
+        pic = process_combination(pic, combo, n_combos, output_path,
+                                  config.general, config.process)
     logger.info("Image %s fully completed.", pic.name)
     return pic
 
@@ -226,12 +232,7 @@ def setup_rgb_single(input_path, output_path, image_name, config,
     else:
         _pretty_info_log("partial", console_width=width)
 
-    fallback_bands_path = Path.cwd()/DEFAULT_BANDS_NAME
-    if not fallback_bands_path.exists():
-        fallback_bands_path = absolute_path/"config"/DEFAULT_BANDS_NAME
-    bands_path = bands_path or fallback_bands_path
-    bands = Band.from_yaml_file(bands_path, config.use_bands)
-
+    bands = _bands_parser(config, bands_path)
     pic = create_rgb_image(input_path, output_path, image_name, config, bands)
 
     elapsed_time = perf_counter() - start_time
