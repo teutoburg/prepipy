@@ -232,7 +232,16 @@ def setup_rgb_single(input_path, output_path, image_name, config,
     else:
         _pretty_info_log("partial", console_width=width)
 
-    bands = _bands_parser(config, bands_path)
+    try:
+        bands = _bands_parser(config, bands_path)
+    except FileNotFoundError:
+        logger.error(("No bands config file found! Attempting to reconstruct "
+                      "bands from main config file..."))
+        all_combos = {band for combo in config.combinations for band in combo}
+        bands = (Band(band) for band in all_combos)
+        logger.warning(("Bands reconstructed from main config file do not "
+                        "contain metadata. RGB combinations cannot be checked "
+                        "for correct physical order."))
     pic = create_rgb_image(input_path, output_path, image_name, config, bands)
 
     elapsed_time = perf_counter() - start_time
