@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Debug module to run main functions from command line."""
 
-__version__ = "0.3"
+__version__ = "0.4"
 
 import sys
 import gc
@@ -18,6 +18,8 @@ from time import perf_counter
 from ruamel.yaml import YAML
 import numpy as np
 from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
+from colorama import Fore, Back, Style
 
 from framework import RGBPicture, JPEGPicture, Band
 from masking import get_mask
@@ -44,6 +46,25 @@ class FramesMisalignedError(Error):
     """Different shapes found in some frames of the same picture."""
 
 
+class ColoredFormatter(logging.Formatter):
+
+    format = "%(message)s"
+    format_level = "%(levelname)s: "
+
+    FORMATS = {
+        logging.DEBUG: Fore.BLUE + format + Style.RESET_ALL,
+        logging.INFO: Fore.GREEN + format + Style.RESET_ALL,
+        logging.WARNING: Fore.CYAN + format_level + format + Style.RESET_ALL,
+        logging.ERROR: Fore.RED + Style.BRIGHT + format_level + format + Style.RESET_ALL,
+        logging.CRITICAL: Fore.YELLOW + Back.RED + Style.BRIGHT + format_level + format + Style.RESET_ALL
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+
+
 def _gma(i, g):
     return np.power(i, 1/g)
 
@@ -55,12 +76,12 @@ def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
                "done": "Processing done",
                "aborted": "Critical error occured, process could not finish."}
     msg = msg_dir.get(msg_key, "Unknown log message.")
-    logger.info(console_width * "*")
-    logger.info("{:^{width}}".format(msg, width=console_width))
+    logger.log(25, console_width * "*")
+    logger.log(25, "{:^{width}}".format(msg, width=console_width))
     if time is not None:
         msg = f"Elapsed time: {time:.2f} s"
-        logger.info("{:^{width}}".format(msg, width=console_width))
-    logger.info(console_width * "*")
+        logger.log(25, "{:^{width}}".format(msg, width=console_width))
+    logger.log(25, console_width * "*")
 
 
 def pretty_infos(function):
@@ -123,11 +144,12 @@ def create_picture(image_name: str,
         logger.info("Using multiprocessing for preprocessing of frames...")
         new_pic.add_fits_frames_mp(input_path, fname_template, bands)
     else:
-        for band in tqdm(bands, total=n_bands,
-                         bar_format=tqdm_fmt):
-            fname = fname_template.substitute(image_name=image_name,
-                                              band_name=band.name)
-            new_pic.add_frame_from_file(input_path/fname, band)
+        with logging_redirect_tqdm(loggers=[logger]):
+            for band in tqdm(bands, total=n_bands,
+                             bar_format=tqdm_fmt):
+                fname = fname_template.substitute(image_name=image_name,
+                                                  band_name=band.name)
+                new_pic.add_frame_from_file(input_path/fname, band)
     logger.info("Picture %s fully loaded.", new_pic.name)
     return new_pic
 
@@ -230,11 +252,12 @@ def create_rgb_image(input_path: Path,
         logger.info("Dumping of partial frames complete, aborting process.")
         return pic
 
-    for combo in tqdm(config.combinations,
-                      total=(n_combos := len(config.combinations)),
-                      bar_format=tqdm_fmt):
-        pic = process_combination(pic, combo, n_combos, output_path,
-                                  config.general, config.process)
+    with logging_redirect_tqdm(loggers=[logger]):
+        for combo in tqdm(config.combinations,
+                          total=(n_combos := len(config.combinations)),
+                          bar_format=tqdm_fmt):
+            pic = process_combination(pic, combo, n_combos, output_path,
+                                      config.general, config.process)
     logger.info("Image %s fully completed.", pic.name)
     return pic
 
@@ -324,7 +347,7 @@ def main() -> None:
                         help="""Whether to create a separate folder in the
                         output path for each picture, which may already exist.
                         Can only be used if -m option is set.""")
-    # TODO: add verbosity count which affects logging level...
+    # TODO: add verbosity count which affects logging level and time output...
     args = parser.parse_args()
 
     if args.output_path is not None:
@@ -352,7 +375,7 @@ def main() -> None:
 def _logging_configurator():
     main_logger = logging.getLogger("main")
     try:
-        with (absolute_path/"log/logging_config.yml").open("r") as ymlfile:
+        with (absolute_path/"config/logging_config.yml").open("r") as ymlfile:
             dictConfig(yaml.load(ymlfile))
     except FileNotFoundError as err:
         formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s",
