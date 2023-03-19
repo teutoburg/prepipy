@@ -33,7 +33,6 @@ bar_width = max(width - 40, 10)
 tqdm_fmt = f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}"
 
 absolute_path = Path(__file__).resolve(strict=True).parent
-DEFAULT_BANDS_NAME = "bands.yml"
 
 yaml = YAML()
 
