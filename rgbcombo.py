@@ -19,6 +19,7 @@ from ruamel.yaml import YAML
 import numpy as np
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
+from colorama import Fore, Back, Style
 
 from framework import RGBPicture, JPEGPicture, Band
 from masking import get_mask
@@ -45,6 +46,25 @@ class FramesMisalignedError(Error):
     """Different shapes found in some frames of the same picture."""
 
 
+class ColoredFormatter(logging.Formatter):
+
+    format = "%(message)s"
+    format_level = "%(levelname)s: "
+
+    FORMATS = {
+        logging.DEBUG: Fore.BLUE + format + Style.RESET_ALL,
+        logging.INFO: Fore.GREEN + format + Style.RESET_ALL,
+        logging.WARNING: Fore.CYAN + format_level + format + Style.RESET_ALL,
+        logging.ERROR: Fore.RED + Style.BRIGHT + format_level + format + Style.RESET_ALL,
+        logging.CRITICAL: Fore.YELLOW + Back.RED + Style.BRIGHT + format_level + format + Style.RESET_ALL
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+
+
 def _gma(i, g):
     return np.power(i, 1/g)
 
@@ -56,12 +76,12 @@ def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
                "done": "Processing done",
                "aborted": "Critical error occured, process could not finish."}
     msg = msg_dir.get(msg_key, "Unknown log message.")
-    logger.info(console_width * "*")
-    logger.info("{:^{width}}".format(msg, width=console_width))
+    logger.log(25, console_width * "*")
+    logger.log(25, "{:^{width}}".format(msg, width=console_width))
     if time is not None:
         msg = f"Elapsed time: {time:.2f} s"
-        logger.info("{:^{width}}".format(msg, width=console_width))
-    logger.info(console_width * "*")
+        logger.log(25, "{:^{width}}".format(msg, width=console_width))
+    logger.log(25, console_width * "*")
 
 
 def pretty_infos(function):
