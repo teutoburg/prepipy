@@ -23,14 +23,6 @@ DEFAULT_CONFIG_NAME = "config_single.yml"
 DEFAULT_BANDS_NAME = "bands.yml"
 
 
-class Error(Exception):
-    """Base class for exeptions in this module."""
-
-
-class EmptyUseBandsError(Error):
-    """The supplied list of use_bands is empty."""
-
-
 def _dump_frame(frame: Frame, dump_path: Path,
                 extension: str = "dump") -> None:
     dump_name: str = frame.band.name
