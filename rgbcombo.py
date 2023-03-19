@@ -347,7 +347,7 @@ def main() -> None:
                         help="""Whether to create a separate folder in the
                         output path for each picture, which may already exist.
                         Can only be used if -m option is set.""")
-    # TODO: add verbosity count which affects logging level...
+    # TODO: add verbosity count which affects logging level and time output...
     args = parser.parse_args()
 
     if args.output_path is not None:
@@ -375,7 +375,7 @@ def main() -> None:
 def _logging_configurator():
     main_logger = logging.getLogger("main")
     try:
-        with (absolute_path/"log/logging_config.yml").open("r") as ymlfile:
+        with (absolute_path/"config/logging_config.yml").open("r") as ymlfile:
             dictConfig(yaml.load(ymlfile))
     except FileNotFoundError as err:
         formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s",
