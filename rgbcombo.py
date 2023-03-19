@@ -22,6 +22,7 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 from colorama import Fore, Back, Style
 
 from framework import RGBPicture, JPEGPicture, Band
+from framework import logger as framework_logger
 from masking import get_mask
 import auxiliaries
 from configuration import Configurator
@@ -144,7 +145,7 @@ def create_picture(image_name: str,
         logger.info("Using multiprocessing for preprocessing of frames...")
         new_pic.add_fits_frames_mp(input_path, fname_template, bands)
     else:
-        with logging_redirect_tqdm(loggers=[logger]):
+        with logging_redirect_tqdm(loggers=all_loggers):
             for band in tqdm(bands, total=n_bands,
                              bar_format=tqdm_fmt):
                 fname = fname_template.substitute(image_name=image_name,
@@ -252,7 +253,7 @@ def create_rgb_image(input_path: Path,
         logger.info("Dumping of partial frames complete, aborting process.")
         return pic
 
-    with logging_redirect_tqdm(loggers=[logger]):
+    with logging_redirect_tqdm(loggers=all_loggers):
         for combo in tqdm(config.combinations,
                           total=(n_combos := len(config.combinations)),
                           bar_format=tqdm_fmt):
@@ -391,10 +392,12 @@ def _logging_configurator():
 
 
 logger = logging.getLogger(__name__)
+all_loggers = [logger, auxiliaries.logger, framework_logger]
 
 
 if __name__ == "__main__":
     logger = _logging_configurator()
+    all_loggers = [logger, auxiliaries.logger, framework_logger]
     assert logger.level == 20
 
     # root = Path("D:/Nemesis/data/HOPS")
