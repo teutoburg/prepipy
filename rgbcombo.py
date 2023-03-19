@@ -334,12 +334,11 @@ def main() -> None:
         logging.warning("No output path specified, dumping into input folder.")
         output_path = args.input_path
 
-    config = auxiliaries._config_parser(Configurator(),
-                                        config_path=args.config_file,
-                                        cmd_args=vars(args))
-    bands = auxiliaries._bands_parser(config, args.bands_file)
-
     try:
+        config = auxiliaries._config_parser(Configurator(),
+                                            config_path=args.config_file,
+                                            cmd_args=vars(args))
+        bands = auxiliaries._bands_parser(config, args.bands_file)
         create_rgb_image(args.input_path, output_path, args.image_name, config,
                          bands)
     except Error as err:
