@@ -78,7 +78,6 @@ def _config_parser(default, config_path=None, cmd_args=None):
         config_fromfile = yaml.load(config_path)
         config = _recursive_replace(default, **asdict(config_fromfile))
     except FileNotFoundError:
-        # BUG: this does not print under some logging options...
         logger.error("Config file not found: %s", config_path)
         logger.warning("Proceeding with default config options...")
         config = default
@@ -91,13 +90,30 @@ def _config_parser(default, config_path=None, cmd_args=None):
     return config
 
 
-def _bands_parser(use_bands, bands_path=None):
-    if not use_bands:
-        raise EmptyUseBandsError
+def _fallback_bands(combos):
+    all_combos = {band for combo in combos for band in combo}
+    bands = (Band(band) for band in all_combos)
+    logger.warning(("Bands reconstructed from main config file do not "
+                    "contain metadata. RGB combinations cannot be checked "
+                    "for correct physical order."))
+    return bands
+
+
+def _bands_parser(config, bands_path=None):
+    if not config.use_bands:
+        logger.error(("No valid list of use_bands found in config options. "
+                      "Proceeding like bands config file does not exist..."))
+        bands = _fallback_bands(config.combinations)
     if not (fallback_bands_path := Path.cwd()/DEFAULT_BANDS_NAME).exists():
         fallback_bands_path = absolute_path/"config"/DEFAULT_BANDS_NAME
     bands_path = bands_path or fallback_bands_path
-    return Band.from_yaml_file(bands_path, use_bands)
+    try:
+        bands = Band.from_yaml_file(bands_path, config.use_bands)
+    except FileNotFoundError:
+        logger.error(("No bands config file found! Attempting to reconstruct "
+                      "bands from main config file..."))
+        bands = auxiliaries._fallback_bands(config.combinations)
+    return bands
 
 
 logger = logging.getLogger(__name__)

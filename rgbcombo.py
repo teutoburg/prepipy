@@ -21,8 +21,7 @@ from tqdm import tqdm
 
 from framework import RGBPicture, JPEGPicture, Band
 from masking import get_mask
-from auxiliaries import _dump_frame, _dump_rgb_channels, _config_parser, \
-                        _bands_parser, EmptyUseBandsError
+import auxiliaries
 from configuration import Configurator
 
 __author__ = "Fabian Haberhauer"
@@ -173,7 +172,7 @@ def process_combination(pic,
                         "%s in %s!"), pic.name, cols)
 
     if generalconfig.fits_dump:
-        _dump_rgb_channels(pic, output_path)
+        auxiliaries._dump_rgb_channels(pic, output_path)
 
     savename = (output_path/fname).with_suffix(".jpeg")
     pic.save_pil(savename, generalconfig.jpeg_quality)
@@ -213,7 +212,7 @@ def create_rgb_image(input_path: Path,
             # TODO: multiprocess this if possible
             frame.clip(5, True)
             frame.normalize()
-            _dump_frame(frame, output_path, "partial")
+            auxiliaries._dump_frame(frame, output_path, "partial")
         logger.info("Dumping of partial frames complete, aborting process.")
         return pic
 
@@ -226,15 +225,6 @@ def create_rgb_image(input_path: Path,
     return pic
 
 
-def _fallback_bands(combos):
-    all_combos = {band for combo in combos for band in combo}
-    bands = (Band(band) for band in all_combos)
-    logger.warning(("Bands reconstructed from main config file do not "
-                    "contain metadata. RGB combinations cannot be checked "
-                    "for correct physical order."))
-    return bands
-
-
 def setup_rgb_single(input_path, output_path, image_name, config,
                      bands_path=None) -> RGBPicture:
     start_time = perf_counter()
@@ -243,17 +233,7 @@ def setup_rgb_single(input_path, output_path, image_name, config,
     else:
         _pretty_info_log("partial", console_width=width)
 
-    try:
-        bands = _bands_parser(config.use_bands, bands_path)
-    except EmptyUseBandsError:
-        logger.error(("No valid list of use_bands found in config options. "
-                      "Proceeding like bands config file does not exist..."))
-        bands = _fallback_bands(config.combinations)
-    except FileNotFoundError:
-        logger.error(("No bands config file found! Attempting to reconstruct "
-                      "bands from main config file..."))
-        bands = _fallback_bands(config.combinations)
-
+    bands = auxiliaries._bands_parser(config, bands_path)
     pic = create_rgb_image(input_path, output_path, image_name, config, bands)
 
     elapsed_time = perf_counter() - start_time
@@ -356,8 +336,9 @@ def main() -> None:
         logging.warning("No output path specified, dumping into input folder.")
         output_path = args.input_path
 
-    config = _config_parser(Configurator(), config_path=args.config_file,
-                            cmd_args=vars(args))
+    config = auxiliaries._config_parser(Configurator(),
+                                        config_path=args.config_file,
+                                        cmd_args=vars(args))
 
     try:
         setup_rgb_single(args.input_path, output_path, args.image_name, config,
