@@ -142,3 +142,6 @@ log/
 
 # Pylint
 .pylint.d/
+
+# Local config files
+local/
