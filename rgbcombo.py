@@ -64,6 +64,20 @@ def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
     logger.info(console_width * "*")
 
 
+def pretty_infos(function):
+    def wrapper(*args, **kwargs):
+        start_time = perf_counter()
+        if not args[3].general.partial:
+            _pretty_info_log("single", console_width=width)
+        else:
+            _pretty_info_log("partial", console_width=width)
+        result = function(*args, **kwargs)
+        elapsed_time = perf_counter() - start_time
+        _pretty_info_log("done", time=elapsed_time, console_width=width)
+        return result
+    return wrapper
+
+
 def create_description_file(picture: RGBPicture,
                             filename: Path,
                             template_path: Path,
@@ -187,6 +201,7 @@ def process_combination(pic,
     return pic
 
 
+@pretty_infos
 def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
@@ -222,22 +237,6 @@ def create_rgb_image(input_path: Path,
         pic = process_combination(pic, combo, n_combos, output_path,
                                   config.general, config.process)
     logger.info("Image %s fully completed.", pic.name)
-    return pic
-
-
-def setup_rgb_single(input_path, output_path, image_name, config,
-                     bands_path=None) -> RGBPicture:
-    start_time = perf_counter()
-    if not config.general.partial:
-        _pretty_info_log("single", console_width=width)
-    else:
-        _pretty_info_log("partial", console_width=width)
-
-    bands = auxiliaries._bands_parser(config, bands_path)
-    pic = create_rgb_image(input_path, output_path, image_name, config, bands)
-
-    elapsed_time = perf_counter() - start_time
-    _pretty_info_log("done", time=elapsed_time, console_width=width)
     return pic
 
 
@@ -339,10 +338,11 @@ def main() -> None:
     config = auxiliaries._config_parser(Configurator(),
                                         config_path=args.config_file,
                                         cmd_args=vars(args))
+    bands = auxiliaries._bands_parser(config, args.bands_file)
 
     try:
-        setup_rgb_single(args.input_path, output_path, args.image_name, config,
-                         args.bands_file)
+        create_rgb_image(args.input_path, output_path, args.image_name, config,
+                         bands)
     except Error as err:
         logger.critical("INTERNAL ERROR, ABORTING PROCESS", exc_info=err)
         _pretty_info_log("aborted", console_width=width)
