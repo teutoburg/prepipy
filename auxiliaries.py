@@ -61,7 +61,7 @@ def _recursive_replace(instance, **kwargs):
 
 def _config_parser(default, config_path=None, cmd_args=None):
     if not (fallback_config_path := Path.cwd()/DEFAULT_CONFIG_NAME).exists():
-        fallback_config_path = absolute_path/"config"/DEFAULT_CONFIG_NAME
+        fallback_config_path = absolute_path/"local"/DEFAULT_CONFIG_NAME
     config_path = config_path or fallback_config_path
     logger.debug("Config path = %s", config_path)
     logger.debug(("Attempting to replace default config settings with values "
@@ -97,7 +97,7 @@ def _bands_parser(config, bands_path=None):
                       "Proceeding like bands config file does not exist..."))
         bands = _fallback_bands(config.combinations)
     if not (fallback_bands_path := Path.cwd()/DEFAULT_BANDS_NAME).exists():
-        fallback_bands_path = absolute_path/"config"/DEFAULT_BANDS_NAME
+        fallback_bands_path = absolute_path/"local"/DEFAULT_BANDS_NAME
     bands_path = bands_path or fallback_bands_path
     try:
         bands = Band.from_yaml_file(bands_path, config.use_bands)
