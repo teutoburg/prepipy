@@ -8,12 +8,13 @@ Experimental, may be changed at any point.
 Detailed documentation currently work in prgress.
 """
 
+__version__ = "0.2"
+
 import logging
 from operator import itemgetter
 import copy
-import struct
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Union, Callable
@@ -32,6 +33,8 @@ from astropy.nddata import Cutout2D
 from PIL import Image
 from PIL import __version__ as pillow_version
 from tqdm import tqdm
+
+from configuration import FiguresConfigurator
 
 __author__ = "Fabian Haberhauer"
 __copyright__ = "Copyright 2023"
@@ -116,10 +119,17 @@ class Band():
     @property
     def verbose_str(self) -> str:
         """str(self)."""
-        outstr = f"{self.printname} band at {self.wavelength} {self.unit}"
+        _printname = self.printname or self.name
+        _wavelength = self.wavelength or "?"
+        outstr = f"{_printname} band at {_wavelength} {self.unit}"
         outstr += f" taken with {self.instrument} instrument"
         outstr += f" at {self.telescope} telescope."
         return outstr
+
+    @property
+    def meta_set(self) -> bool:
+        return all((val := getattr(self, field.name)) is not None and
+                   val != "unknown" for field in fields(self))
 
     @classmethod
     def from_dict(cls, bands: dict[str, Union[str, float]]):
@@ -1209,11 +1219,7 @@ class MPLPicture(RGBPicture):
 
     # padding = {1: 5, 2: 5, 4: 4}
     padding: dict[int, float] = {2: 3.5}
-    default_figurekwargs = {"titlemode": "debug",
-                            "include_suptitle": True,
-                            "figsize": (3, 5.6),
-                            "centermark": False,
-                            "gridlines": False}
+    default_figuresconfig = FiguresConfigurator()
 
     @property
     def title(self) -> str:
@@ -1246,21 +1252,19 @@ class MPLPicture(RGBPicture):
 
     def _display_cube(self,
                       axis: plt.Axes,
-                      center: bool = False,
-                      grid: bool = False,
-                      rois: Union[list, None] = None) -> None:
+                      figuresconfig: FiguresConfigurator) -> None:
         axis.imshow(self.get_rgb_cube(order="xyc"),
                     aspect="equal", origin="lower")
         axis.set_xlabel("right ascension")
         axis.set_ylabel("declination", labelpad=0)
         axis.coords[0].set_ticklabel(exclude_overlapping=True)
         axis.coords[1].set_ticklabel(exclude_overlapping=True)
-        if center:
+        if figuresconfig.center:
             self._plot_center_marker(axis)
-        if grid:
+        if figuresconfig.grid:
             self._plot_coord_grid(axis)
-        if rois is not None:
-            for radec in rois:
+        if figuresconfig.rois is not None:
+            for radec in figuresconfig.rois:
                 self._plot_roi(axis, radec)
 
     def _display_cube_histo(self, axes, cube) -> None:
@@ -1286,16 +1290,17 @@ class MPLPicture(RGBPicture):
         # axes = list(map(list, zip(*axes)))
         return fig, axes.T
 
-    def _create_title(self, axis, combo,
-                      mode: str = "debug", equalized: bool = False) -> None:
+    def _create_title(self,
+                      axis: plt.Axes,
+                      combo: list[str],
+                      mode: str = "debug",
+                      equalized: bool = False) -> None:
+        title: str = ""
         if mode == "debug":
-            title = "R: {}, G: {}, B: {}".format(*combo)
-            title += "\n{equalized = }"
+            title = "R: {}, G: {}, B: {}".format(*combo) + f"\n{equalized = }"
         elif mode == "pub":
-            # TODO: change this to str(channel)
-            channels = (f"{chnl.band.printname} ({chnl.band.wavelength} µm)"
-                        for chnl in self.rgb_channels)
-            title = "Red: {}\nGreen: {}\nBlue: {}".format(*channels)
+            bands = (str(chnl.band) for chnl in self.rgb_channels)
+            title = "Red: {}\nGreen: {}\nBlue: {}".format(*bands)
         else:
             raise ValueError("Title mode not understood.")
         axis.set_title(title, pad=7, fontdict={"multialignment": "left"})
@@ -1314,42 +1319,34 @@ class MPLPicture(RGBPicture):
         assert nrows * ncols >= n_combos
         return nrows, ncols
 
-    def stuff(self, channel_combos, imgpath, grey_mode="normal",
-              figurekwargs=None, **kwargs) -> None:
+    def stuff(self, channel_combos, imgpath,
+              processconfig=None,
+              figuresconfig=None, **kwargs) -> None:
         """DEBUG ONLY."""
-        if figurekwargs is not None:
-            figurekwargs = self.default_figurekwargs | figurekwargs
-        else:
-            figurekwargs = self.default_figurekwargs
+        figuresconfig = figuresconfig or self.default_figuresconfig
         grey_values = {"normal": .3, "lessback": .08, "moreback": .7}
 
         nrows, ncols = self._get_nrows_ncols(len(channel_combos),
-                                             figurekwargs.get("max_cols", 4))
+                                             figuresconfig.max_cols)
 
-        fig, axes = self._get_axes(nrows, ncols, figurekwargs["figsize"])
+        fig, axes = self._get_axes(nrows, ncols, figuresconfig.figsize)
         for combo, column in zip(tqdm(channel_combos), axes.flatten()):
             self.select_rgb_channels(combo)
             self.stretch_rgb_channels("stiff",
                                       stiff_mode="prepipy",
-                                      grey_level=grey_values[grey_mode],
+                                      grey_level=grey_values[processconfig.grey_mode],
                                       **kwargs)
 
-            if self.is_bright:
+            if (equal := self.is_bright):
                 self.equalize("median",
-                              offset=kwargs.get("equal_offset", .1),
-                              norm=kwargs.get("equal_norm", True))
-                equal = True
-            else:
-                equal = False
+                              offset=processconfig.equal_offset,
+                              norm=processconfig.equal_norm)
 
-            self._create_title(column, combo, figurekwargs["titlemode"], equal)
-            self._display_cube(column,
-                               center=figurekwargs["centermark"],
-                               grid=figurekwargs["gridlines"],
-                               rois=figurekwargs.get("additional_roi", None))
+            self._create_title(column, combo, figuresconfig.titlemode, equal)
+            self._display_cube(column, figuresconfig)
 
-        if figurekwargs["include_suptitle"]:
-            suptitle = self.title + "\n" + self.center_coords_str
+        if figuresconfig.include_suptitle:
+            suptitle = f"{self.title}\n{self.center_coords_str}"
             fig.suptitle(suptitle, fontsize="xx-large")
 
         fig.tight_layout(pad=self.padding[ncols])
