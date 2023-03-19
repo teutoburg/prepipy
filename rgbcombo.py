@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Debug module to run main functions from command line."""
 
-__version__ = "0.3"
+__version__ = "0.4"
 
 import sys
 import gc

@@ -1,0 +1,43 @@
+version: 1
+
+loggers:
+  main:
+    level: INFO
+    handlers: [console]
+    propagate: yes
+  framework:
+    level: INFO
+    handlers: [console]
+    propagate: yes
+  auxiliaries:
+    level: INFO
+    handlers: [console]
+    propagate: yes
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: color
+    stream: ext://sys.stdout
+  file:
+    class : logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: datetime
+    filename: log/stuff.log
+    maxBytes: 65536
+    backupCount: 3
+
+formatters:
+  simple:
+    format: '%(module)s - %(levelname)-8s - %(message)s'
+  datetime:
+    format: '%(asctime)s - %(name)s - %(module)s - %(levelname)-8s - %(message)s'
+  script:
+    format: '%(message)s'
+  color:
+    '()': rgbcombo.ColoredFormatter
+
+root:
+  level: INFO
+  handlers: [file]
