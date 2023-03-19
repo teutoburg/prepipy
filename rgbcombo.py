@@ -18,6 +18,7 @@ from time import perf_counter
 from ruamel.yaml import YAML
 import numpy as np
 from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 from framework import RGBPicture, JPEGPicture, Band
 from masking import get_mask
@@ -123,11 +124,12 @@ def create_picture(image_name: str,
         logger.info("Using multiprocessing for preprocessing of frames...")
         new_pic.add_fits_frames_mp(input_path, fname_template, bands)
     else:
-        for band in tqdm(bands, total=n_bands,
-                         bar_format=tqdm_fmt):
-            fname = fname_template.substitute(image_name=image_name,
-                                              band_name=band.name)
-            new_pic.add_frame_from_file(input_path/fname, band)
+        with logging_redirect_tqdm(loggers=[logger]):
+            for band in tqdm(bands, total=n_bands,
+                             bar_format=tqdm_fmt):
+                fname = fname_template.substitute(image_name=image_name,
+                                                  band_name=band.name)
+                new_pic.add_frame_from_file(input_path/fname, band)
     logger.info("Picture %s fully loaded.", new_pic.name)
     return new_pic
 
@@ -230,11 +232,12 @@ def create_rgb_image(input_path: Path,
         logger.info("Dumping of partial frames complete, aborting process.")
         return pic
 
-    for combo in tqdm(config.combinations,
-                      total=(n_combos := len(config.combinations)),
-                      bar_format=tqdm_fmt):
-        pic = process_combination(pic, combo, n_combos, output_path,
-                                  config.general, config.process)
+    with logging_redirect_tqdm(loggers=[logger]):
+        for combo in tqdm(config.combinations,
+                          total=(n_combos := len(config.combinations)),
+                          bar_format=tqdm_fmt):
+            pic = process_combination(pic, combo, n_combos, output_path,
+                                      config.general, config.process)
     logger.info("Image %s fully completed.", pic.name)
     return pic
 
