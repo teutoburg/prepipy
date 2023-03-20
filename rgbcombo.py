@@ -392,30 +392,12 @@ def _logging_configurator():
 
 
 logger = logging.getLogger(__name__)
-all_loggers = [logger, auxiliaries.logger, framework_logger]
 
 
 if __name__ == "__main__":
     logger = _logging_configurator()
     all_loggers = [logger, auxiliaries.logger, framework_logger]
     assert logger.level == 20
-
-    # root = Path("D:/Nemesis/data/HOPS")
-    # path = root/"HOPS_99"
-    # imgpath = root/"RGBs"
-    # target = "HOPS_99"
-
-    # root = Path("D:/Nemesis/data")
-    # path = root/"stamps/LARGE/Orion"
-    # imgpath = root/"comps_large"
-    # target = "Hand"
-
-    root = Path("C:/Users/ghost/Desktop/nemesis/outreach/regions")
-    path = root/"input"
-    imgpath = root/"JPEGS/new3"
-    target = "outreach_4"
-
-    # mypic = setup_rgb_single(path, imgpath, target, description=True)
 
     main()
     gc.collect()
