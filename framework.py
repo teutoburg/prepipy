@@ -1259,12 +1259,12 @@ class MPLPicture(RGBPicture):
         axis.set_ylabel("declination", labelpad=0)
         axis.coords[0].set_ticklabel(exclude_overlapping=True)
         axis.coords[1].set_ticklabel(exclude_overlapping=True)
-        if figuresconfig.center:
+        if figuresconfig.centermark:
             self._plot_center_marker(axis)
-        if figuresconfig.grid:
+        if figuresconfig.gridlines:
             self._plot_coord_grid(axis)
-        if figuresconfig.rois is not None:
-            for radec in figuresconfig.rois:
+        if figuresconfig.additional_roi is not None:
+            for radec in figuresconfig.additional_roi:
                 self._plot_roi(axis, radec)
 
     def _display_cube_histo(self, axes, cube) -> None:
