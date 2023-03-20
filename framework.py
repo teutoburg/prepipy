@@ -17,7 +17,7 @@ import warnings
 from dataclasses import dataclass, fields
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, Callable, Iterable
+from typing import Union, Callable, Iterable, Any
 from packaging import version
 
 import yaml
@@ -29,6 +29,7 @@ from astropy.io import fits
 from astropy import wcs
 from astropy.stats import sigma_clipped_stats as scs
 from astropy.nddata import Cutout2D
+from astropy.units import Quantity
 
 from PIL import Image
 from PIL import __version__ as pillow_version
@@ -631,7 +632,7 @@ class Picture():
         return self.frames[0].image.size
 
     @property
-    def pixel_scale(self) -> float:
+    def pixel_scale(self) -> Quantity:
         """Get pixel scale in arcsec. Read-only property."""
         scales = self.coords.proj_plane_pixel_scales()
         scale = sum(scales) / len(scales)
@@ -786,7 +787,7 @@ class Picture():
         return np.hstack(list(tesseracts))
 
     @staticmethod
-    def combine_into_tesseract(pictures: list[object]) -> np.ndarray:
+    def combine_into_tesseract(pictures: list[Any]) -> np.ndarray:
         """Combine multiple 3D picture cubes into one 4D cube."""
         return np.stack([picture.cube for picture in pictures])
 
