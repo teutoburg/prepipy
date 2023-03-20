@@ -12,7 +12,7 @@ from logging.config import dictConfig
 from string import Template
 from pathlib import Path
 from shutil import get_terminal_size
-from typing import Iterator
+from collections.abc import Iterable
 from time import perf_counter
 
 from ruamel.yaml import YAML
@@ -48,16 +48,20 @@ class FramesMisalignedError(Error):
 
 
 class ColoredFormatter(logging.Formatter):
+    """Deal with custom colored logging output to console."""
 
-    format = "%(message)s"
+    format_msg = "%(message)s"
     format_level = "%(levelname)s: "
 
     FORMATS = {
-        logging.DEBUG: Fore.BLUE + format + Style.RESET_ALL,
-        logging.INFO: Fore.GREEN + format + Style.RESET_ALL,
-        logging.WARNING: Fore.CYAN + format_level + format + Style.RESET_ALL,
-        logging.ERROR: Fore.RED + Style.BRIGHT + format_level + format + Style.RESET_ALL,
-        logging.CRITICAL: Fore.YELLOW + Back.RED + Style.BRIGHT + format_level + format + Style.RESET_ALL
+        logging.DEBUG: Fore.BLUE + format_msg + Style.RESET_ALL,
+        logging.INFO: Fore.GREEN + format_msg + Style.RESET_ALL,
+        logging.WARNING: (Fore.CYAN + format_level + format_msg
+                          + Style.RESET_ALL),
+        logging.ERROR: (Fore.RED + Style.BRIGHT + format_level + format_msg
+                        + Style.RESET_ALL),
+        logging.CRITICAL: (Fore.YELLOW + Back.RED + Style.BRIGHT + format_level
+                           + format_msg + Style.RESET_ALL)
     }
 
     def format(self, record):
@@ -77,16 +81,19 @@ def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
                "done": "Processing done",
                "aborted": "Critical error occured, process could not finish."}
     msg = msg_dir.get(msg_key, "Unknown log message.")
+    msg = f"{msg:^{console_width}}"
     logger.log(25, console_width * "*")
-    logger.log(25, "{:^{width}}".format(msg, width=console_width))
+    logger.log(25, msg)
     if time is not None:
         msg = f"Elapsed time: {time:.2f} s"
-        logger.log(25, "{:^{width}}".format(msg, width=console_width))
+        msg = f"{msg:^{console_width}}"
+        logger.log(25, msg)
     logger.log(25, console_width * "*")
 
 
 def pretty_infos(function):
-    def wrapper(*args, **kwargs):
+    """Decorator for logging start and end msg, including execution time."""
+    def _wrapper(*args, **kwargs):
         start_time = perf_counter()
         if not args[3].general.partial:
             _pretty_info_log("single", console_width=width)
@@ -96,50 +103,16 @@ def pretty_infos(function):
         elapsed_time = perf_counter() - start_time
         _pretty_info_log("done", time=elapsed_time, console_width=width)
         return result
-    return wrapper
-
-
-def create_description_file(picture: RGBPicture,
-                            filename: Path,
-                            template_path: Path,
-                            stretchalgo: str = "prepipy") -> None:
-    outstr: str = ""
-    colors: tuple[str, str, str] = ("Red", "Green", "Blue")
-    ul_margin: str = "-20px"
-
-    templates = yaml.load(template_path)
-
-    coord = Template(templates["coord"])
-    bands = Template(templates["bands"])
-    chnls = Template(templates["chnls"])
-    salgo = Template(templates["salgo"])
-
-    center = picture.coords.pixel_to_world(*picture.center)
-    center = center.to_string("hmsdms", precision=0)
-    coord = coord.substitute(center=center,
-                             pixel_scale=str(picture.pixel_scale),
-                             image_scale=str(picture.image_scale))
-
-    if not all(channel.band.meta_set for channel in picture.rgb_channels):
-        logger.warning(("Some metadata is missing for some bands. Description "
-                        "file will likely contain placeholders."))
-    channels = "".join(chnls.substitute(color=color,
-                                        band_str=channel.band.verbose_str)
-                       for color, channel in zip(colors, picture.rgb_channels))
-    bands = bands.substitute(channels=channels, ul_margin=ul_margin)
-
-    salgo = salgo.substitute(stretchalgo=stretchalgo)
-
-    outstr = templates["title"] + coord + bands + salgo + templates["footr"]
-    filename.write_text(outstr, "utf-8")
+    return _wrapper
 
 
 def create_picture(image_name: str,
                    input_path: Path,
                    fname_template: Template,
-                   bands: Iterator[Band],  # or Iterable??
+                   bands: Iterable[Band],
                    n_bands: int,
                    multi: int = 0) -> JPEGPicture:
+    """Factory for JPEGPicture class."""
     new_pic = JPEGPicture(name=image_name)
     if multi >= 2:
         logger.info("Using multiprocessing for preprocessing of frames...")
@@ -156,14 +129,15 @@ def create_picture(image_name: str,
 
 
 def process_combination(pic,
-                        combination, n_combos,
+                        combination, single,
                         output_path,
                         generalconfig, processconfig):
+    """Process one RGB combination for a picture instance."""
     cols: str = "".join(combination)
     fname: str = f"{pic.name}_img_{cols}"
 
     logger.info("Processing image %s in %s.", pic.name, cols)
-    pic.select_rgb_channels(combination, single=(n_combos == 1))
+    pic.select_rgb_channels(combination, single=single)
 
     if processconfig.mask_path is not None:
         try:
@@ -216,8 +190,8 @@ def process_combination(pic,
     if generalconfig.description:
         logger.info("Creating html description file.")
         html_template_path = absolute_path/"resources/html_templates.yml"
-        create_description_file(pic, savename.with_suffix(".html"),
-                                html_template_path)
+        auxiliaries.create_description_file(pic, savename.with_suffix(".html"),
+                                            html_template_path)
 
     logger.info("Image %s in %s done.", pic.name, cols)
     return pic
@@ -228,7 +202,35 @@ def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
                      config: Configurator,
-                     bands: Iterator[Band]) -> RGBPicture:
+                     bands: Iterable[Band]) -> RGBPicture:
+    """
+    Create, process, stretch, combine and save RGB image(s).
+
+    Parameters
+    ----------
+    input_path : Path
+        Folder containing raw monochromatic input images.
+    output_path : Path
+        Folder in which to save the final image(s).
+    image_name : str
+        Common part of the input images file names, also output name stem.
+    config : Configurator
+        Configurator instance containing config options.
+    bands : Iterable[Band]
+        Iterable of Band instances.
+
+    Raises
+    ------
+    FramesMisalignedError
+        Raised if frames are of different shapes.
+
+    Returns
+    -------
+    RGBPicture
+        Final instance of RGBPicture (subclass), containing the last processed
+        RGB combination as rgb_channels.
+
+    """
     fname_template = Template(config.general.filenames)
     pic = create_picture(image_name, input_path, fname_template,
                          bands, len(config.use_bands),
@@ -257,7 +259,7 @@ def create_rgb_image(input_path: Path,
         for combo in tqdm(config.combinations,
                           total=(n_combos := len(config.combinations)),
                           bar_format=tqdm_fmt):
-            pic = process_combination(pic, combo, n_combos, output_path,
+            pic = process_combination(pic, combo, n_combos == 1, output_path,
                                       config.general, config.process)
     logger.info("Image %s fully completed.", pic.name)
     return pic

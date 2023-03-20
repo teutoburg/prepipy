@@ -11,6 +11,7 @@ Created on Sat Mar 11 22:03:21 2023
 import logging
 from pathlib import Path
 from dataclasses import replace, asdict, is_dataclass, fields
+from string import Template
 
 from ruamel.yaml import YAML
 
@@ -104,8 +105,71 @@ def _bands_parser(config, bands_path=None):
     except FileNotFoundError:
         logger.error(("No bands config file found! Attempting to reconstruct "
                       "bands from main config file..."))
-        bands = auxiliaries._fallback_bands(config.combinations)
+        bands = _fallback_bands(config.combinations)
     return bands
+
+
+def create_description_file(picture: RGBPicture,
+                            filename: Path,
+                            template_path: Path,
+                            stretchalgo: str = "prepipy") -> None:
+    """
+    Create html description file containing information about the picture.
+
+    Description is created based on a template stored in `template_path`, which
+    is expected to be a YAML file contain the following entries: title, coord,
+    bands, chnls, salgo, footr. Information in the description includes: pixel
+    scale, image size in angular units, picture center coordinates, bands used
+    as colour channels including metadata for the bands (if available). Also
+    included in the default template is the stretching algorithm used (can be
+    set via `stretchalgo`) and a line about the ability to open the picture in
+    Aladin, including a link.
+
+    Parameters
+    ----------
+    picture : RGBPicture or subclass
+        Any instance of RGBPicture or a subclass containing valid RGB channels.
+    filename : Path
+        Name and path of the file to which the html is written.
+    template_path : Path
+        Path to the template file.
+    stretchalgo : str, optional
+        Algorithm mentioned in the standard template. The default is "prepipy".
+
+    Returns
+    -------
+    None.
+
+    """
+    outstr: str = ""
+    colors: tuple[str, str, str] = ("Red", "Green", "Blue")
+    ul_margin: str = "-20px"
+
+    templates = yaml.load(template_path)
+
+    coord = Template(templates["coord"])
+    bands = Template(templates["bands"])
+    chnls = Template(templates["chnls"])
+    salgo = Template(templates["salgo"])
+
+    center = picture.coords.pixel_to_world(*picture.center)
+    center = center.to_string("hmsdms", precision=0)
+    coord = coord.substitute(center=center,
+                             pixel_scale=str(picture.pixel_scale),
+                             image_scale=str(picture.image_scale))
+
+    if not all(channel.band.meta_set for channel in picture.rgb_channels):
+        logger.warning(("Some metadata is missing for some bands. Description "
+                        "file will likely contain placeholders."))
+    channels = "".join(chnls.substitute(color=color,
+                                        band_str=channel.band.verbose_str)
+                       for color, channel in zip(colors, picture.rgb_channels))
+    bands = bands.substitute(channels=channels, ul_margin=ul_margin)
+
+    salgo = salgo.substitute(stretchalgo=stretchalgo)
+
+    outstr = templates["title"] + coord + bands + salgo + templates["footr"]
+    filename.write_text(outstr, "utf-8")
 
 
 logger = logging.getLogger(__name__)
