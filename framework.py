@@ -17,7 +17,7 @@ import warnings
 from dataclasses import dataclass, fields
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, Callable
+from typing import Union, Callable, Iterable
 from packaging import version
 
 import yaml
@@ -131,12 +131,6 @@ class Band():
         return all((val := getattr(self, field.name)) is not None and
                    val != "unknown" for field in fields(self))
 
-    @classmethod
-    def from_dict(cls, bands: dict[str, Union[str, float]]):
-        """Create incstance from list of dictionaries (default factory)."""
-        for band in bands:
-            yield cls(**band)
-
     @staticmethod
     def parse_yaml_dict(yaml_dict: dict[str, Union[str, float]]
                         ) -> dict[str, Union[str, float]]:
@@ -184,7 +178,7 @@ class Band():
             yaml_dict = yaml.load(ymlfile, yaml.SafeLoader)
         yaml_dict = cls.parse_yaml_dict(yaml_dict)
         bands = cls.filter_used_bands(yaml_dict, use_bands)
-        return cls.from_dict(bands)
+        return (cls(**band) for band in bands)
 
 
 class Frame():
