@@ -132,8 +132,8 @@ class Band():
                    val != "unknown" for field in fields(self))
 
     @staticmethod
-    def parse_yaml_dict(yaml_dict: dict[str, Union[str, float]]
-                        ) -> dict[str, Union[str, float]]:
+    def parse_yaml_dict(yaml_dict: dict[str, dict[str, Union[str, float]]]
+                        ) -> dict[str, dict[str, Union[str, float]]]:
         """Parse shortened names as used in YAML to correct parameter names."""
         for printname, band in yaml_dict.items():
             band["instrument"] = band.pop("inst")
@@ -143,13 +143,13 @@ class Band():
         return yaml_dict
 
     @staticmethod
-    def filter_used_bands(yaml_dict: dict[str, Union[str, float]],
+    def filter_used_bands(yaml_dict: dict[str, dict[str, Union[str, float]]],
                           use_bands: Union[list[str], None] = None
-                          ) -> list[str]:
+                          ) -> tuple[dict[str, Union[str, float]], ...]:
         """Either use specified or all, anyway turn into tuple w/o names."""
         if use_bands is not None:
             return itemgetter(*use_bands)(yaml_dict)
-        return yaml_dict.values()
+        return tuple(yaml_dict.values())
 
     @classmethod
     def from_yaml_file(cls, filepath: Path,
