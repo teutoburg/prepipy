@@ -147,26 +147,26 @@ def create_description_file(picture: RGBPicture,
 
     templates = yaml.load(template_path)
 
-    coord = Template(templates["coord"])
-    bands = Template(templates["bands"])
-    chnls = Template(templates["chnls"])
-    salgo = Template(templates["salgo"])
+    coord_tmplt = Template(templates["coord"])
+    bands_tmplt = Template(templates["bands"])
+    chnls_tmplt = Template(templates["chnls"])
+    salgo_tmplt = Template(templates["salgo"])
 
     center = picture.coords.pixel_to_world(*picture.center)
     center = center.to_string("hmsdms", precision=0)
-    coord = coord.substitute(center=center,
-                             pixel_scale=str(picture.pixel_scale),
-                             image_scale=str(picture.image_scale))
+    coord = coord_tmplt.substitute(center=center,
+                                   pixel_scale=str(picture.pixel_scale),
+                                   image_scale=str(picture.image_scale))
 
     if not all(channel.band.meta_set for channel in picture.rgb_channels):
         logger.warning(("Some metadata is missing for some bands. Description "
                         "file will likely contain placeholders."))
-    channels = "".join(chnls.substitute(color=color,
-                                        band_str=channel.band.verbose_str)
+    chnls = "".join(chnls_tmplt.substitute(color=color,
+                                           band_str=channel.band.verbose_str)
                        for color, channel in zip(colors, picture.rgb_channels))
-    bands = bands.substitute(channels=channels, ul_margin=ul_margin)
+    bands = bands_tmplt.substitute(channels=chnls, ul_margin=ul_margin)
 
-    salgo = salgo.substitute(stretchalgo=stretchalgo)
+    salgo = salgo_tmplt.substitute(stretchalgo=stretchalgo)
 
     outstr = templates["title"] + coord + bands + salgo + templates["footr"]
     filename.write_text(outstr, "utf-8")
