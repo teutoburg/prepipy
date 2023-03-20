@@ -472,7 +472,7 @@ class Frame():
                     grey_level: float = .3,
                     **kwargs) -> None:
         """Stretch frame based on modified STIFF algorithm."""
-        logger.info("stretching %s band", self.band.name)
+        logger.info("Stretching %s band", self.band.name)
         data_range, _ = self.normalize()
 
         i_min, i_max = self._min_inten(gamma_lum, grey_level, **kwargs)
