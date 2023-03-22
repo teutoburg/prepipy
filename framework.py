@@ -17,7 +17,8 @@ import warnings
 from dataclasses import dataclass, fields
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, Callable, Any
+from typing import Union, Any, TypedDict, Optional
+from collections.abc import Callable
 from packaging import version
 
 import yaml
@@ -60,6 +61,15 @@ absolute_path = Path(__file__).resolve(strict=True).parent
 with (absolute_path/"resources/stiff_params.yml").open("r") as ymlfile:
     STIFF_PARAMS = yaml.load(ymlfile, yaml.SafeLoader)
 
+BandDict = TypedDict("BandDict", {"name": str,
+                                  "printname": str,
+                                  "wavelength": float,
+                                  "instrument": str,
+                                  "telescope": str,
+                                  "wave": float,
+                                  "inst": str,
+                                  "tele": str},
+                     total=False)
 
 class Error(Exception):
     """Base class for exeptions in this module."""
@@ -135,8 +145,7 @@ class Band():
                    val != "unknown" for field in fields(self))
 
     @staticmethod
-    def parse_yaml_dict(yaml_dict: dict[str, dict[str, Union[str, float]]]
-                        ) -> dict[str, dict[str, Union[str, float]]]:
+    def parse_yaml_dict(yaml_dict: dict[str, BandDict]) -> dict[str, BandDict]:
         """Parse shortened names as used in YAML to correct parameter names."""
         for printname, band in yaml_dict.items():
             band["instrument"] = band.pop("inst")
@@ -146,9 +155,9 @@ class Band():
         return yaml_dict
 
     @staticmethod
-    def filter_used_bands(yaml_dict: dict[str, dict[str, Union[str, float]]],
-                          use_bands: Union[list[str], None] = None
-                          ) -> tuple[dict[str, Union[str, float]], ...]:
+    def filter_used_bands(yaml_dict: dict[str, BandDict],
+                          use_bands: Optional[list[str]] = None
+                          ) -> tuple[BandDict, ...]:
         """Either use specified or all, anyway turn into tuple w/o names."""
         if use_bands is not None:
             return itemgetter(*use_bands)(yaml_dict)
@@ -156,7 +165,7 @@ class Band():
 
     @classmethod
     def from_yaml_file(cls, filepath: Path,
-                       use_bands: Union[list[str], None] = None):
+                       use_bands: Optional[list[str]] = None):
         """
         Yield newly created instances from YAML config file entries.
 
@@ -178,7 +187,7 @@ class Band():
 
         """
         with filepath.open("r") as ymlfile:
-            yaml_dict = yaml.load(ymlfile, yaml.SafeLoader)
+            yaml_dict: dict[str, BandDict] = yaml.load(ymlfile, yaml.SafeLoader)
         yaml_dict = cls.parse_yaml_dict(yaml_dict)
         bands = cls.filter_used_bands(yaml_dict, use_bands)
         return (cls(**band) for band in bands)
@@ -824,7 +833,7 @@ class Picture():
                 raise ValueError("stretch mode not understood")
 
     def _update_header(self) -> fits.Header:
-        hdr = self.frames[0].header
+        hdr: fits.Header = self.frames[0].header
         # TODO: properly do this ^^
         hdr.update(AUTHOR="Fabian Haberhauer")
         return hdr
