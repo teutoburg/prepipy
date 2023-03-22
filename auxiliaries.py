@@ -46,11 +46,12 @@ def _recursive_replace(instance, **kwargs):
     for field in fields(instance):
         new_val = None
         if is_dataclass(field.type):
-            new_val = replace(getattr(instance, field.name),
-                              **{key: value for key, value in kwargs.items()
-                                 if key in [subfield.name for subfield in
-                                            fields(getattr(instance,
-                                                           field.name))]})
+            sfl = [subfield.name for subfield in fields(getattr(instance, field.name))]
+            try:
+                subkwargs = {key: value for key, value in kwargs[field.name].items() if key in sfl}
+            except KeyError:
+                subkwargs = {key: value for key, value in kwargs.items() if key in sfl}
+            new_val = replace(getattr(instance, field.name), **subkwargs)
         elif field.name in kwargs:
             new_val = kwargs[field.name]
         else:
@@ -69,6 +70,7 @@ def _config_parser(default, config_path=None, cmd_args=None):
                   "from config file."))
     try:
         config_fromfile = yaml.load(config_path)
+        logger.debug("Loaded from config file: %s", config_fromfile)
         config = _recursive_replace(default, **asdict(config_fromfile))
     except FileNotFoundError:
         logger.error("Config file not found: %s", config_path)
