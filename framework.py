@@ -17,12 +17,11 @@ import warnings
 from dataclasses import dataclass, fields
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, Callable, Iterable, Any
+from typing import Union, Callable, Any
 from packaging import version
 
 import yaml
 import numpy as np
-# import numpy.typing as npt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -131,6 +130,7 @@ class Band():
 
     @property
     def meta_set(self) -> bool:
+        """True if all metadata is set, False if placeholders are included."""
         return all((val := getattr(self, field.name)) is not None and
                    val != "unknown" for field in fields(self))
 
@@ -575,8 +575,21 @@ class Frame():
         clp_mean, _, clp_stddev = self.clipped_stats(self.image)
         return np.exp((1 - (clp_mean + clp_stddev)) / 2)
 
-    def save_fits(self, fname) -> None:
-        fits.writeto(fname, self.image, self.header)
+    def save_fits(self, filename: Union[Path, str]) -> None:
+        """
+        Save processes frame as fits file.
+
+        Parameters
+        ----------
+        filename : Path or str
+            Filename to save to.
+
+        Returns
+        -------
+        None.
+
+        """
+        fits.writeto(filename, self.image, self.header)
 
 
 class Picture():

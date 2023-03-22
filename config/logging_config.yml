@@ -25,7 +25,7 @@ handlers:
     level: DEBUG
     formatter: datetime
     filename: log/stuff.log
-    maxBytes: 4096
+    maxBytes: 32768
     backupCount: 5
 
 formatters:
