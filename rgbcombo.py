@@ -266,7 +266,7 @@ def create_rgb_image(input_path: Path,
             frame.clip(5, True)
             frame.normalize()
             auxiliaries._dump_frame(frame, output_path, "partial")
-        logger.info("Dumping of partial frames complete, aborting process.")
+        logger.info("Dumping of partial frames complete, exiting process.")
         return pic
 
     with logging_redirect_tqdm(loggers=all_loggers):

@@ -22,11 +22,11 @@ handlers:
     stream: ext://sys.stdout
   file:
     class : logging.handlers.RotatingFileHandler
-    level: INFO
+    level: DEBUG
     formatter: datetime
     filename: log/stuff.log
-    maxBytes: 65536
-    backupCount: 3
+    maxBytes: 4096
+    backupCount: 5
 
 formatters:
   simple:
