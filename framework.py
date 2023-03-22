@@ -214,12 +214,12 @@ class Frame():
 
     @classmethod
     def from_fits(cls, filename: Union[Path, str],
-                  band: Band, **kwargs):
+                  band: Band, hdu: int = 0, **kwargs):
         """Create instance from fits file."""
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", ".*datfix.*")
             with fits.open(filename) as file:
-                return cls(file[0].data, band, file[0].header, **kwargs)
+                return cls(file[hdu].data, band, file[hdu].header, **kwargs)
 
     @property
     def band(self) -> Band:

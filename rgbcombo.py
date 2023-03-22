@@ -111,7 +111,8 @@ def create_picture(image_name: str,
                    fname_template: Template,
                    bands: Iterable[Band],
                    n_bands: int,
-                   multi: int = 0) -> JPEGPicture:
+                   multi: int = 0,
+                   hdu: int = 0) -> JPEGPicture:
     """Factory for JPEGPicture class."""
     new_pic = JPEGPicture(name=image_name)
     if multi >= 2:
@@ -123,7 +124,7 @@ def create_picture(image_name: str,
                              bar_format=tqdm_fmt):
                 fname = fname_template.substitute(image_name=image_name,
                                                   band_name=band.name)
-                new_pic.add_frame_from_file(input_path/fname, band)
+                new_pic.add_frame_from_file(input_path/fname, band, hdu=hdu)
     logger.info("Picture %s fully loaded.", new_pic.name)
     return new_pic
 
@@ -234,7 +235,7 @@ def create_rgb_image(input_path: Path,
     fname_template = Template(config.general.filenames)
     pic = create_picture(image_name, input_path, fname_template,
                          bands, len(config.use_bands),
-                         config.general.multiprocess)
+                         config.general.multiprocess, config.general.hdu)
 
     if (n_shapes := len(set(frame.image.shape for frame in pic.frames))) > 1:
         if config.general.partial:

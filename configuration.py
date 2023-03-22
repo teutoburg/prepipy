@@ -33,6 +33,7 @@ class GeneralConfigurator:
     fits_dump: bool = False    # False (default) or True
     partial: bool = False      # False (default) or True
     create_outfolders: bool = False  # False (default) or True
+    hdu: int = 0               # FITS HDU where image data is stored
 
 
 @yaml_object(yaml)
