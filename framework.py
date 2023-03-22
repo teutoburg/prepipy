@@ -233,6 +233,13 @@ class Frame():
         """Get shape of image array as pretty string."""
         return f"{self.image.shape[0]} x {self.image.shape[1]}"
 
+    @property
+    def pixel_scale(self) -> Quantity:
+        """Get pixel scale in arcsec. Read-only property."""
+        scales = self.coords.proj_plane_pixel_scales()
+        scale = sum(scales) / len(scales)
+        return scale.to("arcsec").round(3)
+
     def camera_aperture(self, center: tuple[int, int], radius: float) -> None:
         """
         Remove vignetting effects.

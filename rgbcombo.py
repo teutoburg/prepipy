@@ -47,6 +47,10 @@ class FramesMisalignedError(Error):
     """Different shapes found in some frames of the same picture."""
 
 
+class PixelScaleError(Error):
+    """Different pixel scales found in some frames of the same picture."""
+
+
 class ColoredFormatter(logging.Formatter):
     """Deal with custom colored logging output to console."""
 
@@ -245,6 +249,15 @@ def create_rgb_image(input_path: Path,
         else:
             raise FramesMisalignedError((f"Found {n_shapes} distinct shapes "
                                          f"for {len(pic.frames)} frames."))
+
+    if (n_scales := len(set(frame.pixel_scale for frame in pic.frames))) > 1:
+        if config.general.partial:
+            logger.warning(("Found %d distinct pixel scales for %d frames. "
+                            "Partial images can still be produced. Proceed "
+                            "with caution!"), n_scales, len(pic.frames))
+        else:
+            raise PixelScaleError((f"Found {n_scales} distinct pixel scales "
+                                   f"for {len(pic.frames)} frames."))
 
     if config.general.partial:
         logger.info("Partial processing selected, normalizing and dumping...")
