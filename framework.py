@@ -22,6 +22,7 @@ from packaging import version
 
 import yaml
 import numpy as np
+# import numpy.typing as npt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -30,6 +31,7 @@ from astropy import wcs
 from astropy.stats import sigma_clipped_stats as scs
 from astropy.nddata import Cutout2D
 from astropy.units import Quantity
+from astropy.visualization.wcsaxes import WCSAxes
 
 from PIL import Image
 from PIL import __version__ as pillow_version
@@ -39,7 +41,7 @@ from configuration import FiguresConfigurator
 
 __author__ = "Fabian Haberhauer"
 __copyright__ = "Copyright 2023"
-__credits__ = []  # add Stiff, mostly
+__credits__ = [("Bertin, E.", "2012ASPC..461..263B")]
 __license__ = "GPL"
 __maintainer__ = "Fabian Haberhauer"
 __email__ = "fabian.haberhauer@univie.ac.at"
@@ -943,7 +945,7 @@ class RGBPicture(Picture):
             raise ValueError("RGB accepts up to 4 channels.")
 
         frames_dict = dict(((f.band.name, f) for f in self.frames))
-        copyfct = copy.copy if single else copy.deepcopy
+        copyfct: Callable[[Any], Any] = copy.copy if single else copy.deepcopy
         self.rgb_channels = list(map(copyfct,
                                      (itemgetter(*bands)(frames_dict))))
 
@@ -1231,7 +1233,7 @@ class MPLPicture(RGBPicture):
         axis.grid(color="w", ls=":")
 
     @staticmethod
-    def _plot_roi(axis: plt.Axes,
+    def _plot_roi(axis: WCSAxes,
                   radec,
                   size: int = 50) -> None:
         axis.scatter(*radec,
@@ -1241,12 +1243,12 @@ class MPLPicture(RGBPicture):
         # axis.scatter_coord(self.center_coords)
 
     def _plot_center_marker(self,
-                            axis: plt.Axes,
+                            axis: WCSAxes,
                             size: int = 50) -> None:
         self._plot_roi(axis, self.center_coords, size)
 
     def _display_cube(self,
-                      axis: plt.Axes,
+                      axis: WCSAxes,
                       figuresconfig: FiguresConfigurator) -> None:
         axis.imshow(self.get_rgb_cube(order="xyc"),
                     aspect="equal", origin="lower")
@@ -1270,7 +1272,7 @@ class MPLPicture(RGBPicture):
                   nrows: int,
                   ncols: int,
                   figsize_mult: tuple[int]
-                  ) -> tuple[plt.Figure, plt.Axes]:
+                  ) -> tuple[plt.Figure, np.ndarray]:
         figsize = tuple(n * s for n, s in zip((ncols, nrows), figsize_mult))
         fig = plt.figure(figsize=figsize, dpi=300)
         # subfigs = fig.subfigures(nrows)
@@ -1286,7 +1288,7 @@ class MPLPicture(RGBPicture):
         return fig, axes.T
 
     def _create_title(self,
-                      axis: plt.Axes,
+                      axis: WCSAxes,
                       combo: list[str],
                       mode: str = "debug",
                       equalized: bool = False) -> None:
