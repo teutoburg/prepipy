@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Debug module to run main functions from command line."""
 
-__version__ = "0.4"
+__version__ = "0.5"
 
 import sys
 import gc
@@ -391,6 +391,7 @@ def main() -> None:
 
 def _logging_configurator():
     main_logger = logging.getLogger("main")
+    (Path.cwd()/"log").mkdir(exist_ok=True)
     try:
         with (absolute_path/"config/logging_config.yml").open("r") as ymlfile:
             dictConfig(yaml.load(ymlfile))
