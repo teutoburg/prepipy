@@ -50,7 +50,7 @@ def _maskparse(mask_dict) -> Iterator[SkyRegion]:
 def _region_mask(region: SkyRegion, frame: Frame) -> np.ndarray:
     pixels = PixCoord(*np.indices(frame.image.shape))
     pixel_region = region.to_pixel(frame.coords)
-    cont = pixel_region.contains(pixels).T
+    cont = pixel_region.contains(pixels)#.T
     return cont
 
 
