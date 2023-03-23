@@ -62,15 +62,8 @@ absolute_path = Path(__file__).resolve(strict=True).parent
 with (absolute_path/"resources/stiff_params.yml").open("r") as ymlfile:
     STIFF_PARAMS = yaml.load(ymlfile)
 
-BandDict = TypedDict("BandDict", {"name": str,
-                                  "printname": str,
-                                  "wavelength": float,
-                                  "instrument": str,
-                                  "telescope": str,
-                                  "wave": float,
-                                  "inst": str,
-                                  "tele": str},
-                     total=False)
+BandDict = TypedDict("BandDict", {"name": str, "wave": float,
+                                  "inst": str, "tele": str})
 
 class Error(Exception):
     """Base class for exeptions in this module."""
