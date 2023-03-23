@@ -133,9 +133,9 @@ class Band():
         """str(self)."""
         _printname = self.printname or self.name
         _wavelength = self.wavelength or "?"
-        outstr = f"{_printname} band at {_wavelength} {self.unit}"
-        outstr += f" taken with {self.instrument} instrument"
-        outstr += f" at {self.telescope} telescope."
+        outstr = (f"{_printname} band at {_wavelength} {self.unit}"
+                  f" taken with {self.instrument} instrument"
+                  f" at {self.telescope} telescope.")
         return outstr
 
     @property
