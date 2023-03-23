@@ -145,24 +145,15 @@ class Band():
         return all((val := getattr(self, field.name)) is not None and
                    val != "unknown" for field in fields(self))
 
-    @staticmethod
-    def parse_yaml_dict(yaml_dict: dict[str, BandDict]) -> dict[str, BandDict]:
+    @classmethod
+    def from_yaml_dict_item(cls, printname: str, band_dict: BandDict):
         """Parse shortened names as used in YAML to correct parameter names."""
-        for printname, band in yaml_dict.items():
-            band["instrument"] = band.pop("inst")
-            band["telescope"] = band.pop("tele")
-            band["wavelength"] = band.pop("wave")
-            band["printname"] = printname.replace("_", " ")
-        return yaml_dict
-
-    @staticmethod
-    def filter_used_bands(yaml_dict: dict[str, BandDict],
-                          use_bands: Optional[list[str]] = None
-                          ) -> tuple[BandDict, ...]:
-        """Either use specified or all, anyway turn into tuple w/o names."""
-        if use_bands is not None:
-            return itemgetter(*use_bands)(yaml_dict)
-        return tuple(yaml_dict.values())
+        new_band = cls(name=band_dict["name"],
+                       printname=printname.replace("_", " "),
+                       wavelength=band_dict.get("wave", None),
+                       instrument=band_dict.get("inst", "unknown"),
+                       telescope=band_dict.get("tele", "unknown"))
+        return new_band
 
     @classmethod
     def from_yaml_file(cls, filepath: Path,
@@ -188,9 +179,12 @@ class Band():
 
         """
         yaml_dict: dict[str, BandDict] = yaml.load(filepath)
-        yaml_dict = cls.parse_yaml_dict(yaml_dict)
-        bands = cls.filter_used_bands(yaml_dict, use_bands)
-        return (cls(**band) for band in bands)
+        for printname, band in yaml_dict.items():
+            if use_bands is not None:
+                if printname in use_bands:
+                    yield cls.from_yaml_dict_item(printname, band)
+            else:
+                yield cls.from_yaml_dict_item(printname, band)
 
 
 class Frame():
