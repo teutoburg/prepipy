@@ -21,7 +21,6 @@ from typing import Union, Any, TypedDict, Optional
 from collections.abc import Callable
 from packaging import version
 
-import yaml
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -33,6 +32,7 @@ from astropy.nddata import Cutout2D
 from astropy.units import Quantity
 from astropy.visualization.wcsaxes import WCSAxes
 
+from ruamel.yaml import YAML
 from PIL import Image
 from PIL import __version__ as pillow_version
 from tqdm import tqdm
@@ -56,10 +56,11 @@ mpl.rcParams["font.family"] = ["Computer Modern", "serif"]
 
 TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 logger = logging.getLogger(__name__)
+yaml = YAML()
 
 absolute_path = Path(__file__).resolve(strict=True).parent
 with (absolute_path/"resources/stiff_params.yml").open("r") as ymlfile:
-    STIFF_PARAMS = yaml.load(ymlfile, yaml.SafeLoader)
+    STIFF_PARAMS = yaml.load(ymlfile)
 
 BandDict = TypedDict("BandDict", {"name": str,
                                   "printname": str,
@@ -186,8 +187,7 @@ class Band():
             Generator object containing the new Band instances.
 
         """
-        with filepath.open("r") as ymlfile:
-            yaml_dict: dict[str, BandDict] = yaml.load(ymlfile, yaml.SafeLoader)
+        yaml_dict: dict[str, BandDict] = yaml.load(filepath)
         yaml_dict = cls.parse_yaml_dict(yaml_dict)
         bands = cls.filter_used_bands(yaml_dict, use_bands)
         return (cls(**band) for band in bands)
