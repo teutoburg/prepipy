@@ -237,6 +237,7 @@ def create_rgb_image(input_path: Path,
 
     """
     fname_template = Template(config.general.filenames)
+    # BUG: if use_bands is None, len() throws an error
     pic = create_picture(image_name, input_path, fname_template,
                          bands, len(config.use_bands),
                          config.general.multiprocess, config.general.hdu)
