@@ -105,12 +105,7 @@ def _fallback_bands(combos: list[list[str]]) -> Iterable[Band]:
 
 def _bands_parser(config: Configurator,
                   bands_path: Optional[Path] = None) -> Iterable[Band]:
-    if not config.use_bands:
-        logger.error(("No valid list of use_bands found in config options. "
-                      "Proceeding like bands config file does not exist..."))
-        # FIXME: is this really what we want? Bands factory assumes to just let
-        #        all bands through is use_bands is None...
-        bands = _fallback_bands(config.combinations)
+    use_bands = config.use_bands or None
     if not (fallback_bands_path := Path.cwd()/DEFAULT_BANDS_NAME).exists():
         fallback_bands_path = absolute_path/"local"/DEFAULT_BANDS_NAME
     bands_path = bands_path or fallback_bands_path
