@@ -51,6 +51,10 @@ class PixelScaleError(Error):
     """Different pixel scales found in some frames of the same picture."""
 
 
+class BandNotFoundError(Error):
+    """The frame for the selected band could not be found."""
+
+
 class ColoredFormatter(logging.Formatter):
     """Deal with custom colored logging output to console."""
 
@@ -152,7 +156,11 @@ def process_combination(pic,
     fname: str = f"{pic.name}_img_{cols}"
 
     logger.info("Processing image %s in %s.", pic.name, cols)
-    pic.select_rgb_channels(combination, single=single)
+    try:
+        pic.select_rgb_channels(combination, single=single)
+    except KeyError as err:
+        logger.error("No frame for band %s found.", err)
+        raise BandNotFoundError(str(err))
 
     if processconfig.mask_path is not None:
         try:
@@ -285,8 +293,13 @@ def create_rgb_image(input_path: Path,
         for combo in tqdm(config.combinations,
                           total=(n_combos := len(config.combinations)),
                           bar_format=tqdm_fmt):
-            pic = process_combination(pic, combo, n_combos == 1, output_path,
-                                      config.general, config.process)
+            try:
+                pic = process_combination(pic, combo, n_combos == 1,
+                                          output_path,
+                                          config.general, config.process)
+            except BandNotFoundError as err:
+                logger.warning("Skipping combination %s.", "".join(combo))
+                continue
     logger.info("Image %s fully completed.", pic.name)
     return pic
 
