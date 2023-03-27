@@ -123,11 +123,23 @@ def create_picture(image_name: str,
         new_pic.add_fits_frames_mp(input_path, fname_template, bands)
     else:
         with logging_redirect_tqdm(loggers=all_loggers):
+            failings = False
             for band in tqdm(bands, bar_format=tqdm_fmt):
                 fname = fname_template.substitute(image_name=image_name,
                                                   band_name=band.name)
-                new_pic.add_frame_from_file(input_path/fname, band, hdu=hdu)
-    logger.info("Picture %s fully loaded.", new_pic.name)
+                try:
+                    new_pic.add_frame_from_file(input_path/fname,
+                                                band, hdu=hdu)
+                except FileNotFoundError:
+                    logger.error("No input file found for %s band", band.name)
+                    failings = True
+                    continue
+    if not failings:
+        logger.info("Picture %s successfully loaded.", new_pic.name)
+    else:
+        logger.warning(("Some frames could not be loaded for picture %s. "
+                        "Any combinations containing those will be skipped."),
+                       new_pic.name)
     return new_pic
 
 

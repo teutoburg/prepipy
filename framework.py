@@ -172,12 +172,16 @@ class Band():
 
         """
         yaml_dict: dict[str, BandDict] = yaml.load(filepath)
-        for printname, band in yaml_dict.items():
-            if use_bands is not None:
+        if use_bands is None:
+            logger.warning(("No valid list of use_bands found in config "
+                            "options. Using all bands specified in bands "
+                            "config file."))
+            for printname, band in yaml_dict.items():
+                yield cls.from_yaml_dict_item(printname, band)
+        else:    
+            for printname, band in yaml_dict.items():
                 if printname in use_bands:
                     yield cls.from_yaml_dict_item(printname, band)
-            else:
-                yield cls.from_yaml_dict_item(printname, band)
 
 
 class Frame():
