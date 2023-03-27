@@ -12,7 +12,7 @@ from logging.config import dictConfig
 from string import Template
 from pathlib import Path
 from shutil import get_terminal_size
-from collections.abc import Iterable
+from collections.abc import Iterable, Collection
 from time import perf_counter
 
 from ruamel.yaml import YAML
@@ -113,8 +113,7 @@ def pretty_infos(function):
 def create_picture(image_name: str,
                    input_path: Path,
                    fname_template: Template,
-                   bands: Iterable[Band],
-                   n_bands: int,
+                   bands: Collection[Band],
                    multi: int = 0,
                    hdu: int = 0) -> JPEGPicture:
     """Factory for JPEGPicture class."""
@@ -124,8 +123,7 @@ def create_picture(image_name: str,
         new_pic.add_fits_frames_mp(input_path, fname_template, bands)
     else:
         with logging_redirect_tqdm(loggers=all_loggers):
-            for band in tqdm(bands, total=n_bands,
-                             bar_format=tqdm_fmt):
+            for band in tqdm(bands, bar_format=tqdm_fmt):
                 fname = fname_template.substitute(image_name=image_name,
                                                   band_name=band.name)
                 new_pic.add_frame_from_file(input_path/fname, band, hdu=hdu)
@@ -207,7 +205,7 @@ def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
                      config: Configurator,
-                     bands: Iterable[Band]) -> RGBPicture:
+                     bands: Collection[Band]) -> RGBPicture:
     """
     Create, process, stretch, combine and save RGB image(s).
 
@@ -238,8 +236,7 @@ def create_rgb_image(input_path: Path,
     """
     fname_template = Template(config.general.filenames)
     # BUG: if use_bands is None, len() throws an error
-    pic = create_picture(image_name, input_path, fname_template,
-                         bands, len(config.use_bands),
+    pic = create_picture(image_name, input_path, fname_template, bands,
                          config.general.multiprocess, config.general.hdu)
 
     if (n_shapes := len(set(frame.image.shape for frame in pic.frames))) > 1:
@@ -379,7 +376,7 @@ def main() -> None:
         config = auxiliaries._config_parser(Configurator(),
                                             config_path=args.config_file,
                                             cmd_args=vars(args))
-        bands = auxiliaries._bands_parser(config, args.bands_file)
+        bands = list(auxiliaries._bands_parser(config, args.bands_file))
         create_rgb_image(args.input_path, output_path, args.image_name, config,
                          bands)
     except Error as err:
