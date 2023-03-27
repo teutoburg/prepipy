@@ -134,7 +134,7 @@ def create_picture(image_name: str,
 def process_combination(pic,
                         combination, single,
                         output_path,
-                        generalconfig, processconfig):
+                        generalconfig, processconfig) -> RGBPicture:
     """Process one RGB combination for a picture instance."""
     cols: str = "".join(combination)
     fname: str = f"{pic.name}_img_{cols}"
@@ -236,8 +236,10 @@ def create_rgb_image(input_path: Path,
     """
     fname_template = Template(config.general.filenames)
     # BUG: if use_bands is None, len() throws an error
-    pic = create_picture(image_name, input_path, fname_template, bands,
-                         config.general.multiprocess, config.general.hdu)
+    pic: RGBPicture = create_picture(image_name, input_path,
+                                     fname_template, bands,
+                                     config.general.multiprocess,
+                                     config.general.hdu)
 
     if (n_shapes := len(set(frame.image.shape for frame in pic.frames))) > 1:
         if config.general.partial:
@@ -387,7 +389,7 @@ def main() -> None:
         _pretty_info_log("aborted", console_width=width)
 
 
-def _logging_configurator():
+def _logging_configurator() -> logging.Logger:
     main_logger = logging.getLogger("main")
     (Path.cwd()/"log").mkdir(exist_ok=True)
     try:
