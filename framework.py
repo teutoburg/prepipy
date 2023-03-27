@@ -921,6 +921,26 @@ class RGBPicture(Picture):
 
         return rgb
 
+    @staticmethod
+    def is_physical(redder: Frame, bluer: Frame) -> bool:
+        physical = False
+        if (redder.band.wavelength is not None and
+            bluer.band.wavelength is not None):
+            physical = redder.band.wavelength >= bluer.band.wavelength
+        return physical
+
+    @staticmethod
+    def all_physical(combination: list[Frame]) -> bool:
+        return all(RGBPicture.is_physical(redder, bluer)
+                   for redder, bluer in zip(combination, combination[1:]))
+
+    def check_physical(self) -> None:
+        if all(channel.band.wavelength is not None
+               for channel in self.rgb_channels):
+            if not self.all_physical(self.rgb_channels):
+                raise UserWarning(("Not all RGB channels are ordered by "
+                                   "descending wavelength."))
+
     def select_rgb_channels(self,
                             bands: list[str],
                             single: bool = False) -> list[Frame]:
@@ -964,14 +984,7 @@ class RGBPicture(Picture):
         copyfct: Callable[[Any], Any] = copy.copy if single else copy.deepcopy
         self.rgb_channels = list(map(copyfct,
                                      (itemgetter(*bands)(frames_dict))))
-
-        if all(channel.band.wavelength is not None
-               for channel in self.rgb_channels):
-            if not all(redder.band.wavelength >= bluer.band.wavelength
-                       for redder, bluer
-                       in zip(self.rgb_channels, self.rgb_channels[1:])):
-                raise UserWarning(("Not all RGB channels are ordered by "
-                                   "descending wavelength."))
+        self.check_physical()
 
         _chnames = [channel.band.name for channel in self.rgb_channels]
         logger.info("Successfully selected %i RGB channels: %s",
