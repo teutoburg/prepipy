@@ -848,7 +848,7 @@ class RGBPicture(Picture):
     def __init__(self, name: Optional[str] = None):
         super().__init__(name)
 
-        self.params = None
+        self.params: dict[str, bool] = {}
         self.rgb_channels: list[Frame] = []
 
     def __str__(self) -> str:
@@ -999,7 +999,7 @@ class RGBPicture(Picture):
         if weights is not None:
             if isinstance(weights, str):
                 if weights == "auto":
-                    clipped_stats = [chnl.clipped_stats()
+                    clipped_stats = [chnl.clipped_stats(chnl.image)
                                      for chnl in self.rgb_channels]
                     _, clp_medians, _ = zip(*clipped_stats)
                     weights = [1/median for median in clp_medians]
@@ -1020,7 +1020,7 @@ class RGBPicture(Picture):
             else:
                 raise ValueError("stretch mode not understood")
 
-    def autoparam(self):
+    def autoparam(self) -> tuple[float, float, float, float]:
         """Experimental automatic parameter estimation."""
         gamma = 2.25
         gamma_lum = 1.5
@@ -1029,7 +1029,8 @@ class RGBPicture(Picture):
 
         self.params = {"gma": False, "alph": False}
 
-        clipped_stats = [chnl.clipped_stats() for chnl in self.rgb_channels]
+        clipped_stats = [channel.clipped_stats(channel.image)
+                         for channel in self.rgb_channels]
         _, clp_medians, clp_stddevs = zip(*clipped_stats)
 
         if not any((np.array(clp_medians) / np.mean(clp_medians)) > 2.):
@@ -1198,7 +1199,7 @@ class RGBPicture(Picture):
                (1. - cmyk[2] / cmyk_scale) * scale_factor
                )
         # TODO: make this an array, incl. mult. w/ sc.fc. afterwards etc.
-        return rgb
+        return np.array(rgb)
 
 
 class JPEGPicture(RGBPicture):
