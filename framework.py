@@ -112,8 +112,8 @@ class Band():
     """
 
     name: str
-    printname: Union[str, None] = None
-    wavelength: Union[float, None] = None
+    printname: Optional[str] = None
+    wavelength: Optional[float] = None
     unit: str = "&mu;m"
     instrument: str = "unknown"
     telescope: str = "unknown"
@@ -412,7 +412,7 @@ class Frame():
         return mean, median, stddev
 
     @staticmethod
-    def _apply_mask(data, mask):
+    def _apply_mask(data: np.ndarray, mask: np.ndarray) -> np.ndarray:
         if mask is None:
             return data
 
@@ -591,7 +591,7 @@ class Frame():
 class Picture():
     """n/a."""
 
-    def __init__(self, name: str = None):
+    def __init__(self, name: Optional[str] = None):
         self.frames: list[Frame] = list()
         self.name = name
 
@@ -742,7 +742,7 @@ class Picture():
         self.frames = framelist
 
     @classmethod
-    def from_cube(cls, cube, bands=None):
+    def from_cube(cls, cube: np.ndarray, bands=None):
         """
         Create Picture instance from 3D array (data cube) and list of bands.
 
@@ -845,7 +845,7 @@ class Picture():
 class RGBPicture(Picture):
     """Picture subclass for ccombining frames to colour image (RGB)."""
 
-    def __init__(self, name: str = None):
+    def __init__(self, name: Optional[str] = None):
         super().__init__(name)
 
         self.params = None

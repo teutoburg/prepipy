@@ -12,16 +12,23 @@ import logging
 from pathlib import Path
 from dataclasses import replace, asdict, is_dataclass, fields
 from string import Template
+from typing import Iterable, Optional, ClassVar, Dict, Protocol, TypeVar
 
 from ruamel.yaml import YAML
 
 from framework import RGBPicture, Frame, Band
+from configuration import Configurator
 
 yaml = YAML()
 
 absolute_path = Path(__file__).resolve(strict=True).parent
 DEFAULT_CONFIG_NAME = "config_single.yml"
 DEFAULT_BANDS_NAME = "bands.yml"
+
+class DataclassType(Protocol):
+    __dataclass_fields__: ClassVar[Dict]
+
+_D = TypeVar("_D", bound=DataclassType)
 
 
 def _dump_frame(frame: Frame, dump_path: Path,
@@ -42,7 +49,7 @@ def _dump_rgb_channels(picture: RGBPicture, dump_path: Path) -> None:
     logger.info("Done dumping all channels for this combination.")
 
 
-def _recursive_replace(instance, **kwargs):
+def _recursive_replace(instance: _D, **kwargs) -> _D:
     for field in fields(instance):
         new_val = None
         if is_dataclass(field.type):
@@ -61,7 +68,9 @@ def _recursive_replace(instance, **kwargs):
     return instance
 
 
-def _config_parser(default, config_path=None, cmd_args=None):
+def _config_parser(default: Configurator,
+                   config_path: Optional[Path] = None,
+                   cmd_args=None) -> Configurator:
     if not (fallback_config_path := Path.cwd()/DEFAULT_CONFIG_NAME).exists():
         fallback_config_path = absolute_path/"local"/DEFAULT_CONFIG_NAME
     config_path = config_path or fallback_config_path
@@ -85,7 +94,7 @@ def _config_parser(default, config_path=None, cmd_args=None):
     return config
 
 
-def _fallback_bands(combos):
+def _fallback_bands(combos: list[list[str]]) -> Iterable[Band]:
     all_combos = {band for combo in combos for band in combo}
     bands = (Band(band) for band in all_combos)
     logger.warning(("Bands reconstructed from main config file do not "
@@ -94,7 +103,8 @@ def _fallback_bands(combos):
     return bands
 
 
-def _bands_parser(config, bands_path=None):
+def _bands_parser(config: Configurator,
+                  bands_path: Optional[Path] = None) -> Iterable[Band]:
     if not config.use_bands:
         logger.error(("No valid list of use_bands found in config options. "
                       "Proceeding like bands config file does not exist..."))
