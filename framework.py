@@ -22,6 +22,7 @@ from collections.abc import Callable
 from packaging import version
 
 import numpy as np
+import numpy.typing as npt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -187,8 +188,9 @@ class Band():
 class Frame():
     """n/a."""
 
-    def __init__(self, image: np.ndarray, band: Band,
+    def __init__(self, image: npt.ArrayLike, band: Band,
                  header: Union[fits.Header, None] = None, **kwargs):
+        image = np.asarray(image)
         self.header = header
         self.coords = wcs.WCS(self.header)
 
@@ -402,9 +404,9 @@ class Frame():
         return data_range, data_max
 
     @staticmethod
-    def clipped_stats(data: np.ndarray) -> tuple[float, float, float]:
+    def clipped_stats(data: npt.ArrayLike) -> tuple[float, float, float]:
         """Calculate sigma-clipped image statistics."""
-        data = data.flatten()
+        data = np.asarray(data).flatten()
         mean, median, stddev = np.mean(data), np.median(data), np.std(data)
         logger.debug("%10s:  mean=%-8.4fmedian=%-8.4fstddev=%.4f", "unclipped",
                      mean, median, stddev)
@@ -689,7 +691,7 @@ class Picture():
 
         return band
 
-    def add_frame(self, image: np.ndarray, band: Band,
+    def add_frame(self, image: npt.ArrayLike, band: Band,
                   header: Union[fits.Header, None] = None, **kwargs) -> Frame:
         """Add new frame to Picture using image array and band information."""
         band = self._check_band(band)
@@ -746,7 +748,7 @@ class Picture():
         self.frames = framelist
 
     @classmethod
-    def from_cube(cls, cube: np.ndarray, bands=None):
+    def from_cube(cls, cube: npt.ArrayLike, bands=None):
         """
         Create Picture instance from 3D array (data cube) and list of bands.
 
@@ -774,6 +776,7 @@ class Picture():
             New instance of Picture including the created frames.
 
         """
+        cube = np.asarray(cube)
         if not cube.ndim == 3:
             raise TypeError("A \"cube\" must have exactly 3 dimensions!")
 
@@ -798,7 +801,7 @@ class Picture():
         return new_picture
 
     @classmethod
-    def from_tesseract(cls, tesseract: np.ndarray, bands=None):
+    def from_tesseract(cls, tesseract: npt.ArrayLike, bands=None):
         """Generate individual pictures from 4D cube."""
         for cube in tesseract:
             yield cls.from_cube(cube, bands)
