@@ -17,7 +17,7 @@ import warnings
 from dataclasses import dataclass, fields
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, Any, TypedDict, Optional
+from typing import Union, Any, TypedDict, Optional, TypeVar
 from collections.abc import Callable
 from packaging import version
 
@@ -65,6 +65,8 @@ with (absolute_path/"resources/stiff_params.yml").open("r") as ymlfile:
 
 BandDict = TypedDict("BandDict", {"name": str, "wave": float,
                                   "inst": str, "tele": str})
+_N = TypeVar("_N")
+_D = TypeVar("_D")
 
 class Error(Exception):
     """Base class for exeptions in this module."""
@@ -189,7 +191,7 @@ class Frame():
     """n/a."""
 
     def __init__(self, image: npt.ArrayLike, band: Band,
-                 header: Union[fits.Header, None] = None, **kwargs):
+                 header: Union[fits.Header, None] = None, **kwargs: Any):
         image = np.asarray(image)
         self.header = header
         self.coords = wcs.WCS(self.header)
@@ -218,7 +220,7 @@ class Frame():
 
     @classmethod
     def from_fits(cls, filename: Union[Path, str],
-                  band: Band, hdu: int = 0, **kwargs):
+                  band: Band, hdu: int = 0, **kwargs: Any):
         """Create instance from fits file."""
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", ".*datfix.*")
@@ -297,7 +299,7 @@ class Frame():
     def clip_and_nan(self,
                      clip: float = 10,
                      nanmode: str = "max",
-                     **kwargs) -> None:
+                     **kwargs: Any) -> None:
         """
         Perform upper sigma clipping and replace NANs.
 
@@ -418,7 +420,8 @@ class Frame():
         return mean, median, stddev
 
     @staticmethod
-    def _apply_mask(data: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    def _apply_mask(data: np.ndarray[_N, _D], mask: np.ndarray[_N, _D]
+                    ) -> np.ndarray[_N, _D]:
         if mask is None:
             return data
 
@@ -439,7 +442,7 @@ class Frame():
                    sky_mode: str = "median",
                    max_mode: str = "quantile",
                    mask=None,
-                   **kwargs) -> tuple[float, float]:
+                   **kwargs: Any) -> tuple[float, float]:
         data = self._apply_mask(self.image, mask)
 
         if sky_mode == "quantile":
@@ -476,7 +479,7 @@ class Frame():
     def setup_stiff(self,
                     gamma_lum: float = 1.,
                     grey_level: float = .3,
-                    **kwargs) -> None:
+                    **kwargs: Any) -> None:
         """Stretch frame based on modified STIFF algorithm."""
         logger.info("Stretching %s band", self.band.name)
         data_range, _ = self.normalize()
@@ -497,7 +500,7 @@ class Frame():
         logger.info("%s band done", self.band.name)
 
     @staticmethod
-    def stiff_stretch_legacy(image, stiff_mode: str = "power-law", **kwargs):
+    def stiff_stretch_legacy(image, stiff_mode: str = "power-law", **kwargs: Any):
         """Stretch frame based on STIFF algorithm."""
         logger.warning(("The method stiff_stretch_legacy is deprecated and "
                         "only included for backwards compatibility."))
@@ -531,7 +534,7 @@ class Frame():
 
     @staticmethod
     def stiff_stretch(image, stiff_mode: str = "power-law",
-                      **kwargs) -> np.ndarray:
+                      **kwargs: Any) -> npt.NDArray[Any]:
         """Stretch frame based on STIFF algorithm."""
         def_kwargs = STIFF_PARAMS
         if stiff_mode not in def_kwargs:
@@ -551,7 +554,7 @@ class Frame():
         return image_s
 
     @staticmethod
-    def autostretch_light(image, **kwargs) -> np.ndarray:
+    def autostretch_light(image, **kwargs: Any) -> npt.NDArray[Any]:
         """Stretch frame based on autostretch algorithm."""
         # logger.info("Begin autostretch for \"%s\" band", self.band.name)
         # maximum = self.normalize()
@@ -622,7 +625,7 @@ class Picture():
         return self.frames[0]
 
     @property
-    def image(self) -> np.ndarray:
+    def image(self) -> npt.NDArray[Any]:
         """Get combined image of all frames. Read-only property."""
         # HACK: actually combine all images!
         return self.primary_frame.image
@@ -675,7 +678,7 @@ class Picture():
         return " by ".join(str(along) for along in size)
 
     @property
-    def cube(self) -> np.ndarray:
+    def cube(self) -> npt.NDArray[Any]:
         """Stack images from all frames in one 3D cube. Read-only property."""
         return np.stack([frame.image for frame in self.frames])
 
@@ -692,7 +695,7 @@ class Picture():
         return band
 
     def add_frame(self, image: npt.ArrayLike, band: Band,
-                  header: Union[fits.Header, None] = None, **kwargs) -> Frame:
+                  header: Union[fits.Header, None] = None, **kwargs: Any) -> Frame:
         """Add new frame to Picture using image array and band information."""
         band = self._check_band(band)
         new_frame = Frame(image, band, header, **kwargs)
@@ -703,7 +706,7 @@ class Picture():
                             filename: Path,
                             band: Union[Band, str],
                             framelist: Union[list, None] = None,
-                            **kwargs) -> Frame:
+                            **kwargs: Any) -> Frame:
         """
         Add a new frame to the picture. File must be in FITS format.
 
@@ -807,16 +810,16 @@ class Picture():
             yield cls.from_cube(cube, bands)
 
     @staticmethod
-    def merge_tesseracts(tesseracts) -> np.ndarray:
+    def merge_tesseracts(tesseracts) -> npt.NDArray[Any]:
         """Merge multiple 4D image cubes into a single one."""
         return np.hstack(list(tesseracts))
 
     @staticmethod
-    def combine_into_tesseract(pictures: list[Any]) -> np.ndarray:
+    def combine_into_tesseract(pictures: list[Any]) -> npt.NDArray[Any]:
         """Combine multiple 3D picture cubes into one 4D cube."""
         return np.stack([picture.cube for picture in pictures])
 
-    def stretch_frames(self, mode: str = "stiff", **kwargs) -> None:
+    def stretch_frames(self, mode: str = "stiff", **kwargs: Any) -> None:
         """Perform stretching on frames."""
         for frame in self.frames:
             if mode == "auto-light":
@@ -834,7 +837,7 @@ class Picture():
 
     def create_supercontrast(self,
                              feature: str,
-                             background: str) -> np.ndarray:
+                             background: str) -> npt.NDArray[Any]:
         """TBA."""
         # BUG: this misses stretching and equalisation (what about norm?)
         logger.info(("Creating supercontrast image from %s as feature band "
@@ -878,7 +881,7 @@ class RGBPicture(Picture):
         return any(np.median(c.image) > .2 for c in self.rgb_channels)
 
     def get_rgb_cube(self, mode: str = "0-1",
-                     order: str = "cxy") -> np.ndarray:
+                     order: str = "cxy") -> npt.NDArray[Any]:
         """
         Stack images from RGB channels into one 3D cube, normalized to 1.
 
@@ -1017,7 +1020,7 @@ class RGBPicture(Picture):
                 channel.image *= weight
 
     def stretch_rgb_channels(self, mode: str = "stiff",
-                             **kwargs):
+                             **kwargs: Any):
         """Perform stretching on frames which are selected as rgb channels."""
         for frame in self.rgb_channels:
             if mode == "auto-light":
@@ -1053,7 +1056,7 @@ class RGBPicture(Picture):
 
         return gamma, gamma_lum, alpha, grey_level
 
-    def luminance(self) -> np.ndarray:
+    def luminance(self) -> npt.NDArray[Any]:
         """Calculate the luminance of the RGB image.
 
         The luminance is defined as the (pixel-wise) sum of all colour channels
@@ -1068,7 +1071,7 @@ class RGBPicture(Picture):
                                                     np.ndarray],
                           gamma_lum: float,
                           lum: np.ndarray,
-                          **kwargs) -> None:
+                          **kwargs: Any) -> None:
         """Perform luminance stretching.
 
         The luminance stretch function `stretch_fkt_lum` is expected to take
@@ -1088,7 +1091,7 @@ class RGBPicture(Picture):
                    alpha: float,
                    stretch_fkt_lum: Callable[[np.ndarray, float], np.ndarray],
                    gamma_lum: float,
-                   **kwargs):
+                   **kwargs: Any):
         """
         Adjust colour saturation of 3-channel (R, G, B) image.
 
@@ -1197,7 +1200,7 @@ class RGBPicture(Picture):
 
     @staticmethod
     def cmyk_to_rgb(cmyk: np.ndarray, cmyk_scale: float,
-                    rgb_scale: int = 255) -> np.ndarray:
+                    rgb_scale: int = 255) -> npt.NDArray[Any]:
         """Convert CMYK to RGB."""
         cmyk_scale = float(cmyk_scale)
         scale_factor = rgb_scale * (1. - cmyk[3] / cmyk_scale)
@@ -1355,7 +1358,7 @@ class MPLPicture(RGBPicture):
 
     def stuff(self, channel_combos, imgpath,
               processconfig=None,
-              figuresconfig=None, **kwargs) -> None:
+              figuresconfig=None, **kwargs: Any) -> None:
         """DEBUG ONLY."""
         figuresconfig = figuresconfig or self.default_figuresconfig
         grey_values = {"normal": .3, "lessback": .08, "moreback": .7}
