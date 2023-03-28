@@ -12,7 +12,7 @@ from logging.config import dictConfig
 from string import Template
 from pathlib import Path
 from shutil import get_terminal_size
-from collections.abc import Iterable
+from collections.abc import Iterable, Collection
 from time import perf_counter
 
 from ruamel.yaml import YAML
@@ -49,6 +49,10 @@ class FramesMisalignedError(Error):
 
 class PixelScaleError(Error):
     """Different pixel scales found in some frames of the same picture."""
+
+
+class BandNotFoundError(Error):
+    """The frame for the selected band could not be found."""
 
 
 class ColoredFormatter(logging.Formatter):
@@ -113,8 +117,7 @@ def pretty_infos(function):
 def create_picture(image_name: str,
                    input_path: Path,
                    fname_template: Template,
-                   bands: Iterable[Band],
-                   n_bands: int,
+                   bands: Collection[Band],
                    multi: int = 0,
                    hdu: int = 0) -> JPEGPicture:
     """Factory for JPEGPicture class."""
@@ -124,25 +127,40 @@ def create_picture(image_name: str,
         new_pic.add_fits_frames_mp(input_path, fname_template, bands)
     else:
         with logging_redirect_tqdm(loggers=all_loggers):
-            for band in tqdm(bands, total=n_bands,
-                             bar_format=tqdm_fmt):
+            failings = False
+            for band in tqdm(bands, bar_format=tqdm_fmt):
                 fname = fname_template.substitute(image_name=image_name,
                                                   band_name=band.name)
-                new_pic.add_frame_from_file(input_path/fname, band, hdu=hdu)
-    logger.info("Picture %s fully loaded.", new_pic.name)
+                try:
+                    new_pic.add_frame_from_file(input_path/fname,
+                                                band, hdu=hdu)
+                except FileNotFoundError:
+                    logger.error("No input file found for %s band", band.name)
+                    failings = True
+                    continue
+    if not failings:
+        logger.info("Picture %s successfully loaded.", new_pic.name)
+    else:
+        logger.warning(("Some frames could not be loaded for picture %s. "
+                        "Any combinations containing those will be skipped."),
+                       new_pic.name)
     return new_pic
 
 
 def process_combination(pic,
                         combination, single,
                         output_path,
-                        generalconfig, processconfig):
+                        generalconfig, processconfig) -> RGBPicture:
     """Process one RGB combination for a picture instance."""
     cols: str = "".join(combination)
     fname: str = f"{pic.name}_img_{cols}"
 
     logger.info("Processing image %s in %s.", pic.name, cols)
-    pic.select_rgb_channels(combination, single=single)
+    try:
+        pic.select_rgb_channels(combination, single=single)
+    except KeyError as err:
+        logger.error("No frame for band %s found.", err)
+        raise BandNotFoundError(str(err))
 
     if processconfig.mask_path is not None:
         try:
@@ -207,7 +225,7 @@ def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
                      config: Configurator,
-                     bands: Iterable[Band]) -> RGBPicture:
+                     bands: Collection[Band]) -> RGBPicture:
     """
     Create, process, stretch, combine and save RGB image(s).
 
@@ -237,9 +255,11 @@ def create_rgb_image(input_path: Path,
 
     """
     fname_template = Template(config.general.filenames)
-    pic = create_picture(image_name, input_path, fname_template,
-                         bands, len(config.use_bands),
-                         config.general.multiprocess, config.general.hdu)
+    # BUG: if use_bands is None, len() throws an error
+    pic: RGBPicture = create_picture(image_name, input_path,
+                                     fname_template, bands,
+                                     config.general.multiprocess,
+                                     config.general.hdu)
 
     if (n_shapes := len(set(frame.image.shape for frame in pic.frames))) > 1:
         if config.general.partial:
@@ -273,8 +293,13 @@ def create_rgb_image(input_path: Path,
         for combo in tqdm(config.combinations,
                           total=(n_combos := len(config.combinations)),
                           bar_format=tqdm_fmt):
-            pic = process_combination(pic, combo, n_combos == 1, output_path,
-                                      config.general, config.process)
+            try:
+                pic = process_combination(pic, combo, n_combos == 1,
+                                          output_path,
+                                          config.general, config.process)
+            except BandNotFoundError as err:
+                logger.warning("Skipping combination %s.", "".join(combo))
+                continue
     logger.info("Image %s fully completed.", pic.name)
     return pic
 
@@ -378,7 +403,7 @@ def main() -> None:
         config = auxiliaries._config_parser(Configurator(),
                                             config_path=args.config_file,
                                             cmd_args=vars(args))
-        bands = auxiliaries._bands_parser(config, args.bands_file)
+        bands = list(auxiliaries._bands_parser(config, args.bands_file))
         create_rgb_image(args.input_path, output_path, args.image_name, config,
                          bands)
     except Error as err:
@@ -389,7 +414,7 @@ def main() -> None:
         _pretty_info_log("aborted", console_width=width)
 
 
-def _logging_configurator():
+def _logging_configurator() -> logging.Logger:
     main_logger = logging.getLogger("main")
     (Path.cwd()/"log").mkdir(exist_ok=True)
     try:

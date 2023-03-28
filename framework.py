@@ -21,7 +21,6 @@ from typing import Union, Any, TypedDict, Optional
 from collections.abc import Callable
 from packaging import version
 
-import yaml
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -33,6 +32,7 @@ from astropy.nddata import Cutout2D
 from astropy.units import Quantity
 from astropy.visualization.wcsaxes import WCSAxes
 
+from ruamel.yaml import YAML
 from PIL import Image
 from PIL import __version__ as pillow_version
 from tqdm import tqdm
@@ -56,20 +56,14 @@ mpl.rcParams["font.family"] = ["Computer Modern", "serif"]
 
 TQDM_FMT = "{l_bar}{bar:50}{r_bar}{bar:-50b}"
 logger = logging.getLogger(__name__)
+yaml = YAML()
 
 absolute_path = Path(__file__).resolve(strict=True).parent
 with (absolute_path/"resources/stiff_params.yml").open("r") as ymlfile:
-    STIFF_PARAMS = yaml.load(ymlfile, yaml.SafeLoader)
+    STIFF_PARAMS = yaml.load(ymlfile)
 
-BandDict = TypedDict("BandDict", {"name": str,
-                                  "printname": str,
-                                  "wavelength": float,
-                                  "instrument": str,
-                                  "telescope": str,
-                                  "wave": float,
-                                  "inst": str,
-                                  "tele": str},
-                     total=False)
+BandDict = TypedDict("BandDict", {"name": str, "wave": float,
+                                  "inst": str, "tele": str})
 
 class Error(Exception):
     """Base class for exeptions in this module."""
@@ -118,8 +112,8 @@ class Band():
     """
 
     name: str
-    printname: Union[str, None] = None
-    wavelength: Union[float, None] = None
+    printname: Optional[str] = None
+    wavelength: Optional[float] = None
     unit: str = "&mu;m"
     instrument: str = "unknown"
     telescope: str = "unknown"
@@ -133,9 +127,9 @@ class Band():
         """str(self)."""
         _printname = self.printname or self.name
         _wavelength = self.wavelength or "?"
-        outstr = f"{_printname} band at {_wavelength} {self.unit}"
-        outstr += f" taken with {self.instrument} instrument"
-        outstr += f" at {self.telescope} telescope."
+        outstr = (f"{_printname} band at {_wavelength} {self.unit}"
+                  f" taken with {self.instrument} instrument"
+                  f" at {self.telescope} telescope.")
         return outstr
 
     @property
@@ -144,24 +138,15 @@ class Band():
         return all((val := getattr(self, field.name)) is not None and
                    val != "unknown" for field in fields(self))
 
-    @staticmethod
-    def parse_yaml_dict(yaml_dict: dict[str, BandDict]) -> dict[str, BandDict]:
+    @classmethod
+    def from_yaml_dict_item(cls, printname: str, band_dict: BandDict):
         """Parse shortened names as used in YAML to correct parameter names."""
-        for printname, band in yaml_dict.items():
-            band["instrument"] = band.pop("inst")
-            band["telescope"] = band.pop("tele")
-            band["wavelength"] = band.pop("wave")
-            band["printname"] = printname.replace("_", " ")
-        return yaml_dict
-
-    @staticmethod
-    def filter_used_bands(yaml_dict: dict[str, BandDict],
-                          use_bands: Optional[list[str]] = None
-                          ) -> tuple[BandDict, ...]:
-        """Either use specified or all, anyway turn into tuple w/o names."""
-        if use_bands is not None:
-            return itemgetter(*use_bands)(yaml_dict)
-        return tuple(yaml_dict.values())
+        new_band = cls(name=band_dict["name"],
+                       printname=printname.replace("_", " "),
+                       wavelength=band_dict.get("wave", None),
+                       instrument=band_dict.get("inst", "unknown"),
+                       telescope=band_dict.get("tele", "unknown"))
+        return new_band
 
     @classmethod
     def from_yaml_file(cls, filepath: Path,
@@ -186,11 +171,17 @@ class Band():
             Generator object containing the new Band instances.
 
         """
-        with filepath.open("r") as ymlfile:
-            yaml_dict: dict[str, BandDict] = yaml.load(ymlfile, yaml.SafeLoader)
-        yaml_dict = cls.parse_yaml_dict(yaml_dict)
-        bands = cls.filter_used_bands(yaml_dict, use_bands)
-        return (cls(**band) for band in bands)
+        yaml_dict: dict[str, BandDict] = yaml.load(filepath)
+        if use_bands is None:
+            logger.warning(("No valid list of use_bands found in config "
+                            "options. Using all bands specified in bands "
+                            "config file."))
+            for printname, band in yaml_dict.items():
+                yield cls.from_yaml_dict_item(printname, band)
+        else:    
+            for printname, band in yaml_dict.items():
+                if printname in use_bands:
+                    yield cls.from_yaml_dict_item(printname, band)
 
 
 class Frame():
@@ -425,7 +416,7 @@ class Frame():
         return mean, median, stddev
 
     @staticmethod
-    def _apply_mask(data, mask):
+    def _apply_mask(data: np.ndarray, mask: np.ndarray) -> np.ndarray:
         if mask is None:
             return data
 
@@ -604,7 +595,7 @@ class Frame():
 class Picture():
     """n/a."""
 
-    def __init__(self, name: str = None):
+    def __init__(self, name: Optional[str] = None):
         self.frames: list[Frame] = list()
         self.name = name
 
@@ -755,7 +746,7 @@ class Picture():
         self.frames = framelist
 
     @classmethod
-    def from_cube(cls, cube, bands=None):
+    def from_cube(cls, cube: np.ndarray, bands=None):
         """
         Create Picture instance from 3D array (data cube) and list of bands.
 
@@ -858,10 +849,10 @@ class Picture():
 class RGBPicture(Picture):
     """Picture subclass for ccombining frames to colour image (RGB)."""
 
-    def __init__(self, name: str = None):
+    def __init__(self, name: Optional[str] = None):
         super().__init__(name)
 
-        self.params = None
+        self.params: dict[str, bool] = {}
         self.rgb_channels: list[Frame] = []
 
     def __str__(self) -> str:
@@ -934,6 +925,26 @@ class RGBPicture(Picture):
 
         return rgb
 
+    @staticmethod
+    def is_physical(redder: Frame, bluer: Frame) -> bool:
+        physical = False
+        if (redder.band.wavelength is not None and
+            bluer.band.wavelength is not None):
+            physical = redder.band.wavelength >= bluer.band.wavelength
+        return physical
+
+    @staticmethod
+    def all_physical(combination: list[Frame]) -> bool:
+        return all(RGBPicture.is_physical(redder, bluer)
+                   for redder, bluer in zip(combination, combination[1:]))
+
+    def check_physical(self) -> None:
+        if all(channel.band.wavelength is not None
+               for channel in self.rgb_channels):
+            if not self.all_physical(self.rgb_channels):
+                raise UserWarning(("Not all RGB channels are ordered by "
+                                   "descending wavelength."))
+
     def select_rgb_channels(self,
                             bands: list[str],
                             single: bool = False) -> list[Frame]:
@@ -977,14 +988,7 @@ class RGBPicture(Picture):
         copyfct: Callable[[Any], Any] = copy.copy if single else copy.deepcopy
         self.rgb_channels = list(map(copyfct,
                                      (itemgetter(*bands)(frames_dict))))
-
-        if all(channel.band.wavelength is not None
-               for channel in self.rgb_channels):
-            if not all(redder.band.wavelength >= bluer.band.wavelength
-                       for redder, bluer
-                       in zip(self.rgb_channels, self.rgb_channels[1:])):
-                raise UserWarning(("Not all RGB channels are ordered by "
-                                   "descending wavelength."))
+        self.check_physical()
 
         _chnames = [channel.band.name for channel in self.rgb_channels]
         logger.info("Successfully selected %i RGB channels: %s",
@@ -999,7 +1003,7 @@ class RGBPicture(Picture):
         if weights is not None:
             if isinstance(weights, str):
                 if weights == "auto":
-                    clipped_stats = [chnl.clipped_stats()
+                    clipped_stats = [chnl.clipped_stats(chnl.image)
                                      for chnl in self.rgb_channels]
                     _, clp_medians, _ = zip(*clipped_stats)
                     weights = [1/median for median in clp_medians]
@@ -1020,7 +1024,7 @@ class RGBPicture(Picture):
             else:
                 raise ValueError("stretch mode not understood")
 
-    def autoparam(self):
+    def autoparam(self) -> tuple[float, float, float, float]:
         """Experimental automatic parameter estimation."""
         gamma = 2.25
         gamma_lum = 1.5
@@ -1029,7 +1033,8 @@ class RGBPicture(Picture):
 
         self.params = {"gma": False, "alph": False}
 
-        clipped_stats = [chnl.clipped_stats() for chnl in self.rgb_channels]
+        clipped_stats = [channel.clipped_stats(channel.image)
+                         for channel in self.rgb_channels]
         _, clp_medians, clp_stddevs = zip(*clipped_stats)
 
         if not any((np.array(clp_medians) / np.mean(clp_medians)) > 2.):
@@ -1198,7 +1203,7 @@ class RGBPicture(Picture):
                (1. - cmyk[2] / cmyk_scale) * scale_factor
                )
         # TODO: make this an array, incl. mult. w/ sc.fc. afterwards etc.
-        return rgb
+        return np.array(rgb)
 
 
 class JPEGPicture(RGBPicture):
