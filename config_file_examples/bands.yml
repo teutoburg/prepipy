@@ -1,0 +1,89 @@
+#################################################
+#
+#   prepipy filter bands config file
+#
+#   This file contains the filter information
+#   for all filters used in to create color
+#   images with prepipy. An example of several
+#   filters is shown below. The general scheme
+#   is as follows:
+#
+#   <IDENTIFIER>:
+#       name: <FilterName>
+#       inst: <Instrument>
+#       tele: <Telescope>
+#       wave: <CentralWavelength>
+#
+#################################################
+---
+VISION_J:
+    name: J
+    inst: VIRCAM
+    tele: VISTA
+    wave: 1.25
+VISION_H:
+    name: H
+    inst: VIRCAM
+    tele: VISTA
+    wave: 1.65
+VISION_Ks:
+    name: Ks
+    inst: VIRCAM
+    tele: VISTA
+    wave: 2.2
+IRAC1:
+    name: i1
+    inst: IRAC
+    tele: Spitzer
+    wave: 3.6
+IRAC2:
+    name: i2
+    inst: IRAC
+    tele: Spitzer
+    wave: 4.5
+IRAC3:
+    name: i3
+    inst: IRAC
+    tele: Spitzer
+    wave: 5.8
+IRAC4:
+    name: i4
+    inst: IRAC
+    tele: Spitzer
+    wave: 8.0
+MIPS1:
+    name: m1
+    inst: MIPS
+    tele: Spitzer
+    wave: 24.0
+PACS70:
+    name: p7
+    inst: PACS
+    tele: Herschel
+    wave: 70.0
+PACS100:
+    name: p10
+    inst: PACS
+    tele: Herschel
+    wave: 100.0
+PACS160:
+    name: p16
+    inst: PACS
+    tele: Herschel
+    wave: 160.0
+SPIRE250:
+    name: s25
+    inst: SPIRE
+    tele: Herschel
+    wave: 250.0
+SPIRE350:
+    name: s35
+    inst: SPIRE
+    tele: Herschel
+    wave: 350.0
+SPIRE500:
+    name: s50
+    inst: SPIRE
+    tele: Herschel
+    wave: 500.0
+...

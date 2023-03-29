@@ -1,0 +1,36 @@
+---
+!Configurator
+general: !GeneralConfigurator
+  filenames: ${image_name}_${band_name}.fits
+  # e.g. $band_name/fits/$image_name.fits or ${image_name}_${band_name}.fits
+  multiprocess: 0       # no (default) or yes
+  hdu: 0                # FITS HDU where image data is stored
+process: !ProcessConfigurator
+  grey_mode: normal     # normal, lessback or moreback
+  rgb_adjust: False     # no (default) or yes
+  alpha: 1.             # float (default=1.), typ. 1-2
+  gamma_lum: 1.         # float (default=1.), typ. 1-3
+  clip: 10.             # float (default=10.)
+  nanmode: max          # max (default) or median
+  skymode: median       # median (default), clipmedian, quantile or debug
+  maxmode: quantile     # quantile (default), max or debug
+  slice: NULL           # NULL (default) or [wx, wy]
+  equal_offset: .1      # float (default=.1)
+  equal_norm: True      # yes (default) or no
+figures: !FiguresConfigurator
+  titlemode: debug       # debug or pub
+  include_suptitle: True # True (default) or False
+  figsize: [3, 5.6]      # [col, row] in inches
+  max_cols: 4            # int (default=4) number of plots per row
+  centermark: False      # False (default) or True
+  gridlines: False       # False (default) or True
+  additional_roi:        # each as [ra, dec] in decimal deg format
+use_bands:               # List the Filter Identifiers from the bands.yml
+  - PACS70               #     config file that should be used.
+  - PACS160
+  - SPIRE250
+combinations:            # Specifies which filter combinations are used.
+                         # This uses the filter names specified in the
+                         #     bands.yml config file
+  - [s25, p16 , p7 ]     # - [R, G, B]
+...

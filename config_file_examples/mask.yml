@@ -1,0 +1,10 @@
+---
+center:
+  mode: limit    # limit or exclude
+  type: circ     # circ, rect or poly
+  coords:
+    - [246.55177011, -24.49465904]
+  size:
+    angle: 60
+    unit: arcmin
+...
