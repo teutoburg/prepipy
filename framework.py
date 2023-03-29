@@ -420,8 +420,9 @@ class Frame():
         return mean, median, stddev
 
     @staticmethod
-    def _apply_mask(data: np.ndarray[_N, _D], mask: np.ndarray[_N, _D]
-                    ) -> np.ndarray[_N, _D]:
+    def _apply_mask(data: np.ndarray[_N, np.dtype[Any]],
+                    mask: np.ndarray[_N, np.dtype[np.bool_]]
+                    ) -> np.ndarray[_N, np.dtype[Any]]:
         if mask is None:
             return data
 
@@ -533,8 +534,9 @@ class Frame():
         return image_s
 
     @staticmethod
-    def stiff_stretch(image, stiff_mode: str = "power-law",
-                      **kwargs: Any) -> npt.NDArray[Any]:
+    def stiff_stretch(image: np.ndarray[_N, np.dtype[Any]],
+                      stiff_mode: str = "power-law",
+                      **kwargs: Any) -> np.ndarray[_N, np.dtype[Any]]:
         """Stretch frame based on STIFF algorithm."""
         def_kwargs = STIFF_PARAMS
         if stiff_mode not in def_kwargs:
@@ -554,7 +556,8 @@ class Frame():
         return image_s
 
     @staticmethod
-    def autostretch_light(image, **kwargs: Any) -> npt.NDArray[Any]:
+    def autostretch_light(image: np.ndarray[_N, np.dtype[Any]], **kwargs: Any
+                          ) -> np.ndarray[_N, np.dtype[Any]]:
         """Stretch frame based on autostretch algorithm."""
         # logger.info("Begin autostretch for \"%s\" band", self.band.name)
         # maximum = self.normalize()
@@ -625,7 +628,7 @@ class Picture():
         return self.frames[0]
 
     @property
-    def image(self) -> npt.NDArray[Any]:
+    def image(self) -> np.ndarray[_N, np.dtype[Any]]:
         """Get combined image of all frames. Read-only property."""
         # HACK: actually combine all images!
         return self.primary_frame.image
@@ -678,7 +681,7 @@ class Picture():
         return " by ".join(str(along) for along in size)
 
     @property
-    def cube(self) -> npt.NDArray[Any]:
+    def cube(self) -> np.ndarray[_N, np.dtype[Any]]:
         """Stack images from all frames in one 3D cube. Read-only property."""
         return np.stack([frame.image for frame in self.frames])
 
@@ -1056,7 +1059,7 @@ class RGBPicture(Picture):
 
         return gamma, gamma_lum, alpha, grey_level
 
-    def luminance(self) -> npt.NDArray[Any]:
+    def luminance(self) -> np.ndarray[_N, np.dtype[Any]]:
         """Calculate the luminance of the RGB image.
 
         The luminance is defined as the (pixel-wise) sum of all colour channels
