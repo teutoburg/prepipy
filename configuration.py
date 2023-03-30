@@ -13,7 +13,7 @@ __version__ = "0.2"
 # TODO: somehow add comment dumping, maybe check ruyaml on GitHub?
 
 from dataclasses import dataclass, field, asdict
-from typing import Union
+from typing import Union, Optional
 
 from ruamel.yaml import YAML, yaml_object, comments
 
@@ -47,10 +47,10 @@ class ProcessConfigurator:
     nanmode: str = "max"       # max (default) or median
     skymode: str = "median"    # median (default), clipmedian, quantile or debug
     maxmode: str = "quantile"  # quantile (default), max or debug
-    slice: Union[list[int], None] = None  # NULL (default) or [wx, wy]
+    slice: Optional[list[int]] = None  # NULL (default) or [wx, wy]
     equal_offset: float = .1   # float (default=.1)
     equal_norm: bool = True    # yes (default) or no
-    mask_path: Union[str, None] = None  # path (relative or absolute) to mask file
+    mask_path: Optional[str] = None  # path (relative or absolute) to mask file
 
 
 @yaml_object(yaml)
@@ -63,7 +63,7 @@ class FiguresConfigurator:
     max_cols: int = 4              # int (default=4)
     centermark: bool = False       # no (default) or yes
     gridlines: bool = False        # no (default) or yes
-    additional_roi: Union[list[list[int]], None] = None
+    additional_roi: Optional[list[list[float]]] = None
     # each as [ra, dec] in decimal deg format
 
 

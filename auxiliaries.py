@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from dataclasses import replace, asdict, is_dataclass, fields
 from string import Template
-from typing import Iterable, Optional, ClassVar, Dict, Protocol, TypeVar
+from typing import Iterable, Optional, ClassVar, Dict, Protocol, TypeVar, Any
 
 from ruamel.yaml import YAML
 
@@ -70,7 +70,7 @@ def _recursive_replace(instance: _D, **kwargs) -> _D:
 
 def _config_parser(default: Configurator,
                    config_path: Optional[Path] = None,
-                   cmd_args=None) -> Configurator:
+                   cmd_args: Optional[dict[str, Any]] = None) -> Configurator:
     if not (fallback_config_path := Path.cwd()/DEFAULT_CONFIG_NAME).exists():
         fallback_config_path = absolute_path/"local"/DEFAULT_CONFIG_NAME
     config_path = config_path or fallback_config_path
@@ -87,9 +87,11 @@ def _config_parser(default: Configurator,
         config = default
     logger.debug(("Attempting to replace default config settings with values "
                   "from command line arguments."))
-    config = _recursive_replace(config, **cmd_args)
+    if cmd_args is not None:
+        config = _recursive_replace(config, **cmd_args)
     if not config.combinations:
-        config.combinations = [cmd_args["rgb"]]
+        if cmd_args is not None:
+            config.combinations = [cmd_args["rgb"]]
     logger.debug("Final config file is: %s", config)
     return config
 
@@ -110,7 +112,8 @@ def _bands_parser(config: Configurator,
         fallback_bands_path = absolute_path/"local"/DEFAULT_BANDS_NAME
     bands_path = bands_path or fallback_bands_path
     try:
-        bands = Band.from_yaml_file(bands_path, config.use_bands)
+        bands: Iterable[Band] = Band.from_yaml_file(bands_path,
+                                                    config.use_bands)
     except FileNotFoundError:
         logger.error(("No bands config file found! Attempting to reconstruct "
                       "bands from main config file..."))

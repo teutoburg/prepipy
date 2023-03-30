@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Debug module to run main functions from command line."""
 
-__version__ = "0.5"
+__version__ = "0.6"
 
 import sys
 import gc
@@ -12,7 +12,9 @@ from logging.config import dictConfig
 from string import Template
 from pathlib import Path
 from shutil import get_terminal_size
-from collections.abc import Iterable, Collection
+from collections.abc import Iterable, Collection, Callable
+from typing import Optional, TypeVar
+from typing_extensions import ParamSpec
 from time import perf_counter
 
 from ruamel.yaml import YAML
@@ -21,14 +23,17 @@ from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 from colorama import Fore, Back, Style
 
-from framework import RGBPicture, JPEGPicture, Band
+from framework import JPEGPicture, Band
 from framework import logger as framework_logger
 from masking import get_mask
 import auxiliaries
-from configuration import Configurator
+from configuration import Configurator, GeneralConfigurator, ProcessConfigurator
 
 __author__ = "Fabian Haberhauer"
 __copyright__ = "Copyright 2023"
+
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
 
 width, _ = get_terminal_size((50, 20))
 width = int(.8 * width)
@@ -82,7 +87,8 @@ def _gma(i, g):
     return np.power(i, 1/g)
 
 
-def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
+def _pretty_info_log(msg_key: str, time: Optional[float] = None,
+                     console_width: int = 50) -> None:
     msg_dir = {"single": "Start RGB processing for single image...",
                "multiple": "Start RGB processing for multiple images...",
                "partial": "Start partial image processing...",
@@ -99,9 +105,9 @@ def _pretty_info_log(msg_key, time=None, console_width=50) -> None:
     logger.log(25, console_width * "*")
 
 
-def pretty_infos(function):
+def pretty_infos(function: Callable[_P, _T]) -> Callable[_P, _T]:
     """Decorator for logging start and end msg, including execution time."""
-    def _wrapper(*args, **kwargs):
+    def _wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
         start_time = perf_counter()
         if not args[3].general.partial:
             _pretty_info_log("single", console_width=width)
@@ -147,10 +153,12 @@ def create_picture(image_name: str,
     return new_pic
 
 
-def process_combination(pic,
-                        combination, single,
-                        output_path,
-                        generalconfig, processconfig) -> RGBPicture:
+def process_combination(pic: JPEGPicture,
+                        combination: list[str],
+                        single: bool,
+                        output_path: Path,
+                        generalconfig: GeneralConfigurator,
+                        processconfig: ProcessConfigurator) -> JPEGPicture:
     """Process one RGB combination for a picture instance."""
     cols: str = "".join(combination)
     fname: str = f"{pic.name}_img_{cols}"
@@ -225,7 +233,7 @@ def create_rgb_image(input_path: Path,
                      output_path: Path,
                      image_name: str,
                      config: Configurator,
-                     bands: Collection[Band]) -> RGBPicture:
+                     bands: Collection[Band]) -> JPEGPicture:
     """
     Create, process, stretch, combine and save RGB image(s).
 
@@ -249,17 +257,17 @@ def create_rgb_image(input_path: Path,
 
     Returns
     -------
-    RGBPicture
-        Final instance of RGBPicture (subclass), containing the last processed
-        RGB combination as rgb_channels.
+    JPEGPicture
+        Final instance of JPEGPicture, containing the last processed RGB
+        combination as rgb_channels.
 
     """
     fname_template = Template(config.general.filenames)
     # BUG: if use_bands is None, len() throws an error
-    pic: RGBPicture = create_picture(image_name, input_path,
-                                     fname_template, bands,
-                                     config.general.multiprocess,
-                                     config.general.hdu)
+    pic = create_picture(image_name, input_path,
+                         fname_template, bands,
+                         config.general.multiprocess,
+                         config.general.hdu)
 
     if (n_shapes := len(set(frame.image.shape for frame in pic.frames))) > 1:
         if config.general.partial:

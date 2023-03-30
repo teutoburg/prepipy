@@ -38,3 +38,11 @@ Make MP a bit config-able, no of workers and chunksize...
 ## Combine images
 
 See [this](https://note.nkmk.me/en/python-pillow-concat-images/) maybe...
+
+## Typing
+
+* Check again correct np typing.
+* Investigate Literal etc.
+* Replace Union and Optional as soon as Python Version updates
+* Investigate again np array shape annotations in new Python Version
+* Find a way to annotate class methods (factories)
