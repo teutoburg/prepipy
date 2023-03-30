@@ -10,9 +10,10 @@ Created on Sat Mar 11 21:52:05 2023
 
 __version__ = "0.2"
 
-from typing import Iterator
+from typing import Iterator, Union, TypedDict
 
 import numpy as np
+import numpy.typing as npt
 from ruamel.yaml import YAML
 
 from astropy.coordinates import Angle, SkyCoord
@@ -26,7 +27,13 @@ __copyright__ = "Copyright 2023"
 
 yaml = YAML()
 
-def _maskparse(mask_dict) -> Iterator[SkyRegion]:
+
+SizeDict = TypedDict("SizeDict", {"angle": Union[int, float], "unit": str})
+MaskDict = TypedDict("MaskDict", {"mode": str, "type": str,
+                                  "coords": list[list[float]],
+                                  "size": SizeDict})
+
+def _maskparse(mask_dict: dict[str, MaskDict]) -> Iterator[SkyRegion]:
     for name, mask in mask_dict.items():
         sky_points = SkyCoord(mask["coords"], unit="deg")
         size = Angle(**mask["size"])
@@ -47,14 +54,15 @@ def _maskparse(mask_dict) -> Iterator[SkyRegion]:
         yield region
 
 
-def _region_mask(region: SkyRegion, frame: Frame) -> np.ndarray:
+def _region_mask(region: SkyRegion, frame: Frame) -> npt.NDArray[np.bool_]:
     pixels = PixCoord(*np.indices(frame.image.shape))
     pixel_region = region.to_pixel(frame.coords)
-    cont = pixel_region.contains(pixels)#.T
+    cont: npt.NDArray[np.bool_] = pixel_region.contains(pixels)#.T
     return cont
 
 
-def _merge_masks(regions: list[SkyRegion], frame: Frame) -> np.ndarray:
+def _merge_masks(regions: list[SkyRegion], frame: Frame
+                 ) -> npt.NDArray[np.bool_]:
     fill = all(region.meta["comment"] == "exclude" for region in regions)
     mask = np.full_like(frame.image, fill_value=fill, dtype=bool)
     for region in regions:
@@ -63,7 +71,7 @@ def _merge_masks(regions: list[SkyRegion], frame: Frame) -> np.ndarray:
     return mask
 
 
-def get_mask(fname: str, frame: Frame) -> np.ndarray:
+def get_mask(fname: str, frame: Frame) -> npt.NDArray[np.bool_]:
     with open(fname, "r", encoding="utf-8") as ymlfile:
         mask_dict = yaml.load(ymlfile)
     mask_regions = list(_maskparse(mask_dict))

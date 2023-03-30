@@ -17,9 +17,10 @@ import warnings
 from dataclasses import dataclass, fields
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, Any, TypedDict, Optional, TypeVar
-from collections.abc import Callable
+from typing import Union, Any, TypedDict, Optional, TypeVar, Iterable
+from collections.abc import Callable, Sequence
 from packaging import version
+from string import Template
 
 import numpy as np
 import numpy.typing as npt
@@ -38,7 +39,7 @@ from PIL import Image
 from PIL import __version__ as pillow_version
 from tqdm import tqdm
 
-from configuration import FiguresConfigurator
+from configuration import ProcessConfigurator, FiguresConfigurator
 
 __author__ = "Fabian Haberhauer"
 __copyright__ = "Copyright 2023"
@@ -192,17 +193,15 @@ class Frame():
 
     def __init__(self, image: npt.ArrayLike, band: Band,
                  header: Union[fits.Header, None] = None, **kwargs: Any):
-        image = np.asarray(image)
+        self.image = np.asarray(image)
         self.header = header
         self.coords = wcs.WCS(self.header)
 
         if "imgslice" in kwargs:
-            cen = [sh//2 for sh in image.shape]
-            cutout = Cutout2D(image, cen, kwargs["imgslice"], self.coords)
+            cen = [sh//2 for sh in self.image.shape]
+            cutout = Cutout2D(self.image, cen, kwargs["imgslice"], self.coords)
             self.image = cutout.data
             self.coords = cutout.wcs
-        else:
-            self.image = image
 
         self._band = band
         self.background = np.nanmedian(self.image)  # estimated background
@@ -421,7 +420,7 @@ class Frame():
 
     @staticmethod
     def _apply_mask(data: np.ndarray[_N, np.dtype[Any]],
-                    mask: np.ndarray[_N, np.dtype[np.bool_]]
+                    mask: Optional[npt.NDArray[np.bool_]] = None
                     ) -> np.ndarray[_N, np.dtype[Any]]:
         if mask is None:
             return data
@@ -442,7 +441,7 @@ class Frame():
                    grey_level: float = .3,
                    sky_mode: str = "median",
                    max_mode: str = "quantile",
-                   mask=None,
+                   mask: Optional[npt.NDArray[np.bool_]] = None,
                    **kwargs: Any) -> tuple[float, float]:
         data = self._apply_mask(self.image, mask)
 
@@ -551,7 +550,7 @@ class Frame():
         logger.debug("%f percent of pixels in linear portion",
                      linear_part.sum()/linear_part.size*100)
 
-        image_s = slope * image * linear_part
+        image_s: npt.NDArray[np.float32] = slope * image * linear_part
         image_s += ((1 + offset) * image**(1/gamma) - offset) * ~linear_part
         return image_s
 
@@ -573,7 +572,7 @@ class Frame():
 
         k = np.power(image, gamma) + ((1 - np.power(image, gamma))
                                       * (mean**gamma))
-        image_s = np.power(image, gamma) / k
+        image_s: npt.NDArray[np.float32] = np.power(image, gamma) / k
 
         # image_s *= maximum
         return image_s
@@ -581,7 +580,7 @@ class Frame():
     def auto_gma(self) -> float:
         """Find gamma based on exponential function. Highly experimental."""
         clp_mean, _, clp_stddev = self.clipped_stats(self.image)
-        return np.exp((1 - (clp_mean + clp_stddev)) / 2)
+        return float(np.exp((1 - (clp_mean + clp_stddev)) / 2))
 
     def save_fits(self, filename: Union[Path, str]) -> None:
         """
@@ -646,7 +645,7 @@ class Picture():
         return [sh//2 for sh in self.image.shape[::-1]]
 
     @property
-    def center_coords(self):
+    def center_coords(self) -> tuple[float, float]:
         """WCS coordinates of the center of first frame. Read-only property."""
         return self.coords.pixel_to_world_values(*self.center)
 
@@ -708,7 +707,7 @@ class Picture():
     def add_frame_from_file(self,
                             filename: Path,
                             band: Union[Band, str],
-                            framelist: Union[list, None] = None,
+                            framelist: Optional[list[Frame]] = None,
                             **kwargs: Any) -> Frame:
         """
         Add a new frame to the picture. File must be in FITS format.
@@ -733,7 +732,7 @@ class Picture():
         logger.info("Loading frame for %s band", band.name)
 
         if filename.suffix == ".fits":
-            new_frame = Frame.from_fits(filename, band, **kwargs)
+            new_frame: Frame = Frame.from_fits(filename, band, **kwargs)
         else:
             raise FileTypeError("Currently only FITS files are supported.")
 
@@ -743,7 +742,10 @@ class Picture():
             framelist.append(new_frame)
         return new_frame
 
-    def add_fits_frames_mp(self, input_path, fname_template, bands) -> None:
+    def add_fits_frames_mp(self,
+                           input_path: Path,
+                           fname_template: Template,
+                           bands: Iterable[Band]) -> None:
         """Add frames from fits files for each band, using multiprocessing."""
         args = [(input_path/fname_template.substitute(image_name=self.name,
                                                       band_name=band.name),
@@ -754,7 +756,9 @@ class Picture():
         self.frames = framelist
 
     @classmethod
-    def from_cube(cls, cube: npt.ArrayLike, bands=None):
+    def from_cube(cls,
+                  cube: npt.ArrayLike,
+                  bands: Optional[list[Union[Band, str]]] = None):
         """
         Create Picture instance from 3D array (data cube) and list of bands.
 
@@ -787,6 +791,7 @@ class Picture():
             raise TypeError("A \"cube\" must have exactly 3 dimensions!")
 
         if bands is None:
+            # FIXME: Why are there two variants? Refactor this generally...
             bands = len(cube) * [Band("unknown")]
             bands = [Band(f"unkown{i}") for i, _ in enumerate(cube)]
         elif all(isinstance(band, str) for band in bands):
@@ -807,13 +812,14 @@ class Picture():
         return new_picture
 
     @classmethod
-    def from_tesseract(cls, tesseract: npt.ArrayLike, bands=None):
+    def from_tesseract(cls, tesseract: Iterable[npt.ArrayLike], bands=None):
         """Generate individual pictures from 4D cube."""
         for cube in tesseract:
             yield cls.from_cube(cube, bands)
 
     @staticmethod
-    def merge_tesseracts(tesseracts) -> npt.NDArray[Any]:
+    def merge_tesseracts(tesseracts: Iterable[npt.ArrayLike]
+                         ) -> npt.NDArray[Any]:
         """Merge multiple 4D image cubes into a single one."""
         return np.hstack(list(tesseracts))
 
@@ -849,6 +855,7 @@ class Picture():
         featureframe = frames_dict[feature]
         backframes = itemgetter(*background)(frames_dict)
         backcube = np.array([frame.image for frame in backframes])
+        contrast_img: npt.NDArray[np.float32]
         contrast_img = featureframe.image - np.nanmean(backcube, 0)
         contrast_img -= np.nanmin(contrast_img)
         contrast_img /= np.nanmax(contrast_img)
@@ -910,6 +917,7 @@ class RGBPicture(Picture):
             determined from the value of the `order` keyword.
 
         """
+        rgb: npt.NDArray[np.float32]
         rgb = np.stack([frame.image for frame in self.rgb_channels])
         rgb /= rgb.max()
 
@@ -1004,14 +1012,14 @@ class RGBPicture(Picture):
                     len(_chnames), ", ".join(map(str, _chnames)))
         return self.rgb_channels
 
-    def norm_by_weights(self, weights):
+    def norm_by_weights(self, mode: Optional[str] = None) -> None:
         """Normalize channels by weights.
 
         Currently only supports "auto" mode, using clipped median as weight.
         """
-        if weights is not None:
-            if isinstance(weights, str):
-                if weights == "auto":
+        if mode is not None:
+            if isinstance(mode, str):
+                if mode == "auto":
                     clipped_stats = [chnl.clipped_stats(chnl.image)
                                      for chnl in self.rgb_channels]
                     _, clp_medians, _ = zip(*clipped_stats)
@@ -1023,7 +1031,7 @@ class RGBPicture(Picture):
                 channel.image *= weight
 
     def stretch_rgb_channels(self, mode: str = "stiff",
-                             **kwargs: Any):
+                             **kwargs: Any) -> None:
         """Perform stretching on frames which are selected as rgb channels."""
         for frame in self.rgb_channels:
             if mode == "auto-light":
@@ -1059,21 +1067,25 @@ class RGBPicture(Picture):
 
         return gamma, gamma_lum, alpha, grey_level
 
-    def luminance(self) -> np.ndarray[_N, np.dtype[Any]]:
+    def luminance(self) -> Union[np.ndarray[_N, np.dtype[Any]], float]:
         """Calculate the luminance of the RGB image.
 
         The luminance is defined as the (pixel-wise) sum of all colour channels
         divided by the number of channels.
         """
+        sum_image: Union[npt.NDArray[np.float32], float]
         sum_image = sum(frame.image for frame in self.rgb_channels)
         sum_image /= len(self.rgb_channels)
         return sum_image
 
     def stretch_luminance(self,
-                          stretch_fkt_lum: Callable[[np.ndarray, float],
-                                                    np.ndarray],
+                          stretch_fkt_lum: Callable[[np.ndarray[_N,
+                                                                np.dtype[Any]],
+                                                     float],
+                                                    np.ndarray[_N,
+                                                               np.dtype[Any]]],
                           gamma_lum: float,
-                          lum: np.ndarray,
+                          lum: np.ndarray[_N, np.dtype[Any]],
                           **kwargs: Any) -> None:
         """Perform luminance stretching.
 
@@ -1092,9 +1104,11 @@ class RGBPicture(Picture):
 
     def adjust_rgb(self,
                    alpha: float,
-                   stretch_fkt_lum: Callable[[np.ndarray, float], np.ndarray],
+                   stretch_fkt_lum: Callable[[np.ndarray[_N, np.dtype[Any]],
+                                              float],
+                                             np.ndarray[_N, np.dtype[Any]]],
                    gamma_lum: float,
-                   **kwargs: Any):
+                   **kwargs: Any) -> None:
         """
         Adjust colour saturation of 3-channel (R, G, B) image.
 
@@ -1120,7 +1134,7 @@ class RGBPicture(Picture):
         #      Is this still an issue??
         logger.info("RGB adjusting using alpha=%.3f, gamma_lum=%.3f.",
                     alpha, gamma_lum)
-        lum = self.luminance()
+        lum = np.array(self.luminance())
         n_channels = len(self.rgb_channels)
         assert n_channels <= 4
         alpha /= n_channels
@@ -1149,7 +1163,7 @@ class RGBPicture(Picture):
                  offset: float = .5,
                  norm: bool = True,
                  supereq: bool = False,
-                 mask=None) -> None:
+                 mask: Optional[npt.NDArray[np.bool_]] = None) -> None:
         """
         Perform a collection of processes to enhance the RGB image.
 
@@ -1173,7 +1187,7 @@ class RGBPicture(Picture):
         None.
 
         """
-        meanfct: Callable[[np.ndarray], float]
+        meanfct: Callable[[npt.NDArray[Any]], float]
         if mode == "mean":
             meanfct = np.mean
         elif mode == "median":
@@ -1202,8 +1216,8 @@ class RGBPicture(Picture):
                 channel.image *= equal
 
     @staticmethod
-    def cmyk_to_rgb(cmyk: np.ndarray, cmyk_scale: float,
-                    rgb_scale: int = 255) -> npt.NDArray[Any]:
+    def cmyk_to_rgb(cmyk: npt.NDArray[Any], cmyk_scale: float,
+                    rgb_scale: int = 255) -> npt.NDArray[np.float32]:
         """Convert CMYK to RGB."""
         cmyk_scale = float(cmyk_scale)
         scale_factor = rgb_scale * (1. - cmyk[3] / cmyk_scale)
@@ -1266,18 +1280,18 @@ class MPLPicture(RGBPicture):
         """Get string-formatted name of Picture."""
         return f"Source ID: {self.name}"
 
-    def _add_histo(self, axis) -> None:
+    def _add_histo(self, axis: WCSAxes) -> None:
         cube = self.get_rgb_cube(order="cxy")
         axis.hist([img.flatten() for img in cube],
                   20, color=("r", "g", "b"))
 
     @staticmethod
-    def _plot_coord_grid(axis) -> None:
+    def _plot_coord_grid(axis: WCSAxes) -> None:
         axis.grid(color="w", ls=":")
 
     @staticmethod
     def _plot_roi(axis: WCSAxes,
-                  radec,
+                  radec: Sequence[float],
                   size: int = 50) -> None:
         axis.scatter(*radec,
                      transform=axis.get_transform("world"), s=size,
@@ -1307,15 +1321,16 @@ class MPLPicture(RGBPicture):
             for radec in figuresconfig.additional_roi:
                 self._plot_roi(axis, radec)
 
-    def _display_cube_histo(self, axes, cube) -> None:
+    def _display_cube_histo(self, axes: npt.NDArray[WCSAxes],
+                            cube: npt.NDArray[Any]) -> None:
         axes[0].imshow(cube.T, origin="lower")
         self._add_histo(axes[1])
 
     def _get_axes(self,
                   nrows: int,
                   ncols: int,
-                  figsize_mult: tuple[int]
-                  ) -> tuple[plt.Figure, np.ndarray]:
+                  figsize_mult: Sequence[Union[float, int]]
+                  ) -> tuple[plt.Figure, npt.NDArray[WCSAxes]]:
         figsize = tuple(n * s for n, s in zip((ncols, nrows), figsize_mult))
         fig = plt.figure(figsize=figsize, dpi=300)
         # subfigs = fig.subfigures(nrows)
@@ -1359,10 +1374,12 @@ class MPLPicture(RGBPicture):
         assert nrows * ncols >= n_combos
         return nrows, ncols
 
-    def stuff(self, channel_combos, imgpath,
-              processconfig=None,
-              figuresconfig=None, **kwargs: Any) -> None:
+    def stuff(self, channel_combos: list[list[str]], imgpath: Path,
+              processconfig: Optional[ProcessConfigurator] = None,
+              figuresconfig: Optional[FiguresConfigurator] = None,
+              **kwargs: Any) -> None:
         """DEBUG ONLY."""
+        processconfig = processconfig or ProcessConfigurator()
         figuresconfig = figuresconfig or self.default_figuresconfig
         grey_values = {"normal": .3, "lessback": .08, "moreback": .7}
 
