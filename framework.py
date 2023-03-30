@@ -1151,8 +1151,8 @@ class RGBPicture(Picture):
             new[zero_mask] = 0.
             channels_adj.append(new)
 
-        for channel, adjusted in zip(self.rgb_channels, channels_adj):
-            channel.image = adjusted
+        for rgbchannel, adjusted in zip(self.rgb_channels, channels_adj):
+            rgbchannel.image = adjusted
 
         # FIXME: should the lu stretch be done with the original luminance
         #        (as is currently) or with the adjusted one???
