@@ -112,8 +112,7 @@ def _bands_parser(config: Configurator,
         fallback_bands_path = absolute_path/"local"/DEFAULT_BANDS_NAME
     bands_path = bands_path or fallback_bands_path
     try:
-        bands: Iterable[Band] = Band.from_yaml_file(bands_path,
-                                                    config.use_bands)
+        bands: Iterable[Band] = Band.from_yaml_file(bands_path, use_bands)
     except FileNotFoundError:
         logger.error(("No bands config file found! Attempting to reconstruct "
                       "bands from main config file..."))
