@@ -178,7 +178,7 @@ def process_combination(pic: JPEGPicture,
         mask = None
 
     # TODO: put these values in a separate config file in resources
-    grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
+    grey_values = {"normal": .3, "moreback": .5, "lessback": .08, "leastback": .001}
     grey_mode = processconfig.grey_mode
 
     if grey_mode != "normal":
@@ -338,7 +338,7 @@ def main() -> None:
                         If omitted, the code will look for a file named
                         "bands.yml" in the main package folder.""")
     parser.add_argument("-g", "--grey_mode",
-                        choices=["normal", "lessback", "moreback"],
+                        choices=["normal", "moreback", "lessback", "leastback"],
                         help="""Background grey level mode, default is
                         'normal'. If you see a monochromatic 'fog' in normal
                         mode, setting to 'lessback' may help.""")
