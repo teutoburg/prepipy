@@ -6,6 +6,7 @@
 * Make autostretch useable again.
 * Maybe add Gaussian stretching if not too complicated.
 * See if MPL features can be included in JPEG putput. See also [this](https://stackoverflow.com/questions/57316491/how-to-convert-matplotlib-figure-to-pil-image-object-without-saving-image) and [this](https://stackoverflow.com/questions/3938676/python-save-matplotlib-figure-on-an-pil-image-object) link.
+* I/O in separate functions passing I/O objects
 
 ## Numpy ufunc stuff
 
