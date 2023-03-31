@@ -186,6 +186,7 @@ def process_combination(pic: JPEGPicture,
     else:
         logger.info("Using normal grey mode.")
 
+    # BUG: gamma_lum from config is not passed to min_inten etc...
     pic.stretch_rgb_channels("stiff",
                              stiff_mode="prepipy2",
                              grey_level=grey_values[processconfig.grey_mode],
