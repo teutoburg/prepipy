@@ -1092,7 +1092,7 @@ class RGBPicture(Picture):
         This method will modify the image data in the frames defined to be used
         as RGB channels.
         """
-        lum_stretched = stretch_fkt_lum(lum, gamma_lum, **kwargs)
+        lum_stretched = np.power(lum, 1/gamma_lum, **kwargs)
         for channel in self.rgb_channels:
             channel.image /= lum
             channel.image *= lum_stretched
