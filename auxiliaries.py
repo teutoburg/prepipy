@@ -55,9 +55,9 @@ def _recursive_replace(instance: _D, **kwargs) -> _D:
         if is_dataclass(field.type):
             sfl = [subfield.name for subfield in fields(getattr(instance, field.name))]
             try:
-                subkwargs = {key: value for key, value in kwargs[field.name].items() if key in sfl}
+                subkwargs = {key: value for key, value in kwargs[field.name].items() if key in sfl and value is not None}
             except KeyError:
-                subkwargs = {key: value for key, value in kwargs.items() if key in sfl}
+                subkwargs = {key: value for key, value in kwargs.items() if key in sfl and value is not None}
             new_val = replace(getattr(instance, field.name), **subkwargs)
         elif field.name in kwargs:
             new_val = kwargs[field.name]
