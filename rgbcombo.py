@@ -178,18 +178,17 @@ def process_combination(pic: JPEGPicture,
         mask = None
 
     # TODO: put these values in a separate config file in resources
-    grey_values = {"normal": .3, "moreback": .5, "lessback": .08, "leastback": .001}
-    grey_mode = processconfig.grey_mode
+    grey_values = dict(yaml.load(absolute_path/"resources/grey_values.yml"))
 
-    if grey_mode != "normal":
-        logger.info("Using grey mode \"%s\".", grey_mode)
-        fname += f"_{grey_mode}"
+    if processconfig.grey_mode != "normal":
+        logger.info("Using grey mode \"%s\".", processconfig.grey_mode)
+        fname += f"_{processconfig.grey_mode}"
     else:
         logger.info("Using normal grey mode.")
 
     pic.stretch_rgb_channels("stiff",
                              stiff_mode="prepipy2",
-                             grey_level=grey_values[grey_mode],
+                             grey_level=grey_values[processconfig.grey_mode],
                              skymode=processconfig.skymode,
                              mask=mask)
 
