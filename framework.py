@@ -468,7 +468,7 @@ class Frame():
         else:
             raise ValueError("max_mode not understood")
 
-        p_grey_g = grey_level**gamma_lum
+        p_grey_g = grey_level**(1/gamma_lum)
         logger.debug("p_grey_g=%.4f", p_grey_g)
 
         i_min = max((i_sky - p_grey_g * i_max) / (1. - p_grey_g), 0.)
