@@ -1079,13 +1079,8 @@ class RGBPicture(Picture):
         return sum_image
 
     def stretch_luminance(self,
-                          stretch_fkt_lum: Callable[[np.ndarray[_N,
-                                                                np.dtype[Any]],
-                                                     float],
-                                                    np.ndarray[_N,
-                                                               np.dtype[Any]]],
-                          gamma_lum: float,
                           lum: np.ndarray[_N, np.dtype[Any]],
+                          gamma_lum: float,
                           **kwargs: Any) -> None:
         """Perform luminance stretching.
 
@@ -1104,9 +1099,6 @@ class RGBPicture(Picture):
 
     def adjust_rgb(self,
                    alpha: float,
-                   stretch_fkt_lum: Callable[[np.ndarray[_N, np.dtype[Any]],
-                                              float],
-                                             np.ndarray[_N, np.dtype[Any]]],
                    gamma_lum: float,
                    **kwargs: Any) -> None:
         """
@@ -1156,7 +1148,7 @@ class RGBPicture(Picture):
 
         # FIXME: should the lu stretch be done with the original luminance
         #        (as is currently) or with the adjusted one???
-        self.stretch_luminance(stretch_fkt_lum, gamma_lum, lum, **kwargs)
+        self.stretch_luminance(lum, gamma_lum, **kwargs)
 
     def equalize(self,
                  mode: str = "mean",

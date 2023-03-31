@@ -83,10 +83,6 @@ class ColoredFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def _gma(i, g):
-    return np.power(i, 1/g)
-
-
 def _pretty_info_log(msg_key: str, time: Optional[float] = None,
                      console_width: int = 50) -> None:
     msg_dir = {"single": "Start RGB processing for single image...",
@@ -198,7 +194,7 @@ def process_combination(pic: JPEGPicture,
                              mask=mask)
 
     if processconfig.rgb_adjust:
-        pic.adjust_rgb(processconfig.alpha, _gma, processconfig.gamma_lum)
+        pic.adjust_rgb(processconfig.alpha, processconfig.gamma_lum)
         logger.info("RGB sat. adjusting after contrast and stretch.")
 
     if pic.is_bright:
