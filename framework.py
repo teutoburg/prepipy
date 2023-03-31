@@ -468,7 +468,7 @@ class Frame():
         else:
             raise ValueError("max_mode not understood")
 
-        p_grey_g = grey_level**gamma_lum
+        p_grey_g = grey_level**(1/gamma_lum)
         logger.debug("p_grey_g=%.4f", p_grey_g)
 
         i_min = max((i_sky - p_grey_g * i_max) / (1. - p_grey_g), 0.)
@@ -1079,13 +1079,8 @@ class RGBPicture(Picture):
         return sum_image
 
     def stretch_luminance(self,
-                          stretch_fkt_lum: Callable[[np.ndarray[_N,
-                                                                np.dtype[Any]],
-                                                     float],
-                                                    np.ndarray[_N,
-                                                               np.dtype[Any]]],
-                          gamma_lum: float,
                           lum: np.ndarray[_N, np.dtype[Any]],
+                          gamma_lum: float,
                           **kwargs: Any) -> None:
         """Perform luminance stretching.
 
@@ -1097,16 +1092,13 @@ class RGBPicture(Picture):
         This method will modify the image data in the frames defined to be used
         as RGB channels.
         """
-        lum_stretched = stretch_fkt_lum(lum, gamma_lum, **kwargs)
+        lum_stretched = np.power(lum, 1/gamma_lum, **kwargs)
         for channel in self.rgb_channels:
             channel.image /= lum
             channel.image *= lum_stretched
 
     def adjust_rgb(self,
                    alpha: float,
-                   stretch_fkt_lum: Callable[[np.ndarray[_N, np.dtype[Any]],
-                                              float],
-                                             np.ndarray[_N, np.dtype[Any]]],
                    gamma_lum: float,
                    **kwargs: Any) -> None:
         """
@@ -1156,7 +1148,7 @@ class RGBPicture(Picture):
 
         # FIXME: should the lu stretch be done with the original luminance
         #        (as is currently) or with the adjusted one???
-        self.stretch_luminance(stretch_fkt_lum, gamma_lum, lum, **kwargs)
+        self.stretch_luminance(lum, gamma_lum, **kwargs)
 
     def equalize(self,
                  mode: str = "mean",

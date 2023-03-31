@@ -83,10 +83,6 @@ class ColoredFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def _gma(i, g):
-    return np.power(i, 1/g)
-
-
 def _pretty_info_log(msg_key: str, time: Optional[float] = None,
                      console_width: int = 50) -> None:
     msg_dir = {"single": "Start RGB processing for single image...",
@@ -182,23 +178,23 @@ def process_combination(pic: JPEGPicture,
         mask = None
 
     # TODO: put these values in a separate config file in resources
-    grey_values = {"normal": .3, "lessback": .08, "moreback": .5}
-    grey_mode = processconfig.grey_mode
+    grey_values = dict(yaml.load(absolute_path/"resources/grey_values.yml"))
 
-    if grey_mode != "normal":
-        logger.info("Using grey mode \"%s\".", grey_mode)
-        fname += f"_{grey_mode}"
+    if processconfig.grey_mode != "normal":
+        logger.info("Using grey mode \"%s\".", processconfig.grey_mode)
+        fname += f"_{processconfig.grey_mode}"
     else:
         logger.info("Using normal grey mode.")
 
+    # BUG: gamma_lum from config is not passed to min_inten etc...
     pic.stretch_rgb_channels("stiff",
                              stiff_mode="prepipy2",
-                             grey_level=grey_values[grey_mode],
+                             grey_level=grey_values[processconfig.grey_mode],
                              skymode=processconfig.skymode,
                              mask=mask)
 
     if processconfig.rgb_adjust:
-        pic.adjust_rgb(processconfig.alpha, _gma, processconfig.gamma_lum)
+        pic.adjust_rgb(processconfig.alpha, processconfig.gamma_lum)
         logger.info("RGB sat. adjusting after contrast and stretch.")
 
     if pic.is_bright:
@@ -342,8 +338,7 @@ def main() -> None:
                         If omitted, the code will look for a file named
                         "bands.yml" in the main package folder.""")
     parser.add_argument("-g", "--grey_mode",
-                        default="normal",
-                        choices=["normal", "lessback", "moreback"],
+                        choices=["normal", "moreback", "lessback", "leastback"],
                         help="""Background grey level mode, default is
                         'normal'. If you see a monochromatic 'fog' in normal
                         mode, setting to 'lessback' may help.""")
