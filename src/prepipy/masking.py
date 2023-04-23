@@ -20,7 +20,7 @@ from astropy.coordinates import Angle, SkyCoord
 from regions import PixCoord, SkyRegion, CircleSkyRegion, \
                     RectangleSkyRegion, PolygonSkyRegion
 
-from framework import Frame
+from .framework import Frame
 
 __author__ = "Fabian Haberhauer"
 __copyright__ = "Copyright 2023"

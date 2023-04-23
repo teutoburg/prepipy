@@ -16,8 +16,8 @@ from typing import Iterable, Optional, ClassVar, Dict, Protocol, TypeVar, Any
 
 from ruamel.yaml import YAML
 
-from framework import RGBPicture, Frame, Band
-from configuration import Configurator
+from .framework import RGBPicture, Frame, Band
+from .configuration import Configurator
 
 yaml = YAML()
 

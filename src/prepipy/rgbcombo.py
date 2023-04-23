@@ -23,11 +23,11 @@ from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 from colorama import Fore, Back, Style
 
-from framework import JPEGPicture, Band
-from framework import logger as framework_logger
-from masking import get_mask
-import auxiliaries
-from configuration import Configurator, GeneralConfigurator, ProcessConfigurator
+from .framework import JPEGPicture, Band
+from .framework import logger as framework_logger
+from .masking import get_mask
+from . import auxiliaries
+from .configuration import Configurator, GeneralConfigurator, ProcessConfigurator
 
 __author__ = "Fabian Haberhauer"
 __copyright__ = "Copyright 2023"

@@ -39,7 +39,7 @@ from PIL import Image
 from PIL import __version__ as pillow_version
 from tqdm import tqdm
 
-from configuration import ProcessConfigurator, FiguresConfigurator
+from .configuration import ProcessConfigurator, FiguresConfigurator
 
 __author__ = "Fabian Haberhauer"
 __copyright__ = "Copyright 2023"
