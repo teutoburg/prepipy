@@ -218,13 +218,25 @@ class Frame():
         return f"{self.shape} frame in \"{self.band.printname}\" band"
 
     @classmethod
+    def from_hdu(cls, hdu: fits.hdu.ImageHDU,
+                  band: Band, **kwargs: Any):
+        """Create instance from fits HDU object."""
+        return cls(hdu.data, band, hdu.header, **kwargs)
+
+    @classmethod
+    def from_hdul(cls, hdul: fits.hdu.HDUList,
+                  band: Band, hdu: int, **kwargs: Any):
+        """Create instance from fits HDU list object and index."""
+        return cls.from_hdu(hdul[hdu], band, **kwargs)
+
+    @classmethod
     def from_fits(cls, filename: Union[Path, str],
                   band: Band, hdu: int = 0, **kwargs: Any):
         """Create instance from fits file."""
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", ".*datfix.*")
             with fits.open(filename) as file:
-                return cls(file[hdu].data, band, file[hdu].header, **kwargs)
+                return cls.from_hdul(file, band, hdu, **kwargs)
 
     @property
     def band(self) -> Band:
