@@ -310,6 +310,12 @@ def create_rgb_image(input_path: Path,
 
 def main() -> None:
     """Execute in script mode."""
+    global logger
+    logger = _logging_configurator()
+    global all_loggers
+    all_loggers = [logger, auxiliaries.logger, framework_logger]
+    assert logger.level == 20
+    
     parser = argparse.ArgumentParser(prog="rgbcombo",
                                      description="""Combines RGB channels to
                                      color image including stretching.""")
@@ -440,10 +446,6 @@ logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
-    logger = _logging_configurator()
-    all_loggers = [logger, auxiliaries.logger, framework_logger]
-    assert logger.level == 20
-
     main()
     gc.collect()
     sys.exit(0)
