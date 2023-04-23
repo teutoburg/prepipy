@@ -36,7 +36,7 @@ formatters:
   script:
     format: '%(message)s'
   color:
-    '()': rgbcombo.ColoredFormatter
+    '()': ..rgbcombo.ColoredFormatter
 
 root:
   level: INFO
