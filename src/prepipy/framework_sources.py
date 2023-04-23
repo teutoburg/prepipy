@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 Framework for images etc. when used with source extraction etc.
+
+Not actively maintained!
 """
 
 import logging
