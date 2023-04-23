@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "prepipy"
+version = "0.6.0"
+description = "Provides the ability to stretch and combine astronomical images from multiple bands into (RGB) colour images."
+authors = ["Fabian Haberhauer <fabian.haberhauer@univie.ac.at>"]
+maintainers = ["teutoburg <ghost@instruct.at>"]
+license = "GPL-3.0-or-later"
+readme = "README.md"
+repository = "https://github.com/teutoburg/prepipy"
+classifiers = [
+    Intended Audience :: Science/Research,
+    Operating System :: OS Independent",
+    Topic :: Scientific/Engineering :: Astronomy,
+    Topic :: Scientific/Engineering :: Image Processing,
+    Topic :: Scientific/Engineering :: Visualization,
+    Typing :: Typed
+]
+packages = [{include = "prepipy", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+Pillow = "^9.4"
+astropy = "^5.1"
+matplotlib = "^3.7"
+tqdm = "^4.64"
+numpy = "^1.23"
+ruamel.yaml = "^0.17.21"
+colorama = "^0.4.6"
+regions = "^0.6"
+
+[tool.poetry.scripts]
+rgbcombo = "prepipy.rgbcombo:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
