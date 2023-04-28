@@ -56,7 +56,7 @@ Alternatively, a minimalistic instance can be created by just providing the band
 
 ### Frame
 
-A `Frame` is an individual image taken in a given `Band`. Instances can be created manually or (recommended) either from a `astropy.io.fits.hdu.ImageHDU` object, `astropy.io.fits.hdu.HDUList` object plus an index or directly from a FITS file. Use the `from_hdu(hdu_object, band)`, `from_hdul(hdu_list_object, band, hdu_index)` or `from_fits(filename, band, hdu_index)` contructors respectively.
+A `Frame` is an individual image taken in a given `Band`. Instances can be created manually or (recommended) either from a `astropy.io.fits.ImageHDU` object, `astropy.io.fits.HDUList` object plus an index or directly from a FITS file. Use the `from_hdu(hdu_object, band)`, `from_hdul(hdu_list_object, band, hdu_index)` or `from_fits(filename, band, hdu_index)` contructors respectively.
 
 Operations like clipping, normalisation and stretching are performed as methods of the `Frame` class. Individual frames can be saved as single-HDU FITS files (`Frame.save_fits(filename)`).
 
@@ -70,9 +70,9 @@ The `Picture` class also provides a number of convenience properties, including 
 
 #### Subclasses of Picture
 
-`RGBPicture`
+`RGBPicture` - subclass of `Picture` for handling 3-channel color composite images. A color channel is just a `Frame` object that is included in the `RGBPicture.rgb_channels` list. This attribute is set by calling the `select_rgb_channels(combination)` method. It is possible (and intended) to provide more than three frames for a `RGBPicture`, if multiple color composite images from different band combinations are desired. In this case, `select_rgb_channels(combination)` is called multiple times. Some operations modify only the frames which are set as color channels, so when processing multiple combinations, deep copies of the frames are created before they are modified as color channels.
 
-`JPEGPicture`
+`JPEGPicture` - subclass of `RGBPicture` for saving the final image as a JPEG (aka jpg) file. Currently one contains one method, `save_pil(filename, quality)`, which uses the interface provided by the `Pillow` package (version 9.4+ is required) to save the image. **NOTE**: in most cases, this is the class you'll want to use when actually dealing with color composite images, unless you want to manually process the 3D array containing the 3-channel image data in some other way.
 
 # Acknowledgement
 
