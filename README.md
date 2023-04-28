@@ -52,43 +52,27 @@ Data class used to store information about a passband.
 
 The recommended way to construct instances is via a YAML config file.
 Use the `Band.from_yaml_file(filename)` constructor to do so.
-
-#### Parameters
-
-name (str)
-: Used for internal reference.
-
-printname (str, optional)
-: Used for output on figures.
-
-wavelength : float, optional
-: Used for checking order in RGB mode. Must be the same unit for all instances used simultanously.
-
-unit : str, optional
-: Unit of the wavelength, currently only used for display purposes, defaults to 'µm' if omitted.
-
-instrument : str, optional
-: Currently unused, defaults to 'unknown' if omitted.
-
-telescope : str, optional
-: Currently unused, defaults to 'unknown' if omitted.
-
-
-#### Notes
-
-Within the YAML file, the parameter names are abbreviated to the first four
-characters each. The key for each sub-dictionary in the YAML file is used
-as `printname` in the constructor, allowing for a more readable file.
-When the `use_bands` argument is used, the names given there are expected
-to match the `name` parameter, as is the case anywhere else in this module.
+Alternatively, a minimalistic instance can be created by just providing the band name: `Band('foo')`. This will create a useable instance with all other parameters containing default or placeholder values.
 
 ### Frame
 
+A `Frame` is an individual image taken in a given `Band`. Instances can be created manually or (recommended) either from a `astropy.io.fits.hdu.ImageHDU` object, `astropy.io.fits.hdu.HDUList` object plus an index or directly from a FITS file. Use the `from_hdu(hdu_object, band)`, `from_hdul(hdu_list_object, band, hdu_index)` or `from_fits(filename, band, hdu_index)` contructors respectively.
 
+Operations like clipping, normalisation and stretching are performed as methods of the `Frame` class. Individual frames can be saved as single-HDU FITS files (`Frame.save_fits(filename)`).
 
 ### Picture
 
+A `Picture` is a collection of one or more `Frame` objects. Frames can be added from a FITS file via `Picture.add_frame_from_file(filename, band)`, where `band` can be an instance of `Band` or, in the minimalistic case, a string containing the band name only. Frames can also be added directly from a 2D numpy array: `Picture.add_frame(image_array, band, header)`, where `header` can be an instance of `astropy.io.fits.Header` or `None`. A third option is to add `Frame` objects manually to the `Picture.frames` list. This has the downside that the frames's band is not checked against the other frames' bands already present in the picture. Normally, only one frame per band is allowed in a picture.
 
+It is also possible to construct a `Picture` object from a 3D array containing 2D images, or to construct multiple instances from a 4D array. Warning: These features are currently highly experimental, not tested and not well documented.
+
+The `Picture` class also provides a number of convenience properties, including `bands`, `primary_frame`, `image`, `coords`, `center`, `center_coords`, `center_coords_str`, `image_size`, `pixel_scale` and `image_scale`.
+
+#### Subclasses of Picture
+
+`RGBPicture`
+
+`JPEGPicture`
 
 # Acknowledgement
 
