@@ -59,3 +59,28 @@ jobs:
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
         run: poetry publish
+
+  upload:
+    name: Upload dist to release
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Retrieve distribution files
+        uses: actions/download-artifact@v3
+        with:
+          name: distribution
+          path: dist/
+
+      - name: Upload release attachment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            // Upload the release asset
+            await github.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ github.event.release.id }},
+              name: "dist/*",
+              data: await fs.readFileSync("dist/*")
+            });
