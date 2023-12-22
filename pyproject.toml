@@ -19,7 +19,7 @@ packages = [{include = "prepipy", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-Pillow = "^9.4"
+Pillow = ">=9.4,<11.0"
 astropy = "^5.1"
 matplotlib = "^3.7"
 tqdm = "^4.64"
