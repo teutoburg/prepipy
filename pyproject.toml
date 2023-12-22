@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prepipy"
-version = "0.6.5"
+version = "0.7.0a0"
 description = "Provides the ability to stretch and combine astronomical images from multiple bands into (RGB) colour images."
 authors = ["Fabian Haberhauer <fabian.haberhauer@univie.ac.at>"]
 maintainers = ["teutoburg <ghost@instruct.at>"]
@@ -26,7 +26,7 @@ tqdm = "^4.64"
 numpy = "^1.21"
 "ruamel.yaml" = "^0.17.21"
 colorama = "^0.4.6"
-regions = "^0.6"
+regions = "^0.8"
 
 [tool.poetry.scripts]
 rgbcombo = "prepipy.rgbcombo:main"
