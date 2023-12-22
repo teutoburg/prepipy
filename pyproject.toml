@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prepipy"
-version = "0.7.1a0"
+version = "0.7.1a1"
 description = "Provides the ability to stretch and combine astronomical images from multiple bands into (RGB) colour images."
 authors = ["Fabian Haberhauer <fabian.haberhauer@univie.ac.at>"]
 maintainers = ["teutoburg <ghost@instruct.at>"]
