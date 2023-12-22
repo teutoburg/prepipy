@@ -636,31 +636,38 @@ files = [
 
 [[package]]
 name = "regions"
-version = "0.6"
-description = "Astropy coordinated package for region handling"
+version = "0.8"
+description = "An Astropy coordinated package for region handling"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "regions-0.6-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:ebc96d47c18da0ada00d75acdd3bf6d7a70115c846aa700a8dc07d9ab18a8339"},
-    {file = "regions-0.6-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:868bdb64c9e66ed8808d3a6128a4332489a46c433ae6dcaa47478ef166a0c6a3"},
-    {file = "regions-0.6-cp310-cp310-win_amd64.whl", hash = "sha256:b334ac307a9373ae1a429c9c09a35fd69819927fa63bffa495cff62a6044ebae"},
-    {file = "regions-0.6-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:9ecdda79d843bcc2615ca4eaa1c380922acfc51661cc690f2cb311ecfc73fdbf"},
-    {file = "regions-0.6-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:635af54cece597875997de005b820bc0decae37be2c372082a4e78ef26b06547"},
-    {file = "regions-0.6-cp38-cp38-win_amd64.whl", hash = "sha256:1e0f4610abba71f12d6c13c8310f79597faa2c2a2030144bc4c3d7b1620d03e7"},
-    {file = "regions-0.6-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:fd8d5d18af92820f7cb129a186eecf324b078136080ab79c1323ce1e6232df8f"},
-    {file = "regions-0.6-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1f3602fa5bee7dc49e11aacd89c778b5d143f162ed23e273a8164ea19e8ce265"},
-    {file = "regions-0.6-cp39-cp39-win_amd64.whl", hash = "sha256:a862f804245e7ecdc2f40fb9bb6f5605d3bde82a5bad6d50d6ae00a68f32e605"},
-    {file = "regions-0.6.tar.gz", hash = "sha256:80328580ae254f848db44048bc711365cab8dcfe47fa00b309ed35c27b5f255d"},
+    {file = "regions-0.8-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:382984e843bb69c6dfe6604740def429767f3f3eb112dd6712e964ace818b7b2"},
+    {file = "regions-0.8-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:f767fceb55e928672b8e2af5a3af8c65794eb88e6ec4f2a92e63ed45c31e3440"},
+    {file = "regions-0.8-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:252e32aab87f1f452ca9240bfdef004c49fb171fadff50e05b227d2c5849936c"},
+    {file = "regions-0.8-cp310-cp310-win_amd64.whl", hash = "sha256:3418d425d919d0d66fda78566c40ae9734522241dad3879681c07c13e5fa923b"},
+    {file = "regions-0.8-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:61daa87b4211f1f0b20aceaed589f5ebeb20a95e9f6f11874eb930c0c198e095"},
+    {file = "regions-0.8-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:7206394950cb15e5db4a72d05fb5b449894ea1dc374f9f811ccc187e9fc4e41d"},
+    {file = "regions-0.8-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:58c614402d4da1607ac95645afd65da3ffa46082d8d35e6b81913ab0ea188a07"},
+    {file = "regions-0.8-cp311-cp311-win_amd64.whl", hash = "sha256:471562123977b98df6520fdd7caffbe71293592f33b3b07c6908be8941f7b2d2"},
+    {file = "regions-0.8-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:8faab7f5c786a360a0e2ae9be38e92b67749036aabfe309b490749d0fc7dc593"},
+    {file = "regions-0.8-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:7b2043a2166f1d3aeaf5835aa9e7a7e0ea1d1a183ba9dc9bf8b548c85ea2dcef"},
+    {file = "regions-0.8-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0e80901c4f1b16d020f17c1849dbe889a3c5eb25c8b63ef232faad82a5a04fc6"},
+    {file = "regions-0.8-cp312-cp312-win_amd64.whl", hash = "sha256:fda7e03618bbd4e40d9636e600a0ea4decd31f0b32f76495c0076806c87a3948"},
+    {file = "regions-0.8-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:665799aa02a3978abdfdb889b43768511259b2f961b24e55e7314f555f8d457d"},
+    {file = "regions-0.8-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:d2d4fbe2282a156484ac4dd09cd03e4b7e6f78e3d21363a6fb9bee193a82aed8"},
+    {file = "regions-0.8-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4078461e1458393fd8306b5a32e6d96fdda42ecd49a8809aed19bbd3b63335b9"},
+    {file = "regions-0.8-cp39-cp39-win_amd64.whl", hash = "sha256:984949b39267818ff6cd0cf874843eb172881f517de54f41b7166b87514a20b5"},
+    {file = "regions-0.8.tar.gz", hash = "sha256:02b37f19533d30dcb053c2fb2e8d3b24a55d213acd7e7622a3df8874fe0d8024"},
 ]
 
 [package.dependencies]
 astropy = ">=5.0"
-numpy = ">=1.18"
+numpy = ">=1.22"
 
 [package.extras]
-all = ["matplotlib (>=3.1)", "shapely"]
-docs = ["matplotlib (>=3.1)", "shapely", "sphinx-astropy"]
-test = ["pytest-arraydiff", "pytest-astropy"]
+all = ["matplotlib (>=3.5)", "shapely"]
+docs = ["regions[all]", "sphinx-astropy (>=1.6)", "tomli"]
+test = ["pytest-arraydiff", "pytest-astropy (>=0.10)"]
 
 [[package]]
 name = "ruamel-yaml"
@@ -788,4 +795,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "75f306550872b9f6fdec5de7fb802514ae01afc31156fa12b69a7a2cc3993bab"
+content-hash = "974603adf7487d62783c0edf1e81295aaf0cbbf069431de39b947dc19e80785f"
