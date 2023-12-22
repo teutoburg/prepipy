@@ -1,5 +1,13 @@
 # prepipy
 
+[![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
+![dev version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fteutoburg%2Fprepipy%2Fmain%2Fpyproject.toml&query=%24.tool.poetry.version&label=dev%20version&color=teal)
+
+[![PyPI - Version](https://img.shields.io/pypi/v/prepipy)](https://pypi.org/project/prepipy/)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/prepipy)
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 PREtty PIctures using PYthon
 
 ## Overview
