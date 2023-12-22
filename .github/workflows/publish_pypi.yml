@@ -72,15 +72,4 @@ jobs:
           path: dist/
 
       - name: Upload release attachment
-        uses: actions/github-script@v4
-        with:
-          script: |
-            const fs = require('fs');
-            // Upload the release asset
-            await github.repos.uploadReleaseAsset({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: ${{ github.event.release.id }},
-              name: "dist/*",
-              data: await fs.readFileSync("dist/*")
-            });
+        run: echo ${{ github.event.release.upload_url }}
