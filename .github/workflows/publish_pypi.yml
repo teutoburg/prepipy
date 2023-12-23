@@ -41,7 +41,7 @@ jobs:
     name: Publish package to PyPI
     runs-on: ubuntu-latest
     needs: build
-    if: needs.build.result == "success"
+    if: needs.build.result == 'success'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
     name: Bump to dev version
     runs-on: ubuntu-latest
     needs: publish
-    if: needs.publish.result == "success"
+    if: needs.publish.result == 'success'
     steps:
       - name: Checkout code
         uses: ./.github/workflows/bump.yml
