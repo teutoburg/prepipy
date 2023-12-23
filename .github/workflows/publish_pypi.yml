@@ -31,10 +31,17 @@ jobs:
           name: distribution
           path: dist/
 
+      - name: Upload release attachment
+	uses: shogo82148/actions-upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: dist/*
+
   publish:
     name: Publish package to PyPI
     runs-on: ubuntu-latest
     needs: build
+    if: needs.build.result == "success"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,16 +67,13 @@ jobs:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
         run: poetry publish
 
-  upload:
-    name: Upload dist to release
+  bump:
+    name: Bump to dev version
     runs-on: ubuntu-latest
-    needs: build
+    needs: publish
+    if: needs.publish.result == "success"
     steps:
-      - name: Retrieve distribution files
-        uses: actions/download-artifact@v3
+      - name: Checkout code
+        uses: ./.github/workflows/bump.yml
         with:
-          name: distribution
-          path: dist/
-
-      - name: Upload release attachment
-        run: echo ${{ github.event.release.upload_url }}
+          rule: prerelease
