@@ -46,7 +46,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -56,7 +58,7 @@ jobs:
       - name: Set up Poetry
         uses: abatilo/actions-poetry@v2
         with:
-          poetry-version: "1.7.0"
+          poetry-version: "1.7.1"
 
       - name: Bump package Version using Poetry
         id: bumping
