@@ -73,5 +73,5 @@ jobs:
     needs: publish
     if: needs.publish.result == 'success'
     uses: ./.github/workflows/bump.yml
-      with:
-        rule: prerelease
+    with:
+      rule: prerelease
