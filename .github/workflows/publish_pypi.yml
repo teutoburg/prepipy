@@ -71,7 +71,7 @@ jobs:
     name: Bump to (next) dev version
     needs: publish
     if: ${{ needs.publish.result == 'success' }}
-    uses: ./.github/workflows/bump.yml
+    uses: ./.github/workflows/bump.yml@main
     secrets: inherit
     with:
       rule: prerelease
