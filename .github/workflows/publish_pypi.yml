@@ -74,6 +74,9 @@ jobs:
     if: needs.publish.result == 'success'
     steps:
       - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Bump to (next) dev version
         uses: ./.github/workflows/bump.yml
         with:
           rule: prerelease
