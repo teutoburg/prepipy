@@ -84,4 +84,4 @@ The `Picture` class also provides a number of convenience properties, including 
 
 # Acknowledgement
 
-> This package was initially developed in the course of the [NEMESIS](https://nemesis.univie.ac.at) project at the University of Vienna. The NEMESIS project has received funding from the European Union's Horizon 2020 research and innovation programme under grant agreement No. 101004141.
+> This package was initially developed in the course of the [NEMESIS](https://nemesis.konkoly.hu/) project at the University of Vienna. The NEMESIS project has received funding from the European Union's Horizon 2020 research and innovation programme under grant agreement No. 101004141.
